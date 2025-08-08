@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff black
+      
+      - name: Run Ruff
+        run: ruff check justllms/
+      
+      - name: Check Black formatting
+        run: black --check justllms/
+
+  type-check:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install mypy types-PyYAML types-requests
+          pip install -e .
+      
+      - name: Run mypy
+        run: mypy justllms/ --ignore-missing-imports
+
+  test-build:
+    name: Test Build - Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+      
+      - name: Build package
+        run: python -m build
+      
+      - name: Verify package
+        run: |
+          pip install dist/*.whl
+          python -c "import justllms; print(f'JustLLMs {justllms.__version__} imported successfully')"
+      
+      - name: Check package contents
+        run: |
+          pip show -f justllms
+
+  import-check:
+    name: Import Check
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.8', '3.11']
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+      
+      - name: Test imports
+        run: |
+          python -c "from justllms import JustLLMs"
+          python -c "from justllms.core import ProviderConfig"
+          python -c "from justllms.routing import RoutingStrategy"
+          python -c "from justllms.utils import cost_calculator"
