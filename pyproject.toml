@@ -69,10 +69,10 @@ analytics = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/justllms"
-Documentation = "https://justllms.readthedocs.io"
-Repository = "https://github.com/yourusername/justllms"
-"Bug Tracker" = "https://github.com/yourusername/justllms/issues"
+Homepage = "https://github.com/just-llms/justllms"
+Documentation = "https://github.com/just-llms/justllms#readme"
+Repository = "https://github.com/just-llms/justllms"
+"Bug Tracker" = "https://github.com/just-llms/justllms/issues"
 
 [tool.setuptools.packages.find]
 include = ["justllms*"]
