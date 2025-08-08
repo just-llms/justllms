@@ -2,6 +2,15 @@
 
 All notable changes to JustLLMs will be documented in this file.
 
+## [1.0.1] - 2025-08-08
+
+### Fixed
+- **Azure OpenAI Provider**: Fixed provider name registration issue where "azure" configuration key was not being recognized at runtime
+- **Provider Name Handling**: Provider now correctly uses the configuration key name instead of hardcoded "azure_openai"
+
+### Changed
+- Azure provider models now use "azure" as the default provider identifier for consistency
+
 ## [1.0.0] - 2025-08-07
 
 ### Added

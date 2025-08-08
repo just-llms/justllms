@@ -31,7 +31,7 @@ class Client:
         default_provider: Optional[str] = None,
     ):
         self.config = self._load_config(config)
-        self.providers = providers or {}
+        self.providers = providers if providers is not None else {}
         self.router = router or Router(self.config.routing)
         self.cache_manager = cache_manager or CacheManager(self.config.cache)
         self.monitor = monitor or Monitor(self.config.monitoring)
@@ -59,7 +59,7 @@ class Client:
         
         self.completion = Completion(self)
         
-        if not self.providers:
+        if providers is None:
             self._initialize_providers()
     
     def _load_config(self, config: Optional[Union[str, Dict[str, Any], Config]]) -> Config:

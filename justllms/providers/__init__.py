@@ -32,7 +32,6 @@ except ImportError:
 try:
     from justllms.providers.azure_openai import AzureOpenAIProvider
     register_provider("azure_openai", AzureOpenAIProvider)
-    register_provider("azure", AzureOpenAIProvider)
 except ImportError:
     pass
 
