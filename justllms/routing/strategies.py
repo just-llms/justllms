@@ -62,7 +62,11 @@ class CostOptimizedStrategy(RoutingStrategy):
 
             for model_name, model_info in models.items():
                 # Check constraints
-                if self.min_context_length and model_info.max_context_length and model_info.max_context_length < self.min_context_length:
+                if (
+                    self.min_context_length
+                    and model_info.max_context_length
+                    and model_info.max_context_length < self.min_context_length
+                ):
                     continue
 
                 if self.require_vision and not model_info.supports_vision:
@@ -117,7 +121,7 @@ class LatencyOptimizedStrategy(RoutingStrategy):
         self.max_latency_ms = max_latency_ms
         self.prefer_local = prefer_local
 
-    def select( # noqa: C901
+    def select(  # noqa: C901
         self,
         messages: List[Message],
         providers: Dict[str, BaseProvider],

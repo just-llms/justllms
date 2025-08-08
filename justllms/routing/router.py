@@ -117,7 +117,11 @@ class Router:
             return provider_name, model_name
         except Exception as e:
             # Fallback logic
-            if self.fallback_provider and self.fallback_model and self.fallback_provider in providers:
+            if (
+                self.fallback_provider
+                and self.fallback_model
+                and self.fallback_provider in providers
+            ):
                 provider = providers[self.fallback_provider]
                 if provider.validate_model(self.fallback_model):
                     return self.fallback_provider, self.fallback_model
