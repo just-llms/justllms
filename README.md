@@ -46,7 +46,7 @@ print(response.content)
 
 ### Multi-Provider Support
 Connect to all major LLM providers with a single, consistent interface:
-- **OpenAI** (GPT-4, GPT-3.5, etc.)
+- **OpenAI** (GPT-5, GPT-4, etc.)
 - **Google** (Gemini 2.5, Gemini 1.5 models)  
 - **Anthropic** (Claude 3.5, Claude 3 models)
 - **Azure OpenAI** (with deployment mapping)
