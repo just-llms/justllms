@@ -84,16 +84,31 @@ class AzureOpenAIProvider(BaseProvider):
         if not config.api_key:
             raise ValueError("Azure OpenAI API key is required")
         
-        if not getattr(config, 'resource_name', None):
-            raise ValueError("Azure resource_name is required")
+        endpoint = getattr(config, 'endpoint', None)
+        resource_name = getattr(config, 'resource_name', None)
+
+        #TODO: refine this logic. not exactly good read       
+        if endpoint:
+            # Extract from endpoint URL like "https://my-resource.openai.azure.com/"
+            self.azure_base_url = endpoint.rstrip('/')
+            # Try to extract resource name from endpoint
+            if '.openai.azure.com' in endpoint:
+                import re
+                match = re.match(r'https?://([^.]+)\.openai\.azure\.com', endpoint)
+                if match:
+                    self.resource_name = match.group(1)
+                else:
+                    self.resource_name = 'azure-openai'
+            else:
+                self.resource_name = 'azure-openai'
+        elif resource_name:
+            self.resource_name = resource_name
+            self.azure_base_url = f"https://{self.resource_name}.openai.azure.com"
+        else:
+            raise ValueError("Either 'endpoint' or 'resource_name' is required for Azure OpenAI")
         
-        # Set defaults for Azure-specific config
-        self.resource_name = config.resource_name
         self.api_version = getattr(config, 'api_version', '2024-02-15-preview')
         self.deployment_mapping = getattr(config, 'deployment_mapping', {})
-        
-        # Construct base URL for Azure
-        self.azure_base_url = f"https://{self.resource_name}.openai.azure.com"
     
     def get_available_models(self) -> Dict[str, ModelInfo]:
         return self.MODELS.copy()
