@@ -14,7 +14,7 @@ from justllms.conversations.models import (
     ConversationSummary,
 )
 from justllms.conversations.storage import ConversationStorage
-from justllms.core.models import Message
+from justllms.core.models import Message, Role
 
 
 class Conversation:
@@ -175,7 +175,7 @@ class Conversation:
 
         # Add system prompt if configured
         if self.config.system_prompt:
-            api_messages.append(Message(role="system", content=self.config.system_prompt))
+            api_messages.append(Message(role=Role.SYSTEM, content=self.config.system_prompt))
 
         # Add conversation messages
         for msg in managed_messages:
@@ -186,7 +186,7 @@ class Conversation:
 
         return api_messages
 
-    async def _generate_title(self):
+    async def _generate_title(self) -> None:
         """Generate a title for the conversation."""
         if not self.client or len(self.messages) < 2:
             return
@@ -198,7 +198,7 @@ class Conversation:
             if first_user_message:
                 title_prompt = f"Generate a short, descriptive title (max 6 words) for a conversation that starts with: '{first_user_message.content[:100]}...'"
 
-                title_messages = [Message(role="user", content=title_prompt)]
+                title_messages = [Message(role=Role.USER, content=title_prompt)]
 
                 response = await self.client.completion.acreate(
                     messages=title_messages,
@@ -244,7 +244,7 @@ class Conversation:
 
         await self._save_state()
 
-    async def _save_state(self):
+    async def _save_state(self) -> None:
         """Save current conversation state."""
         if self.storage:
             await self.storage.save_conversation(
@@ -282,40 +282,40 @@ class Conversation:
 
         return conversation
 
-    def pause(self):
+    def pause(self) -> None:
         """Pause the conversation."""
         self.state = ConversationState.PAUSED
         self.updated_at = time.time()
 
-    def resume(self):
+    def resume(self) -> None:
         """Resume the conversation."""
         self.state = ConversationState.ACTIVE
         self.updated_at = time.time()
 
-    def complete(self):
+    def complete(self) -> None:
         """Mark conversation as completed."""
         self.state = ConversationState.COMPLETED
         self.updated_at = time.time()
         self.analytics.calculate_conversation_duration(self.created_at)
 
-    def archive(self):
+    def archive(self) -> None:
         """Archive the conversation."""
         self.state = ConversationState.ARCHIVED
         self.updated_at = time.time()
 
-    def add_tag(self, tag: str):
+    def add_tag(self, tag: str) -> None:
         """Add a tag to the conversation."""
         if tag not in self.tags:
             self.tags.append(tag)
             self.updated_at = time.time()
 
-    def remove_tag(self, tag: str):
+    def remove_tag(self, tag: str) -> None:
         """Remove a tag from the conversation."""
         if tag in self.tags:
             self.tags.remove(tag)
             self.updated_at = time.time()
 
-    def set_metadata(self, key: str, value: Any):
+    def set_metadata(self, key: str, value: Any) -> None:
         """Set metadata for the conversation."""
         self.metadata[key] = value
         self.updated_at = time.time()
@@ -328,7 +328,7 @@ class Conversation:
         return f"Conversation(id='{self.id}', messages={len(self.messages)}, state='{self.state.value}')"
 
     # Synchronous wrapper methods
-    def _run_async(self, coro):
+    def _run_async(self, coro: Any) -> Any:
         """Run an async coroutine and return result."""
         try:
             # Try to get existing event loop
@@ -338,7 +338,7 @@ class Conversation:
 
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 future = executor.submit(asyncio.run, coro)
-                return future.result()
+                return future.result()  # type: ignore
         except RuntimeError:
             # No event loop running, we can use asyncio.run
             return asyncio.run(coro)
@@ -352,26 +352,26 @@ class Conversation:
         **kwargs: Any,
     ) -> ConversationMessage:
         """Send a message and get a response (synchronous)."""
-        return self._run_async(self.send(content, role, model, provider, **kwargs))
+        return self._run_async(self.send(content, role, model, provider, **kwargs))  # type: ignore
 
     def add_system_message_sync(self, content: str) -> ConversationMessage:
         """Add a system message to the conversation (synchronous)."""
-        return self._run_async(self.add_system_message(content))
+        return self._run_async(self.add_system_message(content))  # type: ignore
 
     def save_sync(self) -> None:
         """Save the conversation to storage (synchronous)."""
-        return self._run_async(self.save())
+        self._run_async(self.save())
 
     @classmethod
     def load_sync(
         cls,
         conversation_id: str,
-        storage,
+        storage: Any,
         client: Optional[Any] = None,
     ) -> Optional["Conversation"]:
         """Load a conversation from storage (synchronous)."""
 
-        async def _load():
+        async def _load() -> Optional["Conversation"]:
             return await cls.load(conversation_id, storage, client)
 
         try:
@@ -382,7 +382,7 @@ class Conversation:
 
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 future = executor.submit(asyncio.run, _load())
-                return future.result()
+                return future.result()  # type: ignore
         except RuntimeError:
             # No event loop running, we can use asyncio.run
             return asyncio.run(_load())

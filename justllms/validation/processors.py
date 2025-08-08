@@ -2,7 +2,7 @@
 
 import re
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from justllms.validation.models import BusinessRule, RuleViolation
 
@@ -10,7 +10,7 @@ from justllms.validation.models import BusinessRule, RuleViolation
 class BaseProcessor(ABC):
     """Base class for rule processors."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.name = self.__class__.__name__
 
     @abstractmethod
@@ -27,7 +27,7 @@ class BaseProcessor(ABC):
 
     async def create_violation(
         self, content: str, rule: BusinessRule, matches: List[Tuple[str, int, int]]
-    ) -> RuleViolation:
+    ) -> Optional[RuleViolation]:
         """Create a violation object from matches."""
         if not matches:
             return None
@@ -190,7 +190,7 @@ class ExactMatcher(BaseProcessor):
 class TopicClassifier(BaseProcessor):
     """Processor for topic-based classification rules."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         # Simple topic classification using keyword mapping
         # In production, this could use ML models
@@ -324,7 +324,7 @@ class TopicClassifier(BaseProcessor):
 class IntentClassifier(BaseProcessor):
     """Processor for intent-based rules."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         # Simple intent patterns - could be enhanced with ML models
         self.intent_patterns = {

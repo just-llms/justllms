@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
-import yaml
+import yaml  # type: ignore
 from dotenv import load_dotenv
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -147,13 +147,14 @@ class Config(BaseModel):
                 if len(parts) >= 2:
                     if parts[0] == "cache" and hasattr(config.cache, parts[1]):
                         # Handle boolean values
+                        parsed_value: Any = value
                         if value.lower() in ["true", "false"]:
-                            value = value.lower() == "true"
+                            parsed_value = value.lower() == "true"
                         # Handle numeric values
                         elif value.isdigit():
-                            value = int(value)
+                            parsed_value = int(value)
 
-                        setattr(config.cache, parts[1], value)
+                        setattr(config.cache, parts[1], parsed_value)
                     elif parts[0] == "routing" and hasattr(config.routing, parts[1]):
                         setattr(config.routing, parts[1], value)
 

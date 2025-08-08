@@ -62,7 +62,7 @@ class ConversationStorage(ABC):
 class MemoryStorage(ConversationStorage):
     """In-memory storage for conversations."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.conversations: Dict[str, Dict[str, Any]] = {}
         self._lock = asyncio.Lock()
 
@@ -234,7 +234,7 @@ class DiskStorage(ConversationStorage):
             for file_path in self.storage_dir.glob("*.json"):
                 try:
                     data = await asyncio.get_event_loop().run_in_executor(
-                        None, lambda fp=file_path: json.loads(fp.read_text())
+                        None, lambda fp=file_path: json.loads(fp.read_text())  # type: ignore
                     )
 
                     summary = ConversationSummary(**data["summary"])
@@ -300,7 +300,7 @@ class DiskStorage(ConversationStorage):
         if limit:
             messages = messages[offset : offset + limit]
 
-        return messages
+        return messages  # type: ignore  # type: ignore
 
 
 class RedisStorage(ConversationStorage):
@@ -313,8 +313,8 @@ class RedisStorage(ConversationStorage):
         db: int = 0,
         password: Optional[str] = None,
         prefix: str = "justllms:conversations:",
-        **redis_kwargs,
-    ):
+        **redis_kwargs: Any,
+    ) -> None:
         self.host = host
         self.port = port
         self.db = db
@@ -440,7 +440,7 @@ class RedisStorage(ConversationStorage):
         """Delete a conversation."""
         key = self._make_key(conversation_id)
         result = await self.redis.delete(key)
-        return result > 0
+        return result > 0  # type: ignore
 
     async def save_message(self, conversation_id: str, message: ConversationMessage) -> None:
         """Save a single message to a conversation."""
@@ -469,4 +469,4 @@ class RedisStorage(ConversationStorage):
         if limit:
             messages = messages[offset : offset + limit]
 
-        return messages
+        return messages  # type: ignore

@@ -31,11 +31,11 @@ class MetricsCollector:
         self.custom_attributes = custom_attributes or {}
 
         # In-memory metrics storage
-        self.request_count = defaultdict(int)
-        self.error_count = defaultdict(int)
-        self.token_count = defaultdict(int)
-        self.latency_sum = defaultdict(float)
-        self.latency_count = defaultdict(int)
+        self.request_count: Dict[str, int] = defaultdict(int)
+        self.error_count: Dict[str, int] = defaultdict(int)
+        self.token_count: Dict[str, int] = defaultdict(int)
+        self.latency_sum: Dict[str, float] = defaultdict(float)
+        self.latency_count: Dict[str, int] = defaultdict(int)
         self.cache_hits = 0
         self.cache_misses = 0
 

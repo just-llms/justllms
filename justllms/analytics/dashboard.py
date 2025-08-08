@@ -30,10 +30,10 @@ class AnalyticsDashboard:
         self.cost_tracker = cost_tracker
 
         # In-memory aggregated data (for when no external collectors available)
-        self._request_data = []
-        self._cost_data = []
-        self._error_data = []
-        self._latency_data = []
+        self._request_data: List[Dict[str, Any]] = []
+        self._cost_data: List[Dict[str, Any]] = []
+        self._error_data: List[Dict[str, Any]] = []
+        self._latency_data: List[Dict[str, Any]] = []
         self._cache_data = {"hits": 0, "misses": 0}
 
     def add_request_data(
@@ -263,7 +263,7 @@ class AnalyticsDashboard:
 
     def _calculate_provider_stats(self, data: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
         """Calculate detailed stats for each provider."""
-        stats = defaultdict(
+        stats: Dict[str, Dict[str, Any]] = defaultdict(
             lambda: {
                 "requests": 0,
                 "tokens": 0,
@@ -288,15 +288,15 @@ class AnalyticsDashboard:
                 stats[provider]["latency_count"] += 1
 
         # Calculate derived metrics
-        for provider, data in stats.items():
-            data["success_rate"] = (
-                ((data["requests"] - data["errors"]) / data["requests"] * 100)
-                if data["requests"] > 0
+        for provider, provider_data in stats.items():
+            provider_data["success_rate"] = (
+                ((provider_data["requests"] - provider_data["errors"]) / provider_data["requests"] * 100)
+                if provider_data["requests"] > 0
                 else 0.0
             )
-            data["cost_per_token"] = data["cost"] / data["tokens"] if data["tokens"] > 0 else 0.0
-            data["avg_latency"] = (
-                data["latency_sum"] / data["latency_count"] if data["latency_count"] > 0 else 0.0
+            provider_data["cost_per_token"] = provider_data["cost"] / provider_data["tokens"] if provider_data["tokens"] > 0 else 0.0
+            provider_data["avg_latency"] = (
+                provider_data["latency_sum"] / provider_data["latency_count"] if provider_data["latency_count"] > 0 else 0.0
             )
 
         return dict(stats)
@@ -307,7 +307,7 @@ class AnalyticsDashboard:
         """Calculate detailed usage breakdown."""
         provider_stats = {}
         model_stats = {}
-        request_type_counts = defaultdict(int)
+        request_type_counts: Dict[str, int] = defaultdict(int)
 
         # Calculate provider stats
         provider_data = defaultdict(list)

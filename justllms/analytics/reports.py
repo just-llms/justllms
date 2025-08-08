@@ -5,7 +5,7 @@ import io
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
 
 try:
     from reportlab.graphics.charts.linecharts import HorizontalLineChart
@@ -78,15 +78,15 @@ class CSVExporter(ReportExporter):
         metrics = report.cross_provider_metrics
         csv_data.extend(
             [
-                ["Total Requests", metrics.total_requests],
-                ["Total Tokens", metrics.total_tokens],
+                ["Total Requests", str(metrics.total_requests)],
+                ["Total Tokens", str(metrics.total_tokens)],
                 ["Total Cost", f"${metrics.total_cost:.4f}"],
-                ["Total Errors", metrics.total_errors],
+                ["Total Errors", str(metrics.total_errors)],
                 ["Success Rate", f"{metrics.overall_success_rate:.2f}%"],
                 ["Average Cost per Request", f"${metrics.average_cost_per_request:.4f}"],
                 ["Average Cost per Token", f"${metrics.average_cost_per_token:.6f}"],
-                ["Unique Providers", metrics.unique_providers],
-                ["Unique Models", metrics.unique_models],
+                ["Unique Providers", str(metrics.unique_providers)],
+                ["Unique Models", str(metrics.unique_models)],
                 ["Cache Hit Rate", f"{metrics.cache_hit_rate:.2f}%"],
                 ["Average Latency (ms)", f"{metrics.average_latency_ms:.2f}"],
                 ["Most Used Provider", metrics.most_used_provider or "N/A"],
@@ -117,10 +117,10 @@ class CSVExporter(ReportExporter):
             csv_data.append(
                 [
                     provider,
-                    stats.total_requests,
-                    stats.total_tokens,
+                    str(stats.total_requests),
+                    str(stats.total_tokens),
                     f"${stats.total_cost:.4f}",
-                    stats.error_count,
+                    str(stats.error_count),
                     f"{stats.success_rate:.2f}%",
                     f"{stats.average_latency_ms:.2f}",
                     f"${stats.cost_per_token:.6f}",
@@ -145,18 +145,18 @@ class CSVExporter(ReportExporter):
             ]
         )
 
-        for model_key, stats in report.usage_breakdown.by_model.items():
+        for model_key, model_stats in report.usage_breakdown.by_model.items():
             csv_data.append(
                 [
-                    stats.provider,
-                    stats.model,
-                    stats.total_requests,
-                    stats.total_tokens,
-                    f"${stats.total_cost:.4f}",
-                    stats.error_count,
-                    f"{stats.success_rate:.2f}%",
-                    f"{stats.average_latency_ms:.2f}",
-                    f"${stats.cost_per_token:.6f}",
+                    model_stats.provider,
+                    model_stats.model,
+                    str(model_stats.total_requests),
+                    str(model_stats.total_tokens),
+                    f"${model_stats.total_cost:.4f}",
+                    str(model_stats.error_count),
+                    f"{model_stats.success_rate:.2f}%",
+                    f"{model_stats.average_latency_ms:.2f}",
+                    f"${model_stats.cost_per_token:.6f}",
                 ]
             )
         csv_data.append([])
@@ -172,10 +172,10 @@ class CSVExporter(ReportExporter):
                 csv_data.append(
                     [
                         point.timestamp.isoformat(),
-                        point.requests,
-                        point.tokens,
+                        str(point.requests),
+                        str(point.tokens),
                         f"${point.cost:.4f}",
-                        point.errors,
+                        str(point.errors),
                         f"{point.latency_ms:.2f}",
                     ]
                 )
@@ -191,8 +191,8 @@ class CSVExporter(ReportExporter):
                     [
                         model.provider,
                         model.model,
-                        model.total_requests,
-                        model.total_tokens,
+                        str(model.total_requests),
+                        str(model.total_tokens),
                         f"${model.total_cost:.4f}",
                         f"{model.success_rate:.2f}%",
                     ]
@@ -272,7 +272,7 @@ class PDFExporter(ReportExporter):
         )
 
         # Build PDF content
-        story = []
+        story: List[Any] = []
 
         # Title page
         self._add_title_page(story, report)

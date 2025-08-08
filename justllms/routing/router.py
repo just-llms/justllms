@@ -24,7 +24,7 @@ class Router:
         fallback_model: Optional[str] = None,
     ):
         # Handle both dict and RoutingConfig object
-        if hasattr(config, "model_dump"):
+        if config is not None and hasattr(config, "model_dump"):
             # It's a Pydantic model, convert to dict
             self.config = config.model_dump()
         else:

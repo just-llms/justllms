@@ -95,7 +95,7 @@ class OpenAIProvider(BaseProvider):
         formatted = []
 
         for msg in messages:
-            formatted_msg = {
+            formatted_msg: Dict[str, Any] = {
                 "role": msg.role.value,
                 "content": msg.content,
             }

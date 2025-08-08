@@ -75,7 +75,7 @@ class AzureOpenAIProvider(BaseProvider):
     def name(self) -> str:
         return "azure_openai"
 
-    def __init__(self, config):
+    def __init__(self, config: Any) -> None:
         """Initialize Azure OpenAI provider with required Azure-specific config."""
         super().__init__(config)
 
@@ -116,7 +116,7 @@ class AzureOpenAIProvider(BaseProvider):
     def _get_headers(self) -> Dict[str, str]:
         """Get request headers for Azure OpenAI."""
         headers = {
-            "api-key": self.config.api_key,
+            "api-key": self.config.api_key or "",
             "Content-Type": "application/json",
         }
 
@@ -127,7 +127,7 @@ class AzureOpenAIProvider(BaseProvider):
         """Get Azure deployment name for a model."""
         # Check if user provided custom deployment mapping
         if self.deployment_mapping and model in self.deployment_mapping:
-            return self.deployment_mapping[model]
+            return str(self.deployment_mapping[model])
 
         # Default: use model name as deployment name
         # Azure often uses different naming (e.g., gpt-35-turbo instead of gpt-3.5-turbo)
@@ -156,7 +156,7 @@ class AzureOpenAIProvider(BaseProvider):
         formatted = []
 
         for msg in messages:
-            formatted_msg = {
+            formatted_msg: Dict[str, Any] = {
                 "role": msg.role.value,
                 "content": msg.content,
             }

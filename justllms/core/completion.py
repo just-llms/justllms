@@ -183,7 +183,7 @@ class Completion:
             raise ValueError("Messages list cannot be empty - at least one message is required")
 
         if isinstance(messages[0], Message):
-            return messages
+            return messages  # type: ignore
 
         formatted = []
         for msg in messages:

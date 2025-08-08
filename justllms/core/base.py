@@ -35,7 +35,7 @@ class BaseResponse(ABC):
             if isinstance(content, str):
                 return content
             elif isinstance(content, list) and content:
-                return content[0].get("text", "")
+                return str(content[0].get("text", ""))
         return None
 
     @property
@@ -80,7 +80,7 @@ class BaseProvider(ABC):
         pass
 
     @abstractmethod
-    async def astream(
+    def astream(
         self,
         messages: List[Message],
         model: str,
@@ -123,6 +123,6 @@ class BaseProvider(ABC):
         prompt_cost = (usage.prompt_tokens / 1000) * model_info.cost_per_1k_prompt_tokens
         completion_cost = (
             usage.completion_tokens / 1000
-        ) * model_info.cost_per_1k_completion_tokens
+        ) * (model_info.cost_per_1k_completion_tokens or 0)
 
         return prompt_cost + completion_cost

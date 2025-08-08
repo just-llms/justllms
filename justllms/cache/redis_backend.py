@@ -30,8 +30,8 @@ class RedisCacheBackend(BaseCacheBackend):
         connection_pool: Optional[redis.ConnectionPool] = None,
         redis_url: Optional[str] = None,
         serialize_method: str = "pickle",  # "pickle" or "json"
-        **redis_kwargs,
-    ):
+        **redis_kwargs: Any,
+    ) -> None:
         if not REDIS_AVAILABLE:
             raise ImportError(
                 "Redis support requires the 'redis' package. " "Install with: pip install redis"
@@ -217,14 +217,14 @@ class RedisCacheBackend(BaseCacheBackend):
     def ping(self) -> bool:
         """Test Redis connection."""
         try:
-            return self.client.ping()
+            return self.client.ping()  # type: ignore
         except Exception:
             return False
 
     async def aping(self) -> bool:
         """Test async Redis connection."""
         try:
-            return await self.async_client.ping()
+            return await self.async_client.ping()  # type: ignore
         except Exception:
             return False
 

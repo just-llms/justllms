@@ -7,7 +7,7 @@ import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from justllms.core.base import BaseProvider, BaseResponse
-from justllms.core.models import Choice, Message, ModelInfo, Usage
+from justllms.core.models import Choice, Message, ModelInfo, Role, Usage
 from justllms.exceptions import ProviderError
 
 
@@ -138,16 +138,16 @@ class GoogleProvider(BaseProvider):
                                 parts.append(
                                     {
                                         "inline_data": {
-                                            "mime_type": image_data.get("mime_type", "image/jpeg"),
-                                            "data": image_data.get("data", ""),
-                                        }
+                                            "mime_type": str(image_data.get("mime_type", "image/jpeg")),
+                                            "data": str(image_data.get("data", "")),
+                                        }  # type: ignore
                                     }
                                 )
 
                 contents.append({"role": role, "parts": parts})
 
         # Build request
-        request_data = {"contents": contents}
+        request_data: Dict[str, Any] = {"contents": contents}
 
         if system_instruction:
             request_data["systemInstruction"] = {"parts": [{"text": system_instruction}]}
@@ -194,7 +194,7 @@ class GoogleProvider(BaseProvider):
 
         # Create message
         message = Message(
-            role="assistant",
+            role=Role.ASSISTANT,
             content=text_content,
         )
 
@@ -238,7 +238,7 @@ class GoogleProvider(BaseProvider):
     def _get_params(self) -> Dict[str, str]:
         """Get query parameters."""
         return {
-            "key": self.config.api_key,
+            "key": self.config.api_key or "",
         }
 
     @retry(
@@ -352,7 +352,7 @@ class GoogleProvider(BaseProvider):
             ) as response:
                 if response.status_code != 200:
                     raise ProviderError(
-                        f"Gemini API error: {response.status_code} - {response.read()}"
+                        f"Gemini API error: {response.status_code} - {response.read().decode('utf-8', errors='ignore')}"
                     )
 
                 # Buffer for accumulating partial lines
@@ -392,7 +392,7 @@ class GoogleProvider(BaseProvider):
 
                                 for part in parts:
                                     if "text" in part:
-                                        message = Message(role="assistant", content=part["text"])
+                                        message = Message(role=Role.ASSISTANT, content=part["text"])
                                         choice = Choice(
                                             index=0,
                                             message=message,
@@ -483,7 +483,7 @@ class GoogleProvider(BaseProvider):
 
                                 for part in parts:
                                     if "text" in part:
-                                        message = Message(role="assistant", content=part["text"])
+                                        message = Message(role=Role.ASSISTANT, content=part["text"])
                                         choice = Choice(
                                             index=0,
                                             message=message,

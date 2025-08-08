@@ -13,8 +13,8 @@ try:
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
-    Console = None
-    RichHandler = None
+    Console = None  # type: ignore
+    RichHandler = None  # type: ignore
 
 
 class LogLevel(str, Enum):
@@ -58,7 +58,7 @@ class JustLLMsLogger:
         # Console handler
         if self.console_output:
             if self.rich_formatting and RICH_AVAILABLE:
-                console_handler = RichHandler(
+                console_handler: logging.Handler = RichHandler(
                     rich_tracebacks=True,
                     tracebacks_show_locals=True,
                 )

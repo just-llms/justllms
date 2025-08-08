@@ -12,6 +12,7 @@ from justllms.health.models import (
     HealthResult,
     HealthStatus,
 )
+from justllms.exceptions import ProviderError
 
 
 class EndpointHealthChecker:
@@ -85,19 +86,18 @@ class EndpointHealthChecker:
         tasks = [self.check(provider, confirm_spend=False) for provider in providers]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        return {
-            providers[i]: (
-                result
-                if not isinstance(result, Exception)
-                else HealthResult(
+        health_results = {}
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                health_results[providers[i]] = HealthResult(
                     provider=providers[i],
                     status=HealthStatus.DOWN,
                     method=HealthCheckMethod.LLM_REQUEST,
                     error_message=str(result),
                 )
-            )
-            for i, result in enumerate(results)
-        }
+            else:
+                health_results[providers[i]] = result  # type: ignore
+        return health_results
 
     def estimate_cost(self, provider: str) -> float:
         """Estimate cost of health check for a provider."""
@@ -144,25 +144,31 @@ class EndpointHealthChecker:
         if provider in ["openai", "anthropic", "grok", "deepseek"]:
             # These use messages format
             messages = [{"role": "user", "content": config.get("test_prompt", "Hi")}]
-            response = await self.client.completion.acreate(
-                provider=provider,
-                model=config.get("model"),
-                messages=messages,
-                max_tokens=config.get("max_tokens", 1),
-                temperature=config.get("temperature", 0),
-                timeout=config.get("timeout", 10),
-            )
+            if self.client:
+                response = await self.client.completion.acreate(
+                    provider=provider,
+                    model=config.get("model"),
+                    messages=messages,
+                    max_tokens=config.get("max_tokens", 1),
+                    temperature=config.get("temperature", 0),
+                    timeout=config.get("timeout", 10),
+                )
+            else:
+                raise ProviderError("Client not available")
         elif provider == "google":
             # Google uses different format
             messages = [{"role": "user", "content": config.get("test_prompt", "Hi")}]
-            response = await self.client.completion.acreate(
-                provider="google",
-                model=config.get("model"),
-                messages=messages,
-                max_tokens=config.get("max_tokens", 1),
-                temperature=config.get("temperature", 0),
-                timeout=config.get("timeout", 10),
-            )
+            if self.client:
+                response = await self.client.completion.acreate(
+                    provider="google",
+                    model=config.get("model"),
+                    messages=messages,
+                    max_tokens=config.get("max_tokens", 1),
+                    temperature=config.get("temperature", 0),
+                    timeout=config.get("timeout", 10),
+                )
+            else:
+                raise ProviderError("Client not available")
         else:
             raise ValueError(f"Unsupported provider: {provider}")
 

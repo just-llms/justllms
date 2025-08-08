@@ -7,7 +7,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-from justllms.core.models import Message, Usage
+from justllms.core.models import Message, Role, Usage
 
 
 class ConversationState(str, Enum):
@@ -26,55 +26,57 @@ class ConversationMessage(BaseModel):
     role: str = Field(..., description="Message role (user, assistant, system)")
     content: str = Field(..., description="Message content")
     timestamp: float = Field(default_factory=time.time)
-    model: Optional[str] = Field(None, description="Model that generated this message")
-    provider: Optional[str] = Field(None, description="Provider that generated this message")
-    usage: Optional[Usage] = Field(None, description="Token usage for this message")
+    model: Optional[str] = Field(default=None, description="Model that generated this message")
+    provider: Optional[str] = Field(default=None, description="Provider that generated this message")
+    usage: Optional[Usage] = Field(default=None, description="Token usage for this message")
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
     def to_message(self) -> Message:
         """Convert to core Message object."""
-        return Message(role=self.role, content=self.content)
+        return Message(role=Role(self.role), content=self.content)
 
     @classmethod
-    def from_message(cls, message: Message, **kwargs) -> "ConversationMessage":
+    def from_message(cls, message: Message, **kwargs: Any) -> "ConversationMessage":
         """Create from core Message object."""
-        return cls(role=message.role, content=message.content, **kwargs)
+        # Convert complex content to string for conversation storage
+        content_str = message.content if isinstance(message.content, str) else str(message.content)
+        return cls(role=message.role.value, content=content_str, **kwargs)
 
 
 class ConversationConfig(BaseModel):
     """Configuration for a conversation."""
 
     # Model settings
-    default_model: Optional[str] = Field(None, description="Default model for the conversation")
+    default_model: Optional[str] = Field(default=None, description="Default model for the conversation")
     default_provider: Optional[str] = Field(
-        None, description="Default provider for the conversation"
+        default=None, description="Default provider for the conversation"
     )
-    system_prompt: Optional[str] = Field(None, description="System prompt for the conversation")
+    system_prompt: Optional[str] = Field(default=None, description="System prompt for the conversation")
 
     # Context management
-    max_context_tokens: Optional[int] = Field(8000, description="Maximum context window tokens")
+    max_context_tokens: Optional[int] = Field(default=8000, description="Maximum context window tokens")
     context_strategy: str = Field(
-        "truncate", description="Context management strategy: truncate, summarize, compress"
+        default="truncate", description="Context management strategy: truncate, summarize, compress"
     )
     context_compression_ratio: float = Field(
-        0.7, description="Target compression ratio when using compress strategy"
+        default=0.7, description="Target compression ratio when using compress strategy"
     )
-    keep_system_prompt: bool = Field(True, description="Always keep system prompt in context")
+    keep_system_prompt: bool = Field(default=True, description="Always keep system prompt in context")
 
     # Conversation behavior
-    auto_save: bool = Field(True, description="Automatically save conversation state")
-    auto_title: bool = Field(True, description="Automatically generate conversation title")
-    enable_analytics: bool = Field(True, description="Track conversation analytics")
+    auto_save: bool = Field(default=True, description="Automatically save conversation state")
+    auto_title: bool = Field(default=True, description="Automatically generate conversation title")
+    enable_analytics: bool = Field(default=True, description="Track conversation analytics")
 
     # Storage settings
-    storage_backend: str = Field("memory", description="Storage backend: memory, disk, redis")
+    storage_backend: str = Field(default="memory", description="Storage backend: memory, disk, redis")
     storage_config: Dict[str, Any] = Field(
         default_factory=dict, description="Storage backend configuration"
     )
 
     # Advanced features
-    enable_branching: bool = Field(False, description="Allow conversation branching")
-    enable_multi_model: bool = Field(True, description="Allow switching models within conversation")
+    enable_branching: bool = Field(default=False, description="Allow conversation branching")
+    enable_multi_model: bool = Field(default=True, description="Allow switching models within conversation")
 
     class Config:
         extra = "allow"
@@ -136,7 +138,7 @@ class ConversationAnalytics(BaseModel):
     created_at: float = Field(default_factory=time.time)
     updated_at: float = Field(default_factory=time.time)
 
-    def update_from_message(self, message: ConversationMessage, response_time: float = 0.0):
+    def update_from_message(self, message: ConversationMessage, response_time: float = 0.0) -> None:
         """Update analytics from a new message."""
         self.total_messages += 1
         self.updated_at = time.time()
@@ -171,7 +173,7 @@ class ConversationAnalytics(BaseModel):
             self.response_times.append(response_time)
             self.average_response_time = sum(self.response_times) / len(self.response_times)
 
-    def calculate_conversation_duration(self, start_time: float):
+    def calculate_conversation_duration(self, start_time: float) -> None:
         """Calculate total conversation duration."""
         self.conversation_duration = self.updated_at - start_time
 

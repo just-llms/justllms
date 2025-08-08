@@ -214,7 +214,7 @@ class BusinessRuleEngine:
 
         # Sort by position (reverse order)
         all_modifications = redact_violations + replace_violations
-        all_modifications.sort(key=lambda v: v.match_location.get("start", 0), reverse=True)
+        all_modifications.sort(key=lambda v: (v.match_location or {}).get("start", 0), reverse=True)
 
         for violation in all_modifications:
             if not violation.match_location:
@@ -314,7 +314,7 @@ class BusinessRuleEngine:
         """Get detailed explanation of validation results."""
         result = await self.validate(content, context)
 
-        explanation = {
+        explanation: Dict[str, Any] = {
             "content": content,
             "passed": result.passed,
             "total_rules_checked": len(self.config.get_enabled_rules()),

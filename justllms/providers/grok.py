@@ -7,7 +7,7 @@ import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from justllms.core.base import BaseProvider, BaseResponse
-from justllms.core.models import Choice, Message, ModelInfo, Usage
+from justllms.core.models import Choice, Message, ModelInfo, Role, Usage
 from justllms.exceptions import ProviderError
 
 
@@ -64,21 +64,22 @@ class GrokProvider(BaseProvider):
         formatted_messages = []
 
         for msg in messages:
-            formatted_msg = {"role": msg.role, "content": msg.content}
+            formatted_msg: Dict[str, Any] = {"role": msg.role.value, "content": msg.content}
 
             # Handle multimodal content if supported
             if isinstance(msg.content, list):
-                formatted_msg["content"] = []
+                content_list: List[Dict[str, Any]] = []
                 for item in msg.content:
                     if isinstance(item, dict):
                         if item.get("type") == "text":
-                            formatted_msg["content"].append(
+                            content_list.append(
                                 {"type": "text", "text": item.get("text", "")}
                             )
                         elif item.get("type") == "image":
-                            formatted_msg["content"].append(
+                            content_list.append(
                                 {"type": "image_url", "image_url": item.get("image", {})}
                             )
+                formatted_msg["content"] = content_list
 
             formatted_messages.append(formatted_msg)
 
@@ -286,7 +287,7 @@ class GrokProvider(BaseProvider):
                                 content = delta.get("content", "")
 
                                 if content:
-                                    message = Message(role="assistant", content=content)
+                                    message = Message(role=Role.ASSISTANT, content=content)
                                     choice = Choice(
                                         index=0,
                                         message=message,
@@ -358,7 +359,7 @@ class GrokProvider(BaseProvider):
                                 content = delta.get("content", "")
 
                                 if content:
-                                    message = Message(role="assistant", content=content)
+                                    message = Message(role=Role.ASSISTANT, content=content)
                                     choice = Choice(
                                         index=0,
                                         message=message,

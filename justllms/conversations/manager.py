@@ -151,7 +151,7 @@ class ConversationManager:
         if state:
             filters["state"] = state
         if tags:
-            filters["tags"] = tags
+            filters["tags"] = tags  # type: ignore
 
         return await self.storage.list_conversations(limit=limit, offset=offset, filters=filters)
 
@@ -199,7 +199,7 @@ class ConversationManager:
         """Get all active (cached) conversations."""
         return list(self._active_conversations.values())
 
-    def clear_cache(self):
+    def clear_cache(self) -> None:
         """Clear the active conversations cache."""
         self._active_conversations.clear()
 
@@ -237,7 +237,7 @@ class ConversationManager:
         total_cost = sum(conv.estimated_cost for conv in conversations)
 
         # Count by state
-        state_counts = {}
+        state_counts: Dict[str, int] = {}
         for conv in conversations:
             state_counts[conv.state.value] = state_counts.get(conv.state.value, 0) + 1
 
@@ -385,7 +385,7 @@ class ConversationManager:
         return conversation
 
     # Synchronous wrapper methods
-    def _run_async(self, coro):
+    def _run_async(self, coro: Any) -> Any:
         """Run an async coroutine and return result."""
         try:
             # Try to get existing event loop
@@ -407,11 +407,11 @@ class ConversationManager:
         **config_kwargs: Any,
     ) -> Conversation:
         """Create a new conversation (synchronous)."""
-        return self._run_async(self.create(conversation_id, config, **config_kwargs))
+        return self._run_async(self.create(conversation_id, config, **config_kwargs))  # type: ignore
 
     def get_sync(self, conversation_id: str) -> Optional[Conversation]:
         """Get a conversation by ID (synchronous)."""
-        return self._run_async(self.get(conversation_id))
+        return self._run_async(self.get(conversation_id))  # type: ignore
 
     def list_sync(
         self,
@@ -421,11 +421,11 @@ class ConversationManager:
         tags: Optional[List[str]] = None,
     ) -> List[ConversationSummary]:
         """List conversations with optional filtering (synchronous)."""
-        return self._run_async(self.list(limit, offset, state, tags))
+        return self._run_async(self.list(limit, offset, state, tags))  # type: ignore
 
     def delete_sync(self, conversation_id: str) -> bool:
         """Delete a conversation (synchronous)."""
-        return self._run_async(self.delete(conversation_id))
+        return self._run_async(self.delete(conversation_id))  # type: ignore
 
     def search_sync(
         self,
@@ -435,7 +435,7 @@ class ConversationManager:
         limit: Optional[int] = None,
     ) -> List[ConversationSummary]:
         """Search conversations (synchronous)."""
-        return self._run_async(self.search(query, tags, state, limit))
+        return self._run_async(self.search(query, tags, state, limit))  # type: ignore
 
     def archive_old_conversations_sync(
         self,
@@ -443,20 +443,20 @@ class ConversationManager:
         state_filter: Optional[ConversationState] = ConversationState.COMPLETED,
     ) -> int:
         """Archive conversations older than threshold (synchronous)."""
-        return self._run_async(self.archive_old_conversations(days_threshold, state_filter))
+        return self._run_async(self.archive_old_conversations(days_threshold, state_filter))  # type: ignore
 
     def get_analytics_summary_sync(self) -> Dict[str, Any]:
         """Get analytics summary across all conversations (synchronous)."""
-        return self._run_async(self.get_analytics_summary())
+        return self._run_async(self.get_analytics_summary())  # type: ignore
 
     def export_conversation_sync(
         self, conversation_id: str, format: str = "json"
     ) -> Optional[Union[Dict[str, Any], str]]:
         """Export a conversation in the specified format (synchronous)."""
-        return self._run_async(self.export_conversation(conversation_id, format))
+        return self._run_async(self.export_conversation(conversation_id, format))  # type: ignore
 
     def import_conversation_sync(
         self, data: Dict[str, Any], conversation_id: Optional[str] = None
     ) -> Conversation:
         """Import a conversation from exported data (synchronous)."""
-        return self._run_async(self.import_conversation(data, conversation_id))
+        return self._run_async(self.import_conversation(data, conversation_id))  # type: ignore

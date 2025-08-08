@@ -6,7 +6,7 @@ import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from justllms.core.base import BaseProvider, BaseResponse
-from justllms.core.models import Choice, Message, ModelInfo, Usage
+from justllms.core.models import Choice, Message, ModelInfo, Role, Usage
 from justllms.exceptions import ProviderError
 
 
@@ -68,7 +68,7 @@ class AnthropicProvider(BaseProvider):
     def _get_headers(self) -> Dict[str, str]:
         """Get request headers."""
         headers = {
-            "x-api-key": self.config.api_key,
+            "x-api-key": self.config.api_key or "",
             "anthropic-version": self.config.api_version or "2023-06-01",
             "content-type": "application/json",
         }
@@ -106,7 +106,7 @@ class AnthropicProvider(BaseProvider):
                 break
 
         message = Message(
-            role="assistant",
+            role=Role.ASSISTANT,
             content=text_content,
         )
 
@@ -284,7 +284,7 @@ class AnthropicProvider(BaseProvider):
                             elif chunk.get("type") == "content_block_delta":
                                 text = chunk.get("delta", {}).get("text", "")
                                 if text:
-                                    message = Message(role="assistant", content=text)
+                                    message = Message(role=Role.ASSISTANT, content=text)
                                     choice = Choice(index=0, message=message)
                                     yield AnthropicResponse(
                                         id=chunk.get("id", ""),
@@ -350,7 +350,7 @@ class AnthropicProvider(BaseProvider):
                             elif chunk.get("type") == "content_block_delta":
                                 text = chunk.get("delta", {}).get("text", "")
                                 if text:
-                                    message = Message(role="assistant", content=text)
+                                    message = Message(role=Role.ASSISTANT, content=text)
                                     choice = Choice(index=0, message=message)
                                     yield AnthropicResponse(
                                         id=chunk.get("id", ""),

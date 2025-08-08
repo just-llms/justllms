@@ -197,7 +197,7 @@ class DiskCacheBackend(BaseCacheBackend):
         """Close the cache (cleanup)."""
         self.cache.close()
 
-    def __del__(self):
+    def __del__(self) -> None:
         """Cleanup on deletion."""
         try:
             self.close()

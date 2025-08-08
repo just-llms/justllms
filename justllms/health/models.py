@@ -186,7 +186,7 @@ class HealthConfig(BaseModel):
 class HealthCheckCache:
     """Simple in-memory cache for health check results."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._cache: Dict[str, tuple[HealthResult, float]] = {}
 
     def get(self, key: str, max_age_seconds: int = 300) -> Optional[HealthResult]:

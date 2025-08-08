@@ -74,7 +74,7 @@ class RetryHandler:
 
         return max(0, delay)
 
-    def create_decorator(self):
+    def create_decorator(self) -> Any:
         """Create a tenacity retry decorator with this configuration."""
         if self.jitter:
             wait_strategy = wait_random_exponential(
@@ -82,7 +82,7 @@ class RetryHandler:
                 max=self.max_delay,
             )
         else:
-            wait_strategy = wait_exponential(
+            wait_strategy = wait_exponential(  # type: ignore
                 multiplier=self.initial_delay,
                 max=self.max_delay,
             )
@@ -121,7 +121,10 @@ class RetryHandler:
                 delay = self.get_retry_delay(attempt)
                 time.sleep(delay)
 
-        raise last_exception
+        if last_exception:
+            raise last_exception
+        else:
+            raise RuntimeError("Retry failed with no exception captured")
 
     async def async_retry(
         self,
@@ -135,9 +138,9 @@ class RetryHandler:
         for attempt in range(1, self.max_attempts + 1):
             try:
                 if asyncio.iscoroutinefunction(func):
-                    return await func(*args, **kwargs)
+                    return await func(*args, **kwargs)  # type: ignore
                 else:
-                    return func(*args, **kwargs)
+                    return func(*args, **kwargs)  # type: ignore
             except Exception as e:
                 last_exception = e
 
@@ -147,7 +150,10 @@ class RetryHandler:
                 delay = self.get_retry_delay(attempt)
                 await asyncio.sleep(delay)
 
-        raise last_exception
+        if last_exception:
+            raise last_exception
+        else:
+            raise RuntimeError("Retry failed with no exception captured")
 
 
 def exponential_backoff(

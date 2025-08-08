@@ -33,8 +33,8 @@ class TokenCounter:
         "korean": 2,
     }
 
-    def __init__(self):
-        self._encodings = {}
+    def __init__(self) -> None:
+        self._encodings: Dict[str, Any] = {}
 
     def _get_encoding(self, model: str) -> Optional[Any]:
         """Get the encoding for a model."""

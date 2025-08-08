@@ -22,7 +22,7 @@ class Monitor:
         metrics_collector: Optional[MetricsCollector] = None,
     ):
         # Handle both dict and MonitoringConfig object
-        if hasattr(config, "model_dump"):
+        if config is not None and hasattr(config, "model_dump"):
             # It's a Pydantic model, convert to dict
             self.config = config.model_dump()
         else:

@@ -136,6 +136,10 @@ class Client:
                 providers=self.providers,
                 **kwargs,
             )
+        
+        # Ensure model is not None
+        if not model:
+            raise ValueError("Model is required")
 
         # Start monitoring with proper provider/model info
         request_id = self.monitor.start_request(
@@ -170,7 +174,7 @@ class Client:
 
             # Calculate estimated cost if usage is available
             if response.usage:
-                estimated_cost = prov.estimate_cost(response.usage, model)
+                estimated_cost = prov.estimate_cost(response.usage, model)  # type: ignore
                 if estimated_cost is not None:
                     response.usage.estimated_cost = estimated_cost
 
@@ -213,6 +217,10 @@ class Client:
                 providers=self.providers,
                 **kwargs,
             )
+        
+        # Ensure model is not None
+        if not model:
+            raise ValueError("Model is required")
 
         # Start monitoring with proper provider/model info
         request_id = self.monitor.start_request(
@@ -292,6 +300,10 @@ class Client:
                     providers=self.providers,
                     **kwargs,
                 )
+            
+            # Ensure model is not None
+            if not model:
+                raise ValueError("Model is required")
 
             if provider not in self.providers:
                 raise ProviderError(f"Provider '{provider}' not found")
@@ -335,6 +347,10 @@ class Client:
                     providers=self.providers,
                     **kwargs,
                 )
+            
+            # Ensure model is not None
+            if not model:
+                raise ValueError("Model is required")
 
             if provider not in self.providers:
                 raise ProviderError(f"Provider '{provider}' not found")

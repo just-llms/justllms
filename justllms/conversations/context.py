@@ -1,6 +1,6 @@
 """Context window management for conversations."""
 
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 import tiktoken
 
@@ -207,8 +207,8 @@ class ContextManager:
         """Get statistics about the current context."""
         total_tokens = self.count_conversation_tokens(messages)
 
-        role_counts = {}
-        role_tokens = {}
+        role_counts: Dict[str, int] = {}
+        role_tokens: Dict[str, int] = {}
 
         for message in messages:
             role = message.role

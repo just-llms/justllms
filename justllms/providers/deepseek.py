@@ -7,7 +7,7 @@ import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from justllms.core.base import BaseProvider, BaseResponse
-from justllms.core.models import Choice, Message, ModelInfo, Usage
+from justllms.core.models import Choice, Message, ModelInfo, Role, Usage
 from justllms.exceptions import ProviderError
 
 
@@ -282,7 +282,7 @@ class DeepSeekProvider(BaseProvider):
                                 content = delta.get("content", "")
 
                                 if content:
-                                    message = Message(role="assistant", content=content)
+                                    message = Message(role=Role.ASSISTANT, content=content)
                                     choice = Choice(
                                         index=0,
                                         message=message,
@@ -358,7 +358,7 @@ class DeepSeekProvider(BaseProvider):
                                 content = delta.get("content", "")
 
                                 if content:
-                                    message = Message(role="assistant", content=content)
+                                    message = Message(role=Role.ASSISTANT, content=content)
                                     choice = Choice(
                                         index=0,
                                         message=message,

@@ -308,7 +308,7 @@ class QualityOptimizedStrategy(RoutingStrategy):
 class TaskBasedStrategy(RoutingStrategy):
     """Select model based on task type detection."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.task_patterns = {
             "code": ["code", "function", "class", "debug", "implement", "program"],
             "analysis": ["analyze", "explain", "understand", "compare", "evaluate"],
