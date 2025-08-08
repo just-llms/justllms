@@ -1,0 +1,66 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.manifest
+*.spec
+
+
+
+# Environments
+.env
+.venv
+env/
+venv/
+.claude
+.vscode/
+
+# JustLLMs specific
+*.csv
+*.pdf
+test_*.py
+demo_*.py
+debug_*.py
+simple_*.py
+comprehensive_test.py
+
+# Screenshots and temporary files
+*.png
+*.jpg
+*.jpeg
+*.gif
+temp/
+tmp/
+.DS_Store
+
+# API keys and secrets
+.env.local
+config.json
+secrets.json
+
+# Cache directories
+redis_cache/
+disk_cache/
+
+# Test results and reports
+test_results/
+analytics_reports/
+conversation_exports/

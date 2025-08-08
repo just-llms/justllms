@@ -1,0 +1,77 @@
+# Example configuration file for JustLLMs
+
+# Provider configurations
+providers:
+  openai:
+    enabled: true
+    api_key: ${OPENAI_API_KEY}  # Will be loaded from environment
+    timeout: 30.0
+    max_retries: 3
+    
+  anthropic:
+    enabled: true
+    api_key: ${ANTHROPIC_API_KEY}
+    timeout: 30.0
+    max_retries: 3
+    
+  google:
+    enabled: true
+    api_key: ${GOOGLE_API_KEY}  # or ${GEMINI_API_KEY}
+    timeout: 30.0
+    max_retries: 3
+    # api_base: https://generativelanguage.googleapis.com  # Default
+
+# Routing configuration
+routing:
+  strategy: "cost"  # Options: cost, latency, quality, task
+  fallback_provider: "openai"
+  fallback_model: "gpt-3.5-turbo"
+  
+  strategy_configs:
+    cost:
+      max_cost_per_1k_tokens: 0.01
+      min_context_length: 4000
+      require_vision: false
+      require_functions: false
+    
+    quality:
+      min_quality_tier: "standard"
+      max_cost_per_1k_tokens: 0.05
+    
+    latency:
+      max_latency_ms: 5000
+      prefer_local: false
+
+# Cache configuration
+cache:
+  enabled: true
+  backend: "disk"  # Options: memory, disk
+  ttl: 3600  # 1 hour
+  ignore_params:
+    - "user"
+    - "seed"
+  
+  backend_config:
+    cache_dir: "~/.justllms/cache"
+    size_limit: 1000000000  # 1GB
+
+# Monitoring configuration
+monitoring:
+  logging:
+    level: "INFO"
+    console_output: true
+    file_output: "~/.justllms/logs/justllms.log"
+    rich_formatting: true
+  
+  cost_tracking:
+    persist_path: "~/.justllms/costs.json"
+    budget_daily: 10.0
+    budget_monthly: 100.0
+    budget_per_request: 0.10
+  
+  metrics:
+    enable_opentelemetry: false
+    export_interval: 60
+    custom_attributes:
+      app_name: "my_app"
+      environment: "production"
