@@ -2,27 +2,33 @@
 
 from .engine import BusinessRuleEngine
 from .models import (
-    ValidationConfig, 
-    ValidationResult, 
     BusinessRule,
-    ValidationAction,
-    RuleType,
     RuleSeverity,
-    RuleViolation
+    RuleType,
+    RuleViolation,
+    ValidationAction,
+    ValidationConfig,
+    ValidationResult,
 )
-from .processors import KeywordProcessor, PatternMatcher, ExactMatcher, TopicClassifier, IntentClassifier
+from .processors import (
+    ExactMatcher,
+    IntentClassifier,
+    KeywordProcessor,
+    PatternMatcher,
+    TopicClassifier,
+)
 
 __all__ = [
     "BusinessRuleEngine",
-    "ValidationConfig", 
+    "ValidationConfig",
     "ValidationResult",
     "BusinessRule",
     "ValidationAction",
-    "RuleType", 
+    "RuleType",
     "RuleSeverity",
     "RuleViolation",
     "KeywordProcessor",
-    "PatternMatcher", 
+    "PatternMatcher",
     "ExactMatcher",
     "TopicClassifier",
     "IntentClassifier",

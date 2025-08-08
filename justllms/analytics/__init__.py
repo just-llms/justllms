@@ -15,7 +15,7 @@ __all__ = [
     "AnalyticsReport",
     "CrossProviderMetrics",
     "ProviderStats",
-    "TimeSeriesData", 
+    "TimeSeriesData",
     "UsageBreakdown",
     "CSVExporter",
     "PDFExporter",

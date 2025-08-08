@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Union
 
 try:
     import tiktoken
+
     HAS_TIKTOKEN = True
 except ImportError:
     HAS_TIKTOKEN = False
@@ -11,7 +12,7 @@ except ImportError:
 
 class TokenCounter:
     """Count tokens for different models."""
-    
+
     # Model to encoding mapping
     MODEL_ENCODINGS = {
         "gpt-4": "cl100k_base",
@@ -23,7 +24,7 @@ class TokenCounter:
         "claude": "cl100k_base",  # Approximation
         "gemini": "cl100k_base",  # Approximation
     }
-    
+
     # Rough token estimates when tiktoken is not available
     CHARS_PER_TOKEN = {
         "default": 4,
@@ -31,18 +32,18 @@ class TokenCounter:
         "japanese": 2,
         "korean": 2,
     }
-    
+
     def __init__(self):
         self._encodings = {}
-        
+
     def _get_encoding(self, model: str) -> Optional[Any]:
         """Get the encoding for a model."""
         if not HAS_TIKTOKEN:
             return None
-        
+
         # Find the encoding name for the model
         encoding_name = None
-        
+
         # Check exact match first
         if model in self.MODEL_ENCODINGS:
             encoding_name = self.MODEL_ENCODINGS[model]
@@ -52,19 +53,19 @@ class TokenCounter:
                 if model.startswith(model_prefix):
                     encoding_name = enc_name
                     break
-        
+
         if not encoding_name:
             encoding_name = "cl100k_base"  # Default
-        
+
         # Cache encodings
         if encoding_name not in self._encodings:
             try:
                 self._encodings[encoding_name] = tiktoken.get_encoding(encoding_name)
             except Exception:
                 return None
-        
+
         return self._encodings[encoding_name]
-    
+
     def count_tokens(
         self,
         text: str,
@@ -78,31 +79,32 @@ class TokenCounter:
                     return len(encoding.encode(text))
                 except Exception:
                     pass
-        
+
         # Fallback to character-based estimation
         return self._estimate_tokens(text)
-    
+
     def _estimate_tokens(self, text: str) -> int:
         """Estimate token count based on character count."""
         # Simple heuristic: ~4 characters per token for English
         # Adjust for other languages if detected
-        
+
         # Check for CJK characters
         cjk_count = sum(
-            1 for char in text
-            if '\u4e00' <= char <= '\u9fff' or  # Chinese
-               '\u3040' <= char <= '\u309f' or  # Hiragana
-               '\u30a0' <= char <= '\u30ff' or  # Katakana
-               '\uac00' <= char <= '\ud7af'     # Korean
+            1
+            for char in text
+            if "\u4e00" <= char <= "\u9fff"  # Chinese
+            or "\u3040" <= char <= "\u309f"  # Hiragana
+            or "\u30a0" <= char <= "\u30ff"  # Katakana
+            or "\uac00" <= char <= "\ud7af"  # Korean
         )
-        
+
         if cjk_count > len(text) * 0.3:  # More than 30% CJK
             chars_per_token = 2
         else:
             chars_per_token = 4
-        
+
         return max(1, len(text) // chars_per_token)
-    
+
     def count_messages_tokens(
         self,
         messages: List[Dict[str, Any]],
@@ -111,12 +113,12 @@ class TokenCounter:
         """Count tokens in a list of messages."""
         total_tokens = 0
         per_message_tokens = 4  # Overhead per message
-        
+
         for message in messages:
             # Count role tokens
             role = message.get("role", "")
             total_tokens += self.count_tokens(role, model)
-            
+
             # Count content tokens
             content = message.get("content", "")
             if isinstance(content, str):
@@ -129,22 +131,20 @@ class TokenCounter:
                     elif isinstance(item, dict) and item.get("type") == "image":
                         # Rough estimate for images
                         total_tokens += 85  # Base64 encoded image token estimate
-            
+
             # Add per-message overhead
             total_tokens += per_message_tokens
-            
+
             # Handle other fields
             if message.get("name"):
                 total_tokens += self.count_tokens(message["name"], model)
-            
+
             if message.get("function_call"):
-                total_tokens += self.count_tokens(
-                    str(message["function_call"]), model
-                )
-        
+                total_tokens += self.count_tokens(str(message["function_call"]), model)
+
         # Add base prompt tokens
         total_tokens += 3  # Every reply is primed with <|start|>assistant<|message|>
-        
+
         return {
             "total": total_tokens,
             "messages": len(messages),

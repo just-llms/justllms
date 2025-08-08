@@ -1,6 +1,5 @@
 """Main router class for intelligent model selection."""
 
-import asyncio
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from justllms.core.base import BaseProvider
@@ -16,7 +15,7 @@ from justllms.routing.strategies import (
 
 class Router:
     """Router for intelligent model selection."""
-    
+
     def __init__(
         self,
         config: Optional[Union[Dict[str, Any], Any]] = None,
@@ -25,26 +24,26 @@ class Router:
         fallback_model: Optional[str] = None,
     ):
         # Handle both dict and RoutingConfig object
-        if hasattr(config, 'model_dump'):
+        if hasattr(config, "model_dump"):
             # It's a Pydantic model, convert to dict
             self.config = config.model_dump()
         else:
             self.config = config or {}
-        
+
         # Get fallback values from config if not provided
         self.fallback_provider = fallback_provider or self.config.get("fallback_provider")
         self.fallback_model = fallback_model or self.config.get("fallback_model")
-        
+
         # Initialize strategy
         if isinstance(strategy, RoutingStrategy):
             self.strategy = strategy
         else:
             self.strategy = self._create_strategy(strategy or self.config.get("strategy", "cost"))
-    
+
     def _create_strategy(self, strategy_name: str) -> RoutingStrategy:
         """Create a routing strategy from name."""
         strategy_configs = self.config.get("strategy_configs", {})
-        
+
         if strategy_name == "cost":
             config = strategy_configs.get("cost", {})
             return CostOptimizedStrategy(**config)
@@ -59,7 +58,7 @@ class Router:
         else:
             # Default to cost optimization
             return CostOptimizedStrategy()
-    
+
     def route(
         self,
         messages: List[Message],
@@ -69,20 +68,20 @@ class Router:
         **kwargs: Any,
     ) -> Tuple[str, str]:
         """Route to the best provider and model.
-        
+
         Args:
             messages: The messages to process
             model: Optional specific model requested
             providers: Available providers
             constraints: Additional constraints for routing
             **kwargs: Additional parameters
-        
+
         Returns:
             Tuple of (provider_name, model_name)
         """
         if not providers:
             raise ValueError("No providers available for routing")
-        
+
         # If specific model requested, try to find it
         if model:
             # Check if it's in format "provider/model"
@@ -90,21 +89,23 @@ class Router:
                 provider_name, model_name = model.split("/", 1)
                 if provider_name not in providers:
                     raise ValueError(f"Provider '{provider_name}' not found")
-                
+
                 provider = providers[provider_name]
                 if not provider.validate_model(model_name):
-                    raise ValueError(f"Model '{model_name}' not found in provider '{provider_name}'")
-                
+                    raise ValueError(
+                        f"Model '{model_name}' not found in provider '{provider_name}'"
+                    )
+
                 return provider_name, model_name
-            
+
             # Check all providers for the model
             for provider_name, provider in providers.items():
                 if provider.validate_model(model):
                     return provider_name, model
-            
+
             # If we get here, the model wasn't found in any provider
             raise ValueError(f"Model '{model}' not found in any available provider")
-        
+
         # Use routing strategy
         try:
             provider_name, model_name = self.strategy.select(
@@ -121,16 +122,16 @@ class Router:
                     provider = providers[self.fallback_provider]
                     if provider.validate_model(self.fallback_model):
                         return self.fallback_provider, self.fallback_model
-            
+
             # Last resort: use first available model
             for provider_name, provider in providers.items():
                 models = provider.get_available_models()
                 if models:
                     model_name = list(models.keys())[0]
                     return provider_name, model_name
-            
+
             raise ValueError(f"No suitable model found: {str(e)}")
-    
+
     async def aroute(
         self,
         messages: List[Message],
@@ -149,14 +150,14 @@ class Router:
             constraints=constraints,
             **kwargs,
         )
-    
+
     def set_strategy(self, strategy: Union[str, RoutingStrategy]) -> None:
         """Set the routing strategy."""
         if isinstance(strategy, RoutingStrategy):
             self.strategy = strategy
         else:
             self.strategy = self._create_strategy(strategy)
-    
+
     def get_strategy_name(self) -> str:
         """Get the name of the current strategy."""
         return self.strategy.__class__.__name__

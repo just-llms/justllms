@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional
 
 class JustLLMsError(Exception):
     """Base exception for all JustLLMs errors."""
-    
+
     def __init__(
         self,
         message: str,
@@ -20,7 +20,7 @@ class JustLLMsError(Exception):
 
 class ProviderError(JustLLMsError):
     """Error from an LLM provider."""
-    
+
     def __init__(
         self,
         message: str,
@@ -37,7 +37,7 @@ class ProviderError(JustLLMsError):
 
 class RouteError(JustLLMsError):
     """Error during routing/model selection."""
-    
+
     def __init__(
         self,
         message: str,
@@ -52,7 +52,7 @@ class RouteError(JustLLMsError):
 
 class ValidationError(JustLLMsError):
     """Error during input validation."""
-    
+
     def __init__(
         self,
         message: str,
@@ -67,7 +67,7 @@ class ValidationError(JustLLMsError):
 
 class RateLimitError(ProviderError):
     """Rate limit exceeded error."""
-    
+
     def __init__(
         self,
         message: str,
@@ -80,7 +80,7 @@ class RateLimitError(ProviderError):
 
 class TimeoutError(ProviderError):
     """Request timeout error."""
-    
+
     def __init__(
         self,
         message: str,
@@ -93,7 +93,7 @@ class TimeoutError(ProviderError):
 
 class AuthenticationError(ProviderError):
     """Authentication/authorization error."""
-    
+
     def __init__(
         self,
         message: str,
@@ -106,7 +106,7 @@ class AuthenticationError(ProviderError):
 
 class ConfigurationError(JustLLMsError):
     """Configuration error."""
-    
+
     def __init__(
         self,
         message: str,

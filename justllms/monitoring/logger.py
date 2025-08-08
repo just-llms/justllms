@@ -4,11 +4,12 @@ import logging
 import sys
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 try:
     from rich.console import Console
     from rich.logging import RichHandler
+
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
@@ -18,7 +19,7 @@ except ImportError:
 
 class LogLevel(str, Enum):
     """Log levels."""
-    
+
     DEBUG = "DEBUG"
     INFO = "INFO"
     WARNING = "WARNING"
@@ -28,7 +29,7 @@ class LogLevel(str, Enum):
 
 class JustLLMsLogger:
     """Custom logger for JustLLMs with rich formatting."""
-    
+
     def __init__(
         self,
         name: str = "justllms",
@@ -42,18 +43,18 @@ class JustLLMsLogger:
         self.console_output = console_output
         self.file_output = file_output
         self.rich_formatting = rich_formatting
-        
+
         self.logger = self._setup_logger()
         self.console = Console() if rich_formatting and RICH_AVAILABLE else None
-    
+
     def _setup_logger(self) -> logging.Logger:
         """Set up the logger with handlers."""
         logger = logging.getLogger(self.name)
         logger.setLevel(self.level)
-        
+
         # Remove existing handlers
         logger.handlers = []
-        
+
         # Console handler
         if self.console_output:
             if self.rich_formatting and RICH_AVAILABLE:
@@ -67,10 +68,10 @@ class JustLLMsLogger:
                     "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
                 )
                 console_handler.setFormatter(formatter)
-            
+
             console_handler.setLevel(self.level)
             logger.addHandler(console_handler)
-        
+
         # File handler
         if self.file_output:
             self.file_output.parent.mkdir(parents=True, exist_ok=True)
@@ -81,35 +82,35 @@ class JustLLMsLogger:
             file_handler.setFormatter(file_formatter)
             file_handler.setLevel(self.level)
             logger.addHandler(file_handler)
-        
+
         return logger
-    
+
     def debug(self, message: str, **kwargs: Any) -> None:
         """Log debug message."""
         self.logger.debug(message, extra=kwargs)
-    
+
     def info(self, message: str, **kwargs: Any) -> None:
         """Log info message."""
         self.logger.info(message, extra=kwargs)
-    
+
     def warning(self, message: str, **kwargs: Any) -> None:
         """Log warning message."""
         self.logger.warning(message, extra=kwargs)
-    
+
     def error(self, message: str, exception: Optional[Exception] = None, **kwargs: Any) -> None:
         """Log error message."""
         if exception:
             self.logger.error(message, exc_info=exception, extra=kwargs)
         else:
             self.logger.error(message, extra=kwargs)
-    
+
     def critical(self, message: str, exception: Optional[Exception] = None, **kwargs: Any) -> None:
         """Log critical message."""
         if exception:
             self.logger.critical(message, exc_info=exception, extra=kwargs)
         else:
             self.logger.critical(message, extra=kwargs)
-    
+
     def log_request(
         self,
         request_id: str,
@@ -127,7 +128,7 @@ class JustLLMsLogger:
             message_count=len(messages) if hasattr(messages, "__len__") else 1,
             **kwargs,
         )
-    
+
     def log_response(
         self,
         request_id: str,
@@ -144,16 +145,16 @@ class JustLLMsLogger:
             f"Response {request_id}: {provider}/{model}",
             f"duration={duration_ms:.2f}ms",
         ]
-        
+
         if tokens_used is not None:
             message_parts.append(f"tokens={tokens_used}")
-        
+
         if cost is not None:
             message_parts.append(f"cost=${cost:.4f}")
-        
+
         if cached:
             message_parts.append("(cached)")
-        
+
         self.info(
             " ".join(message_parts),
             request_id=request_id,
@@ -165,7 +166,7 @@ class JustLLMsLogger:
             cached=cached,
             **kwargs,
         )
-    
+
     def log_error_response(
         self,
         request_id: str,
@@ -180,10 +181,10 @@ class JustLLMsLogger:
             f"Error {request_id}: {provider}/{model}",
             f"error={type(error).__name__}: {str(error)}",
         ]
-        
+
         if duration_ms is not None:
             message_parts.append(f"duration={duration_ms:.2f}ms")
-        
+
         self.error(
             " ".join(message_parts),
             exception=error,
@@ -193,7 +194,7 @@ class JustLLMsLogger:
             duration_ms=duration_ms,
             **kwargs,
         )
-    
+
     def log_cache_hit(self, request_id: str, cache_key: str, **kwargs: Any) -> None:
         """Log a cache hit."""
         self.debug(
@@ -202,7 +203,7 @@ class JustLLMsLogger:
             cache_key=cache_key,
             **kwargs,
         )
-    
+
     def log_cache_miss(self, request_id: str, cache_key: str, **kwargs: Any) -> None:
         """Log a cache miss."""
         self.debug(
@@ -211,7 +212,7 @@ class JustLLMsLogger:
             cache_key=cache_key,
             **kwargs,
         )
-    
+
     def log_routing_decision(
         self,
         request_id: str,
@@ -227,10 +228,10 @@ class JustLLMsLogger:
             f"strategy={strategy}",
             f"selected={selected_provider}/{selected_model}",
         ]
-        
+
         if reason:
             message_parts.append(f"reason={reason}")
-        
+
         self.debug(
             " ".join(message_parts),
             request_id=request_id,
@@ -240,7 +241,7 @@ class JustLLMsLogger:
             reason=reason,
             **kwargs,
         )
-    
+
     def set_level(self, level: Union[str, LogLevel]) -> None:
         """Set the log level."""
         level_value = level.value if isinstance(level, LogLevel) else level
