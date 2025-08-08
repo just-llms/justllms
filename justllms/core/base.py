@@ -121,8 +121,8 @@ class BaseProvider(ABC):
             return None
 
         prompt_cost = (usage.prompt_tokens / 1000) * model_info.cost_per_1k_prompt_tokens
-        completion_cost = (
-            usage.completion_tokens / 1000
-        ) * (model_info.cost_per_1k_completion_tokens or 0)
+        completion_cost = (usage.completion_tokens / 1000) * (
+            model_info.cost_per_1k_completion_tokens or 0
+        )
 
         return prompt_cost + completion_cost

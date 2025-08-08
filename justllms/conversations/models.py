@@ -27,7 +27,9 @@ class ConversationMessage(BaseModel):
     content: str = Field(..., description="Message content")
     timestamp: float = Field(default_factory=time.time)
     model: Optional[str] = Field(default=None, description="Model that generated this message")
-    provider: Optional[str] = Field(default=None, description="Provider that generated this message")
+    provider: Optional[str] = Field(
+        default=None, description="Provider that generated this message"
+    )
     usage: Optional[Usage] = Field(default=None, description="Token usage for this message")
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
@@ -47,21 +49,29 @@ class ConversationConfig(BaseModel):
     """Configuration for a conversation."""
 
     # Model settings
-    default_model: Optional[str] = Field(default=None, description="Default model for the conversation")
+    default_model: Optional[str] = Field(
+        default=None, description="Default model for the conversation"
+    )
     default_provider: Optional[str] = Field(
         default=None, description="Default provider for the conversation"
     )
-    system_prompt: Optional[str] = Field(default=None, description="System prompt for the conversation")
+    system_prompt: Optional[str] = Field(
+        default=None, description="System prompt for the conversation"
+    )
 
     # Context management
-    max_context_tokens: Optional[int] = Field(default=8000, description="Maximum context window tokens")
+    max_context_tokens: Optional[int] = Field(
+        default=8000, description="Maximum context window tokens"
+    )
     context_strategy: str = Field(
         default="truncate", description="Context management strategy: truncate, summarize, compress"
     )
     context_compression_ratio: float = Field(
         default=0.7, description="Target compression ratio when using compress strategy"
     )
-    keep_system_prompt: bool = Field(default=True, description="Always keep system prompt in context")
+    keep_system_prompt: bool = Field(
+        default=True, description="Always keep system prompt in context"
+    )
 
     # Conversation behavior
     auto_save: bool = Field(default=True, description="Automatically save conversation state")
@@ -69,14 +79,18 @@ class ConversationConfig(BaseModel):
     enable_analytics: bool = Field(default=True, description="Track conversation analytics")
 
     # Storage settings
-    storage_backend: str = Field(default="memory", description="Storage backend: memory, disk, redis")
+    storage_backend: str = Field(
+        default="memory", description="Storage backend: memory, disk, redis"
+    )
     storage_config: Dict[str, Any] = Field(
         default_factory=dict, description="Storage backend configuration"
     )
 
     # Advanced features
     enable_branching: bool = Field(default=False, description="Allow conversation branching")
-    enable_multi_model: bool = Field(default=True, description="Allow switching models within conversation")
+    enable_multi_model: bool = Field(
+        default=True, description="Allow switching models within conversation"
+    )
 
     class Config:
         extra = "allow"

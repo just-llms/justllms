@@ -153,9 +153,10 @@ class AnalyticsDashboard:
 
         # Add metrics collector data if available
         if self.metrics_collector:
-            metrics_summary = self.metrics_collector.get_metrics_summary()
+            # metrics_summary = self.metrics_collector.get_metrics_summary()
             # Convert metrics to standardized format
             # This is a simplified conversion - in practice you'd need more detailed data
+            pass
 
         for source in data_sources:
             for entry in source:
@@ -288,15 +289,25 @@ class AnalyticsDashboard:
                 stats[provider]["latency_count"] += 1
 
         # Calculate derived metrics
-        for provider, provider_data in stats.items():
+        for _provider, provider_data in stats.items():
             provider_data["success_rate"] = (
-                ((provider_data["requests"] - provider_data["errors"]) / provider_data["requests"] * 100)
+                (
+                    (provider_data["requests"] - provider_data["errors"])
+                    / provider_data["requests"]
+                    * 100
+                )
                 if provider_data["requests"] > 0
                 else 0.0
             )
-            provider_data["cost_per_token"] = provider_data["cost"] / provider_data["tokens"] if provider_data["tokens"] > 0 else 0.0
+            provider_data["cost_per_token"] = (
+                provider_data["cost"] / provider_data["tokens"]
+                if provider_data["tokens"] > 0
+                else 0.0
+            )
             provider_data["avg_latency"] = (
-                provider_data["latency_sum"] / provider_data["latency_count"] if provider_data["latency_count"] > 0 else 0.0
+                provider_data["latency_sum"] / provider_data["latency_count"]
+                if provider_data["latency_count"] > 0
+                else 0.0
             )
 
         return dict(stats)

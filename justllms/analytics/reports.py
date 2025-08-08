@@ -8,11 +8,8 @@ from pathlib import Path
 from typing import Any, List, Optional, Union
 
 try:
-    from reportlab.graphics.charts.linecharts import HorizontalLineChart
-    from reportlab.graphics.charts.piecharts import Pie
-    from reportlab.graphics.shapes import Drawing
     from reportlab.lib import colors
-    from reportlab.lib.pagesizes import A4, letter
+    from reportlab.lib.pagesizes import letter
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import inch
     from reportlab.platypus import (
@@ -33,7 +30,6 @@ try:
     import matplotlib.dates as mdates
     import matplotlib.pyplot as plt
     import pandas as pd
-    from matplotlib.figure import Figure
 
     MATPLOTLIB_AVAILABLE = True
 except ImportError:
@@ -145,7 +141,7 @@ class CSVExporter(ReportExporter):
             ]
         )
 
-        for model_key, model_stats in report.usage_breakdown.by_model.items():
+        for _model_key, model_stats in report.usage_breakdown.by_model.items():
             csv_data.append(
                 [
                     model_stats.provider,

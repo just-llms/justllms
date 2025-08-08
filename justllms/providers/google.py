@@ -138,7 +138,9 @@ class GoogleProvider(BaseProvider):
                                 parts.append(
                                     {
                                         "inline_data": {
-                                            "mime_type": str(image_data.get("mime_type", "image/jpeg")),
+                                            "mime_type": str(
+                                                image_data.get("mime_type", "image/jpeg")
+                                            ),
                                             "data": str(image_data.get("data", "")),
                                         }  # type: ignore
                                     }

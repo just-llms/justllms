@@ -5,6 +5,7 @@ import hashlib
 import time
 from typing import Any, Dict, List, Optional
 
+from justllms.exceptions import ProviderError
 from justllms.health.models import (
     HealthCheckCache,
     HealthCheckMethod,
@@ -12,7 +13,6 @@ from justllms.health.models import (
     HealthResult,
     HealthStatus,
 )
-from justllms.exceptions import ProviderError
 
 
 class EndpointHealthChecker:

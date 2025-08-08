@@ -72,9 +72,7 @@ class GrokProvider(BaseProvider):
                 for item in msg.content:
                     if isinstance(item, dict):
                         if item.get("type") == "text":
-                            content_list.append(
-                                {"type": "text", "text": item.get("text", "")}
-                            )
+                            content_list.append({"type": "text", "text": item.get("text", "")})
                         elif item.get("type") == "image":
                             content_list.append(
                                 {"type": "image_url", "image_url": item.get("image", {})}

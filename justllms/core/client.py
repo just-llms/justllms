@@ -1,11 +1,10 @@
 """Main client class for JustLLMs."""
 
-from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Union
+from typing import TYPE_CHECKING, Any, AsyncIterator, Dict, Iterator, List, Optional, Union
 
 from justllms.analytics import AnalyticsDashboard
 from justllms.cache import CacheManager
 from justllms.config import Config
-from justllms.conversations import ConversationManager
 from justllms.core.base import BaseProvider
 from justllms.core.completion import Completion, CompletionResponse
 from justllms.core.models import Message, ProviderConfig
@@ -14,6 +13,9 @@ from justllms.health import EndpointHealthChecker
 from justllms.monitoring import Monitor
 from justllms.routing import Router
 from justllms.validation import BusinessRuleEngine, ValidationConfig
+
+if TYPE_CHECKING:
+    pass
 
 
 class Client:
@@ -26,7 +28,7 @@ class Client:
         router: Optional[Router] = None,
         cache_manager: Optional[CacheManager] = None,
         monitor: Optional[Monitor] = None,
-        conversation_manager: Optional[ConversationManager] = None,
+        conversation_manager: Optional[Any] = None,
         default_model: Optional[str] = None,
         default_provider: Optional[str] = None,
     ):
@@ -39,9 +41,15 @@ class Client:
         self.default_provider = default_provider
 
         # Initialize conversation management
-        self.conversations = conversation_manager or ConversationManager(
-            storage_config=getattr(self.config, "conversations", {}), client=self
-        )
+        if conversation_manager is not None:
+            self.conversations = conversation_manager
+        else:
+            # Lazy import to avoid circular dependency
+            from justllms.conversations import ConversationManager
+
+            self.conversations = ConversationManager(
+                storage_config=getattr(self.config, "conversations", {}), client=self
+            )
 
         # Initialize analytics dashboard
         self.analytics = AnalyticsDashboard(
@@ -136,7 +144,7 @@ class Client:
                 providers=self.providers,
                 **kwargs,
             )
-        
+
         # Ensure model is not None
         if not model:
             raise ValueError("Model is required")
@@ -217,7 +225,7 @@ class Client:
                 providers=self.providers,
                 **kwargs,
             )
-        
+
         # Ensure model is not None
         if not model:
             raise ValueError("Model is required")
@@ -300,7 +308,7 @@ class Client:
                     providers=self.providers,
                     **kwargs,
                 )
-            
+
             # Ensure model is not None
             if not model:
                 raise ValueError("Model is required")
@@ -347,7 +355,7 @@ class Client:
                     providers=self.providers,
                     **kwargs,
                 )
-            
+
             # Ensure model is not None
             if not model:
                 raise ValueError("Model is required")
