@@ -1,14 +1,17 @@
 """Unified completion interface."""
 
-from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Union
+from typing import TYPE_CHECKING, Any, AsyncIterator, Dict, Iterator, List, Optional, Union
 
 from justllms.core.base import BaseResponse
 from justllms.core.models import Choice, Message, Usage
 
+if TYPE_CHECKING:
+    from justllms.core.client import Client
+
 
 class CompletionResponse(BaseResponse):
     """Standard completion response format."""
-    
+
     def __init__(
         self,
         id: str,
@@ -36,7 +39,7 @@ class CompletionResponse(BaseResponse):
         self.cached = cached
         self.blocked = blocked
         self.validation_result = validation_result
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert response to dictionary."""
         return {
@@ -53,12 +56,16 @@ class CompletionResponse(BaseResponse):
                 }
                 for choice in self.choices
             ],
-            "usage": {
-                "prompt_tokens": self.usage.prompt_tokens,
-                "completion_tokens": self.usage.completion_tokens,
-                "total_tokens": self.usage.total_tokens,
-                "estimated_cost": self.usage.estimated_cost,
-            } if self.usage else None,
+            "usage": (
+                {
+                    "prompt_tokens": self.usage.prompt_tokens,
+                    "completion_tokens": self.usage.completion_tokens,
+                    "total_tokens": self.usage.total_tokens,
+                    "estimated_cost": self.usage.estimated_cost,
+                }
+                if self.usage
+                else None
+            ),
             "created": self.created,
             "system_fingerprint": self.system_fingerprint,
             "provider": self.provider,
@@ -68,10 +75,10 @@ class CompletionResponse(BaseResponse):
 
 class Completion:
     """Unified completion interface for all providers."""
-    
+
     def __init__(self, client: "Client"):
         self.client = client
-    
+
     def create(
         self,
         messages: Union[List[Dict[str, Any]], List[Message]],
@@ -93,7 +100,7 @@ class Completion:
     ) -> Union[CompletionResponse, Iterator[CompletionResponse]]:
         """Create a completion."""
         formatted_messages = self._format_messages(messages)
-        
+
         params = {
             "messages": formatted_messages,
             "model": model,
@@ -111,15 +118,15 @@ class Completion:
             "user": user,
             **kwargs,
         }
-        
+
         # Filter out None values, but keep model=None for routing
         params = {k: v for k, v in params.items() if v is not None or k == "model"}
-        
+
         if stream:
             return self.client._stream_completion(**params)
         else:
             return self.client._create_completion(**params)
-    
+
     async def acreate(
         self,
         messages: Union[List[Dict[str, Any]], List[Message]],
@@ -141,7 +148,7 @@ class Completion:
     ) -> Union[CompletionResponse, AsyncIterator[CompletionResponse]]:
         """Create an async completion."""
         formatted_messages = self._format_messages(messages)
-        
+
         params = {
             "messages": formatted_messages,
             "model": model,
@@ -159,30 +166,30 @@ class Completion:
             "user": user,
             **kwargs,
         }
-        
+
         # Filter out None values, but keep model=None for routing
         params = {k: v for k, v in params.items() if v is not None or k == "model"}
-        
+
         if stream:
             return self.client._astream_completion(**params)
         else:
             return await self.client._acreate_completion(**params)
-    
+
     def _format_messages(
         self, messages: Union[List[Dict[str, Any]], List[Message]]
     ) -> List[Message]:
         """Format messages to Message objects."""
         if not messages:
             raise ValueError("Messages list cannot be empty - at least one message is required")
-        
+
         if isinstance(messages[0], Message):
-            return messages
-        
+            return messages  # type: ignore
+
         formatted = []
         for msg in messages:
             if isinstance(msg, dict):
                 formatted.append(Message(**msg))
             else:
                 formatted.append(msg)
-        
+
         return formatted

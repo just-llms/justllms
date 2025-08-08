@@ -2,12 +2,13 @@
 
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
-from pydantic import BaseModel, Field, ConfigDict
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Role(str, Enum):
     """Message role enumeration."""
-    
+
     SYSTEM = "system"
     USER = "user"
     ASSISTANT = "assistant"
@@ -17,9 +18,9 @@ class Role(str, Enum):
 
 class Message(BaseModel):
     """Unified message format for all providers."""
-    
+
     model_config = ConfigDict(extra="allow")
-    
+
     role: Role
     content: Union[str, List[Dict[str, Any]]]
     name: Optional[str] = None
@@ -29,7 +30,7 @@ class Message(BaseModel):
 
 class Usage(BaseModel):
     """Token usage statistics."""
-    
+
     prompt_tokens: int
     completion_tokens: int
     total_tokens: int
@@ -38,7 +39,7 @@ class Usage(BaseModel):
 
 class Choice(BaseModel):
     """Response choice."""
-    
+
     index: int
     message: Message
     finish_reason: Optional[str] = None
@@ -47,7 +48,7 @@ class Choice(BaseModel):
 
 class ModelInfo(BaseModel):
     """Information about a model."""
-    
+
     name: str
     provider: str
     max_tokens: Optional[int] = None
@@ -63,9 +64,9 @@ class ModelInfo(BaseModel):
 
 class ProviderConfig(BaseModel):
     """Configuration for a provider."""
-    
+
     model_config = ConfigDict(extra="allow")
-    
+
     name: str
     api_key: Optional[str] = None
     api_base: Optional[str] = None
