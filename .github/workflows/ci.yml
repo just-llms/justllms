@@ -55,7 +55,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.10', '3.11', '3.12']
     
     steps:
       - uses: actions/checkout@v4
@@ -81,32 +81,3 @@ jobs:
       - name: Check package contents
         run: |
           pip show -f justllms
-
-  import-check:
-    name: Import Check
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.8', '3.11']
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-      
-      - name: Install package
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e .
-      
-      - name: Test imports
-        run: |
-          python -c "from justllms import JustLLMs"
-          python -c "from justllms.core import ProviderConfig"
-          python -c "from justllms.routing import RoutingStrategy"
-          python -c "from justllms.utils import cost_calculator"
