@@ -1,6 +1,7 @@
 """Cache backend implementations."""
 
 import asyncio
+import contextlib
 import json
 import time
 from abc import ABC, abstractmethod
@@ -158,13 +159,11 @@ class DiskCacheBackend(BaseCacheBackend):
         """Get a value from cache."""
         try:
             value = self.cache.get(key)
-            if value is not None:
-                # Deserialize if it's JSON
-                if isinstance(value, str) and value.startswith('{"'):
-                    try:
-                        return json.loads(value)
-                    except json.JSONDecodeError:
-                        pass
+            if value is not None and isinstance(value, str) and value.startswith('{"'):
+                try:
+                    return json.loads(value)
+                except json.JSONDecodeError:
+                    pass
             return value
         except Exception:
             return None
@@ -199,7 +198,5 @@ class DiskCacheBackend(BaseCacheBackend):
 
     def __del__(self) -> None:
         """Cleanup on deletion."""
-        try:
+        with contextlib.suppress(Exception):
             self.close()
-        except Exception:
-            pass

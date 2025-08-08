@@ -113,7 +113,7 @@ class CostTracker:
 
         return warnings
 
-    def get_cost_summary(
+    def get_cost_summary(  # noqa: C901
         self,
         period: str = "all",  # "all", "daily", "weekly", "monthly"
         provider: Optional[str] = None,

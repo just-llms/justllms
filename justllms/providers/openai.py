@@ -235,29 +235,28 @@ class OpenAIProvider(BaseProvider):
             **kwargs,
         }
 
-        with httpx.Client(timeout=self.config.timeout) as client:
-            with client.stream(
-                "POST",
-                url,
-                json=payload,
-                headers=self._get_headers(),
-            ) as response:
-                if response.status_code != 200:
-                    raise ProviderError(f"OpenAI API error: {response.status_code}")
+        with httpx.Client(timeout=self.config.timeout) as client, client.stream(
+            "POST",
+            url,
+            json=payload,
+            headers=self._get_headers(),
+        ) as response:
+            if response.status_code != 200:
+                raise ProviderError(f"OpenAI API error: {response.status_code}")
 
-                for line in response.iter_lines():
-                    if line.startswith("data: "):
-                        data = line[6:]
-                        if data == "[DONE]":
-                            break
+            for line in response.iter_lines():
+                if line.startswith("data: "):
+                    data = line[6:]
+                    if data == "[DONE]":
+                        break
 
-                        try:
-                            import json
+                    try:
+                        import json
 
-                            chunk = json.loads(data)
-                            yield self._parse_response(chunk)
-                        except json.JSONDecodeError:
-                            continue
+                        chunk = json.loads(data)
+                        yield self._parse_response(chunk)
+                    except json.JSONDecodeError:
+                        continue
 
     async def astream(
         self,
@@ -275,26 +274,25 @@ class OpenAIProvider(BaseProvider):
             **kwargs,
         }
 
-        async with httpx.AsyncClient(timeout=self.config.timeout) as client:
-            async with client.stream(
-                "POST",
-                url,
-                json=payload,
-                headers=self._get_headers(),
-            ) as response:
-                if response.status_code != 200:
-                    raise ProviderError(f"OpenAI API error: {response.status_code}")
+        async with httpx.AsyncClient(timeout=self.config.timeout) as client, client.stream(
+            "POST",
+            url,
+            json=payload,
+            headers=self._get_headers(),
+        ) as response:
+            if response.status_code != 200:
+                raise ProviderError(f"OpenAI API error: {response.status_code}")
 
-                async for line in response.aiter_lines():
-                    if line.startswith("data: "):
-                        data = line[6:]
-                        if data == "[DONE]":
-                            break
+            async for line in response.aiter_lines():
+                if line.startswith("data: "):
+                    data = line[6:]
+                    if data == "[DONE]":
+                        break
 
-                        try:
-                            import json
+                    try:
+                        import json
 
-                            chunk = json.loads(data)
-                            yield self._parse_response(chunk)
-                        except json.JSONDecodeError:
-                            continue
+                        chunk = json.loads(data)
+                        yield self._parse_response(chunk)
+                    except json.JSONDecodeError:
+                        continue

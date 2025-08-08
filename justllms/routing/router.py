@@ -59,7 +59,7 @@ class Router:
             # Default to cost optimization
             return CostOptimizedStrategy()
 
-    def route(
+    def route(  # noqa: C901
         self,
         messages: List[Message],
         model: Optional[str] = None,
@@ -117,11 +117,10 @@ class Router:
             return provider_name, model_name
         except Exception as e:
             # Fallback logic
-            if self.fallback_provider and self.fallback_model:
-                if self.fallback_provider in providers:
-                    provider = providers[self.fallback_provider]
-                    if provider.validate_model(self.fallback_model):
-                        return self.fallback_provider, self.fallback_model
+            if self.fallback_provider and self.fallback_model and self.fallback_provider in providers:
+                provider = providers[self.fallback_provider]
+                if provider.validate_model(self.fallback_model):
+                    return self.fallback_provider, self.fallback_model
 
             # Last resort: use first available model
             for provider_name, provider in providers.items():
@@ -130,7 +129,7 @@ class Router:
                     model_name = list(models.keys())[0]
                     return provider_name, model_name
 
-            raise ValueError(f"No suitable model found: {str(e)}")
+            raise ValueError(f"No suitable model found: {str(e)}") from e
 
     async def aroute(
         self,

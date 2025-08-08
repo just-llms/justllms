@@ -330,11 +330,11 @@ class RedisStorage(ConversationStorage):
             self.redis = aioredis.Redis(
                 host=host, port=port, db=db, password=password, **redis_kwargs
             )
-        except ImportError:
+        except ImportError as e:
             self.redis_available = False
             raise ImportError(
                 "Redis support requires the 'redis' package. Install with: pip install redis"
-            )
+            ) from e
 
     def _make_key(self, key: str) -> str:
         """Add prefix to key."""

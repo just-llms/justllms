@@ -113,7 +113,7 @@ class Config(BaseModel):
         return cls(**data)
 
     @classmethod
-    def from_env(cls, prefix: str = "JUSTLLMS_") -> "Config":
+    def from_env(cls, prefix: str = "JUSTLLMS_") -> "Config":  # noqa: C901
         """Load configuration from environment variables."""
         load_dotenv()
 

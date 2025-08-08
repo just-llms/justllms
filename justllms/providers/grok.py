@@ -258,47 +258,46 @@ class GrokProvider(BaseProvider):
             },
         }
 
-        with httpx.Client(timeout=self.config.timeout) as client:
-            with client.stream(
-                "POST",
-                url,
-                json=request_data,
-                headers=self._get_headers(),
-            ) as response:
-                if response.status_code != 200:
-                    raise ProviderError(f"Grok API error: {response.status_code}")
+        with httpx.Client(timeout=self.config.timeout) as client, client.stream(
+            "POST",
+            url,
+            json=request_data,
+            headers=self._get_headers(),
+        ) as response:
+            if response.status_code != 200:
+                raise ProviderError(f"Grok API error: {response.status_code}")
 
-                for line in response.iter_lines():
-                    if line.startswith("data: "):
-                        data = line[6:]
-                        if data == "[DONE]":
-                            break
+            for line in response.iter_lines():
+                if line.startswith("data: "):
+                    data = line[6:]
+                    if data == "[DONE]":
+                        break
 
-                        try:
-                            import json
+                    try:
+                        import json
 
-                            chunk_data = json.loads(data)
+                        chunk_data = json.loads(data)
 
-                            choices = chunk_data.get("choices", [])
-                            if choices:
-                                delta = choices[0].get("delta", {})
-                                content = delta.get("content", "")
+                        choices = chunk_data.get("choices", [])
+                        if choices:
+                            delta = choices[0].get("delta", {})
+                            content = delta.get("content", "")
 
-                                if content:
-                                    message = Message(role=Role.ASSISTANT, content=content)
-                                    choice = Choice(
-                                        index=0,
-                                        message=message,
-                                        finish_reason=choices[0].get("finish_reason"),
-                                    )
-                                    yield GrokResponse(
-                                        id=chunk_data.get("id", f"grok-stream-{int(time.time())}"),
-                                        model=model,
-                                        choices=[choice],
-                                        created=int(time.time()),
-                                    )
-                        except json.JSONDecodeError:
-                            continue
+                            if content:
+                                message = Message(role=Role.ASSISTANT, content=content)
+                                choice = Choice(
+                                    index=0,
+                                    message=message,
+                                    finish_reason=choices[0].get("finish_reason"),
+                                )
+                                yield GrokResponse(
+                                    id=chunk_data.get("id", f"grok-stream-{int(time.time())}"),
+                                    model=model,
+                                    choices=[choice],
+                                    created=int(time.time()),
+                                )
+                    except json.JSONDecodeError:
+                        continue
 
     async def astream(
         self,
@@ -330,44 +329,43 @@ class GrokProvider(BaseProvider):
             },
         }
 
-        async with httpx.AsyncClient(timeout=self.config.timeout) as client:
-            async with client.stream(
-                "POST",
-                url,
-                json=request_data,
-                headers=self._get_headers(),
-            ) as response:
-                if response.status_code != 200:
-                    raise ProviderError(f"Grok API error: {response.status_code}")
+        async with httpx.AsyncClient(timeout=self.config.timeout) as client, client.stream(
+            "POST",
+            url,
+            json=request_data,
+            headers=self._get_headers(),
+        ) as response:
+            if response.status_code != 200:
+                raise ProviderError(f"Grok API error: {response.status_code}")
 
-                async for line in response.aiter_lines():
-                    if line.startswith("data: "):
-                        data = line[6:]
-                        if data == "[DONE]":
-                            break
+            async for line in response.aiter_lines():
+                if line.startswith("data: "):
+                    data = line[6:]
+                    if data == "[DONE]":
+                        break
 
-                        try:
-                            import json
+                    try:
+                        import json
 
-                            chunk_data = json.loads(data)
+                        chunk_data = json.loads(data)
 
-                            choices = chunk_data.get("choices", [])
-                            if choices:
-                                delta = choices[0].get("delta", {})
-                                content = delta.get("content", "")
+                        choices = chunk_data.get("choices", [])
+                        if choices:
+                            delta = choices[0].get("delta", {})
+                            content = delta.get("content", "")
 
-                                if content:
-                                    message = Message(role=Role.ASSISTANT, content=content)
-                                    choice = Choice(
-                                        index=0,
-                                        message=message,
-                                        finish_reason=choices[0].get("finish_reason"),
-                                    )
-                                    yield GrokResponse(
-                                        id=chunk_data.get("id", f"grok-stream-{int(time.time())}"),
-                                        model=model,
-                                        choices=[choice],
-                                        created=int(time.time()),
-                                    )
-                        except json.JSONDecodeError:
-                            continue
+                            if content:
+                                message = Message(role=Role.ASSISTANT, content=content)
+                                choice = Choice(
+                                    index=0,
+                                    message=message,
+                                    finish_reason=choices[0].get("finish_reason"),
+                                )
+                                yield GrokResponse(
+                                    id=chunk_data.get("id", f"grok-stream-{int(time.time())}"),
+                                    model=model,
+                                    choices=[choice],
+                                    created=int(time.time()),
+                                )
+                    except json.JSONDecodeError:
+                        continue

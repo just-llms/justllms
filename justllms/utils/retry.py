@@ -57,10 +57,7 @@ class RetryHandler:
             return any(error in error_str for error in retryable_errors)
 
         # Retry on connection errors
-        if isinstance(exception, (ConnectionError, asyncio.TimeoutError)):
-            return True
-
-        return False
+        return bool(isinstance(exception, (ConnectionError, asyncio.TimeoutError)))
 
     def get_retry_delay(self, attempt: int) -> float:
         """Calculate the retry delay for a given attempt."""

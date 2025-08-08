@@ -41,7 +41,7 @@ class CostOptimizedStrategy(RoutingStrategy):
         self.require_vision = require_vision
         self.require_functions = require_functions
 
-    def select(
+    def select(  # noqa: C901
         self,
         messages: List[Message],
         providers: Dict[str, BaseProvider],
@@ -62,9 +62,8 @@ class CostOptimizedStrategy(RoutingStrategy):
 
             for model_name, model_info in models.items():
                 # Check constraints
-                if self.min_context_length and model_info.max_context_length:
-                    if model_info.max_context_length < self.min_context_length:
-                        continue
+                if self.min_context_length and model_info.max_context_length and model_info.max_context_length < self.min_context_length:
+                    continue
 
                 if self.require_vision and not model_info.supports_vision:
                     continue
@@ -118,7 +117,7 @@ class LatencyOptimizedStrategy(RoutingStrategy):
         self.max_latency_ms = max_latency_ms
         self.prefer_local = prefer_local
 
-    def select(
+    def select( # noqa: C901
         self,
         messages: List[Message],
         providers: Dict[str, BaseProvider],
@@ -131,7 +130,7 @@ class LatencyOptimizedStrategy(RoutingStrategy):
         for provider_name, provider in providers.items():
             models = provider.get_available_models()
 
-            for model_name, model_info in models.items():
+            for model_name, _model_info in models.items():
                 # Estimate latency (this is simplified - in practice you'd measure actual latency)
                 latency_score = 1.0
 
@@ -162,7 +161,7 @@ class LatencyOptimizedStrategy(RoutingStrategy):
             # Use all available models if no specific candidates
             for provider_name, provider in providers.items():
                 models = provider.get_available_models()
-                for model_name, model_info in models.items():
+                for model_name, _model_info in models.items():
                     latency_score = 1.0
 
                     # Apply same scoring logic
@@ -288,7 +287,7 @@ class QualityOptimizedStrategy(RoutingStrategy):
                     # Try to pick the highest quality model name-wise
                     best_model = None
                     best_score = 0
-                    for model_name in models.keys():
+                    for model_name in models:
                         score = self._get_quality_tier(models[model_name], model_name)
                         if score > best_score:
                             best_score = score
@@ -425,7 +424,7 @@ class TaskBasedStrategy(RoutingStrategy):
                     return provider_name, model_name
 
         # If no preferred model found, use first available from preferred providers
-        for provider_name, model_name in preferences.get(task_type, preferences["general"]):
+        for provider_name, _model_name in preferences.get(task_type, preferences["general"]):
             if provider_name in providers:
                 provider = providers[provider_name]
                 available_models = provider.get_available_models()

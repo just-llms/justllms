@@ -319,7 +319,7 @@ class GoogleProvider(BaseProvider):
 
             return self._parse_response(response.json(), model)
 
-    def stream(
+    def stream(  # noqa: C901
         self,
         messages: List[Message],
         model: str,
@@ -344,14 +344,13 @@ class GoogleProvider(BaseProvider):
         params = self._get_params()
         params["alt"] = "sse"
 
-        with httpx.Client(timeout=self.config.timeout) as client:
-            with client.stream(
-                "POST",
-                url,
-                json=request_data,
-                headers=self._get_headers(),
-                params=params,
-            ) as response:
+        with httpx.Client(timeout=self.config.timeout) as client, client.stream(
+            "POST",
+            url,
+            json=request_data,
+            headers=self._get_headers(),
+            params=params,
+        ) as response:
                 if response.status_code != 200:
                     raise ProviderError(
                         f"Gemini API error: {response.status_code} - {response.read().decode('utf-8', errors='ignore')}"
@@ -409,7 +408,7 @@ class GoogleProvider(BaseProvider):
                         except json.JSONDecodeError:
                             continue
 
-    async def astream(
+    async def astream(  # noqa: C901
         self,
         messages: List[Message],
         model: str,
@@ -434,68 +433,67 @@ class GoogleProvider(BaseProvider):
         params = self._get_params()
         params["alt"] = "sse"
 
-        async with httpx.AsyncClient(timeout=self.config.timeout) as client:
-            async with client.stream(
-                "POST",
-                url,
-                json=request_data,
-                headers=self._get_headers(),
-                params=params,
-            ) as response:
-                if response.status_code != 200:
-                    content = await response.aread()
-                    raise ProviderError(
-                        f"Gemini API error: {response.status_code} - {content.decode()}"
-                    )
+        async with httpx.AsyncClient(timeout=self.config.timeout) as client, client.stream(
+            "POST",
+            url,
+            json=request_data,
+            headers=self._get_headers(),
+            params=params,
+        ) as response:
+            if response.status_code != 200:
+                content = await response.aread()
+                raise ProviderError(
+                    f"Gemini API error: {response.status_code} - {content.decode()}"
+                )
 
-                # Buffer for accumulating partial lines
-                buffer = ""
+            # Buffer for accumulating partial lines
+            buffer = ""
 
-                async for chunk in response.aiter_bytes():
-                    buffer += chunk.decode("utf-8", errors="ignore")
+            async for chunk in response.aiter_bytes():
+                buffer += chunk.decode("utf-8", errors="ignore")
 
-                    # Process complete lines
-                    while "\n" in buffer:
-                        line, buffer = buffer.split("\n", 1)
-                        line = line.strip()
+                # Process complete lines
+                while "\n" in buffer:
+                    line, buffer = buffer.split("\n", 1)
+                    line = line.strip()
 
-                        # Skip empty lines
-                        if not line:
-                            continue
+                    # Skip empty lines
+                    if not line:
+                        continue
 
-                        # Skip SSE data prefix
-                        if line.startswith("data: "):
-                            line = line[6:]
+                    # Skip SSE data prefix
+                    if line.startswith("data: "):
+                        line = line[6:]
 
-                        # Skip non-JSON lines
-                        if not line or line == "[DONE]":
-                            continue
+                    # Skip non-JSON lines
+                    if not line or line == "[DONE]":
+                        continue
 
-                        try:
-                            import json
+                    try:
+                        import json
 
-                            chunk_data = json.loads(line)
+                        chunk_data = json.loads(line)
 
-                            # Extract text from the chunk
-                            candidates = chunk_data.get("candidates", [])
-                            if candidates:
-                                candidate = candidates[0]
-                                content = candidate.get("content", {})
-                                parts = content.get("parts", [])
+                        # Extract text from the chunk
+                        candidates = chunk_data.get("candidates", [])
+                        if candidates:
+                            candidate = candidates[0]
+                            content = candidate.get("content", {})
+                            parts = content.get("parts", [])
 
-                                for part in parts:
-                                    if "text" in part:
-                                        message = Message(role=Role.ASSISTANT, content=part["text"])
-                                        choice = Choice(
-                                            index=0,
-                                            message=message,
-                                            finish_reason=candidate.get("finishReason"),
-                                        )
-                                        yield GoogleResponse(
-                                            id=f"gemini-stream-{int(time.time())}",
-                                            model=model,
-                                            choices=[choice],
-                                            created=int(time.time()),
-                                        )
-                        except json.JSONDecodeError:
-                            continue
+                            for part in parts:
+                                if "text" in part:
+                                    message = Message(role=Role.ASSISTANT, content=part["text"])
+                                    choice = Choice(
+                                        index=0,
+                                        message=message,
+                                        finish_reason=candidate.get("finishReason"),
+                                    )
+                                    yield GoogleResponse(
+                                        id=f"gemini-stream-{int(time.time())}",
+                                        model=model,
+                                        choices=[choice],
+                                        created=int(time.time()),
+                                    )
+                    except json.JSONDecodeError:
+                        continue

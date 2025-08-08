@@ -98,10 +98,7 @@ class TokenCounter:
             or "\uac00" <= char <= "\ud7af"  # Korean
         )
 
-        if cjk_count > len(text) * 0.3:  # More than 30% CJK
-            chars_per_token = 2
-        else:
-            chars_per_token = 4
+        chars_per_token = 2 if cjk_count > len(text) * 0.3 else 4
 
         return max(1, len(text) // chars_per_token)
 

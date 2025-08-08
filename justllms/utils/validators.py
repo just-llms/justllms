@@ -7,7 +7,7 @@ from justllms.core.models import Message, Role
 from justllms.exceptions import ValidationError
 
 
-def validate_messages(
+def validate_messages(  # noqa: C901
     messages: Union[List[Dict[str, Any]], List[Message]],
 ) -> List[Message]:
     """Validate and convert messages to Message objects."""
@@ -35,12 +35,12 @@ def validate_messages(
             if isinstance(role, str):
                 try:
                     role = Role(role.lower())
-                except ValueError:
+                except ValueError as e:
                     valid_roles = [r.value for r in Role]
                     raise ValidationError(
                         f"Message {i} has invalid role '{role}'. "
                         f"Valid roles are: {', '.join(valid_roles)}"
-                    )
+                    ) from e
             elif not isinstance(role, Role):
                 raise ValidationError(f"Message {i} role must be a string or Role enum")
 
@@ -85,7 +85,7 @@ def validate_messages(
             try:
                 validated_messages.append(Message(**msg))
             except Exception as e:
-                raise ValidationError(f"Message {i} validation failed: {str(e)}")
+                raise ValidationError(f"Message {i} validation failed: {str(e)}") from e
         else:
             raise ValidationError(f"Message {i} must be a dict or Message object, got {type(msg)}")
 

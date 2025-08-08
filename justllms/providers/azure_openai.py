@@ -358,29 +358,28 @@ class AzureOpenAIProvider(BaseProvider):
         }
 
         timeout = getattr(self.config, "timeout", 30) or 30
-        with httpx.Client(timeout=timeout) as client:
-            with client.stream(
-                "POST",
-                url,
-                json=payload,
-                headers=self._get_headers(),
-            ) as response:
-                if response.status_code != 200:
-                    raise ProviderError(f"Azure OpenAI API error: {response.status_code}")
+        with httpx.Client(timeout=timeout) as client, client.stream(
+            "POST",
+            url,
+            json=payload,
+            headers=self._get_headers(),
+        ) as response:
+            if response.status_code != 200:
+                raise ProviderError(f"Azure OpenAI API error: {response.status_code}")
 
-                for line in response.iter_lines():
-                    if line.startswith("data: "):
-                        data = line[6:]
-                        if data == "[DONE]":
-                            break
+            for line in response.iter_lines():
+                if line.startswith("data: "):
+                    data = line[6:]
+                    if data == "[DONE]":
+                        break
 
-                        try:
-                            import json
+                    try:
+                        import json
 
-                            chunk = json.loads(data)
-                            yield self._parse_streaming_chunk(chunk)
-                        except json.JSONDecodeError:
-                            continue
+                        chunk = json.loads(data)
+                        yield self._parse_streaming_chunk(chunk)
+                    except json.JSONDecodeError:
+                        continue
 
     async def astream(
         self,
@@ -398,26 +397,25 @@ class AzureOpenAIProvider(BaseProvider):
         }
 
         timeout = getattr(self.config, "timeout", 30) or 30
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            async with client.stream(
-                "POST",
-                url,
-                json=payload,
-                headers=self._get_headers(),
-            ) as response:
-                if response.status_code != 200:
-                    raise ProviderError(f"Azure OpenAI API error: {response.status_code}")
+        async with httpx.AsyncClient(timeout=timeout) as client, client.stream(
+            "POST",
+            url,
+            json=payload,
+            headers=self._get_headers(),
+        ) as response:
+            if response.status_code != 200:
+                raise ProviderError(f"Azure OpenAI API error: {response.status_code}")
 
-                async for line in response.aiter_lines():
-                    if line.startswith("data: "):
-                        data = line[6:]
-                        if data == "[DONE]":
-                            break
+            async for line in response.aiter_lines():
+                if line.startswith("data: "):
+                    data = line[6:]
+                    if data == "[DONE]":
+                        break
 
-                        try:
-                            import json
+                    try:
+                        import json
 
-                            chunk = json.loads(data)
-                            yield self._parse_streaming_chunk(chunk)
-                        except json.JSONDecodeError:
-                            continue
+                        chunk = json.loads(data)
+                        yield self._parse_streaming_chunk(chunk)
+                    except json.JSONDecodeError:
+                        continue

@@ -174,7 +174,7 @@ class EndpointHealthChecker:
 
         return response
 
-    def _parse_response(
+    def _parse_response(  # noqa: C901
         self, provider: str, response: Any, latency_ms: float, test_config: Dict[str, Any]
     ) -> HealthResult:
         """Parse LLM response into health result."""

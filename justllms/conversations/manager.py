@@ -389,7 +389,7 @@ class ConversationManager:
         """Run an async coroutine and return result."""
         try:
             # Try to get existing event loop
-            loop = asyncio.get_running_loop()
+            asyncio.get_running_loop()
             # If we're already in an async context, we need to use a different approach
             import concurrent.futures
 

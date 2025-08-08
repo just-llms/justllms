@@ -228,7 +228,7 @@ class AnthropicProvider(BaseProvider):
 
             return self._parse_response(response.json(), model)
 
-    def stream(
+    def stream(  # noqa: C901
         self,
         messages: List[Message],
         model: str,
@@ -259,42 +259,41 @@ class AnthropicProvider(BaseProvider):
                 kwargs["stop"] if isinstance(kwargs["stop"], list) else [kwargs["stop"]]
             )
 
-        with httpx.Client(timeout=self.config.timeout) as client:
-            with client.stream(
-                "POST",
-                url,
-                json=payload,
-                headers=self._get_headers(),
-            ) as response:
-                if response.status_code != 200:
-                    raise ProviderError(f"Anthropic API error: {response.status_code}")
+        with httpx.Client(timeout=self.config.timeout) as client, client.stream(
+            "POST",
+            url,
+            json=payload,
+            headers=self._get_headers(),
+        ) as response:
+            if response.status_code != 200:
+                raise ProviderError(f"Anthropic API error: {response.status_code}")
 
-                for line in response.iter_lines():
-                    if line.startswith("data: "):
-                        data = line[6:]
-                        if data == "[DONE]":
-                            break
+            for line in response.iter_lines():
+                if line.startswith("data: "):
+                    data = line[6:]
+                    if data == "[DONE]":
+                        break
 
-                        try:
-                            import json
+                    try:
+                        import json
 
-                            chunk = json.loads(data)
-                            if chunk.get("type") == "message_start":
-                                continue
-                            elif chunk.get("type") == "content_block_delta":
-                                text = chunk.get("delta", {}).get("text", "")
-                                if text:
-                                    message = Message(role=Role.ASSISTANT, content=text)
-                                    choice = Choice(index=0, message=message)
-                                    yield AnthropicResponse(
-                                        id=chunk.get("id", ""),
-                                        model=model,
-                                        choices=[choice],
-                                    )
-                        except json.JSONDecodeError:
+                        chunk = json.loads(data)
+                        if chunk.get("type") == "message_start":
                             continue
+                        elif chunk.get("type") == "content_block_delta":
+                            text = chunk.get("delta", {}).get("text", "")
+                            if text:
+                                message = Message(role=Role.ASSISTANT, content=text)
+                                choice = Choice(index=0, message=message)
+                                yield AnthropicResponse(
+                                    id=chunk.get("id", ""),
+                                    model=model,
+                                    choices=[choice],
+                                )
+                    except json.JSONDecodeError:
+                        continue
 
-    async def astream(
+    async def astream(  # noqa: C901
         self,
         messages: List[Message],
         model: str,
@@ -325,37 +324,36 @@ class AnthropicProvider(BaseProvider):
                 kwargs["stop"] if isinstance(kwargs["stop"], list) else [kwargs["stop"]]
             )
 
-        async with httpx.AsyncClient(timeout=self.config.timeout) as client:
-            async with client.stream(
-                "POST",
-                url,
-                json=payload,
-                headers=self._get_headers(),
-            ) as response:
-                if response.status_code != 200:
-                    raise ProviderError(f"Anthropic API error: {response.status_code}")
+        async with httpx.AsyncClient(timeout=self.config.timeout) as client, client.stream(
+            "POST",
+            url,
+            json=payload,
+            headers=self._get_headers(),
+        ) as response:
+            if response.status_code != 200:
+                raise ProviderError(f"Anthropic API error: {response.status_code}")
 
-                async for line in response.aiter_lines():
-                    if line.startswith("data: "):
-                        data = line[6:]
-                        if data == "[DONE]":
-                            break
+            async for line in response.aiter_lines():
+                if line.startswith("data: "):
+                    data = line[6:]
+                    if data == "[DONE]":
+                        break
 
-                        try:
-                            import json
+                    try:
+                        import json
 
-                            chunk = json.loads(data)
-                            if chunk.get("type") == "message_start":
-                                continue
-                            elif chunk.get("type") == "content_block_delta":
-                                text = chunk.get("delta", {}).get("text", "")
-                                if text:
-                                    message = Message(role=Role.ASSISTANT, content=text)
-                                    choice = Choice(index=0, message=message)
-                                    yield AnthropicResponse(
-                                        id=chunk.get("id", ""),
-                                        model=model,
-                                        choices=[choice],
-                                    )
-                        except json.JSONDecodeError:
+                        chunk = json.loads(data)
+                        if chunk.get("type") == "message_start":
                             continue
+                        elif chunk.get("type") == "content_block_delta":
+                            text = chunk.get("delta", {}).get("text", "")
+                            if text:
+                                message = Message(role=Role.ASSISTANT, content=text)
+                                choice = Choice(index=0, message=message)
+                                yield AnthropicResponse(
+                                    id=chunk.get("id", ""),
+                                    model=model,
+                                    choices=[choice],
+                                )
+                    except json.JSONDecodeError:
+                        continue

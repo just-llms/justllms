@@ -42,7 +42,7 @@ class BusinessRuleEngine:
         self.violation_count = 0
         self.total_processing_time = 0.0
 
-    async def validate(
+    async def validate(  # noqa: C901
         self, content: str, context: Optional[Dict[str, Any]] = None
     ) -> ValidationResult:
         """Validate content against all enabled business rules."""
@@ -147,10 +147,9 @@ class BusinessRuleEngine:
         for result in results:
             if isinstance(result, RuleViolation):
                 violations.append(result)
-            elif isinstance(result, Exception):
+            elif isinstance(result, Exception) and self.config.error_on_processor_failure:
                 # Log error but continue processing
-                if self.config.error_on_processor_failure:
-                    raise result
+                raise result
 
         return violations
 

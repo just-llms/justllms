@@ -109,10 +109,7 @@ class BusinessRule(BaseModel):
             return False
 
         # User filter
-        if self.apply_to_users and context.get("user_id") not in self.apply_to_users:
-            return False
-
-        return True
+        return not (self.apply_to_users and context.get("user_id") not in self.apply_to_users)
 
     def get_rule_content(self) -> List[str]:
         """Get the content to match based on rule type."""

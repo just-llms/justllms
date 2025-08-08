@@ -6,7 +6,7 @@ from typing import Any, AsyncIterator, Dict, Iterator, List, Optional
 from justllms.core.models import Choice, Message, ModelInfo, ProviderConfig, Usage
 
 
-class BaseResponse(ABC):
+class BaseResponse:
     """Base class for all provider responses."""
 
     def __init__(

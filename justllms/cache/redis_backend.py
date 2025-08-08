@@ -13,6 +13,8 @@ try:
 except ImportError:
     REDIS_AVAILABLE = False
 
+import contextlib
+
 from justllms.cache.backends import BaseCacheBackend
 
 
@@ -257,12 +259,8 @@ class RedisCacheBackend(BaseCacheBackend):
 
     def close(self) -> None:
         """Close Redis connections."""
-        try:
+        with contextlib.suppress(Exception):
             self.client.close()
-        except Exception:
-            pass
 
-        try:
+        with contextlib.suppress(Exception):
             asyncio.create_task(self.async_client.close())
-        except Exception:
-            pass
