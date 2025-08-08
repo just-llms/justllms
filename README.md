@@ -2,6 +2,8 @@
 
 A production-ready Python library that simplifies working with multiple Large Language Model providers through intelligent routing, comprehensive analytics, and enterprise-grade features.
 
+[![PyPI version](https://badge.fury.io/py/justllms.svg)](https://pypi.org/project/justllms/)
+
 ## Why JustLLMs?
 
 Managing multiple LLM providers is complex. You need to handle different APIs, optimize costs, monitor usage, and ensure reliability. JustLLMs solves these challenges by providing a unified interface that automatically routes requests to the best provider based on your criteria—whether that's cost, speed, or quality.
