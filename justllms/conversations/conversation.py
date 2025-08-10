@@ -67,7 +67,7 @@ class Conversation:
             metadata=self.metadata,
         )
 
-    async def send(
+    def send(
         self,
         content: str,
         role: str = "user",
@@ -75,7 +75,18 @@ class Conversation:
         provider: Optional[str] = None,
         **kwargs: Any,
     ) -> ConversationMessage:
-        """Send a message and get a response."""
+        """Send a message and get a response (synchronous)."""
+        return self._run_async(self.send_async(content, role, model, provider, **kwargs))  # type: ignore
+
+    async def send_async(
+        self,
+        content: str,
+        role: str = "user",
+        model: Optional[str] = None,
+        provider: Optional[str] = None,
+        **kwargs: Any,
+    ) -> ConversationMessage:
+        """Send a message and get a response (asynchronous)."""
         if self.state != ConversationState.ACTIVE:
             raise ValueError(f"Cannot send message to {self.state.value} conversation")
 
@@ -214,8 +225,12 @@ class Conversation:
             # If title generation fails, use fallback
             self.title = f"Conversation {self.id[:8]}"
 
-    async def add_system_message(self, content: str) -> ConversationMessage:
-        """Add a system message to the conversation."""
+    def add_system_message(self, content: str) -> ConversationMessage:
+        """Add a system message to the conversation (synchronous)."""
+        return self._run_async(self.add_system_message_async(content))
+
+    async def add_system_message_async(self, content: str) -> ConversationMessage:
+        """Add a system message to the conversation (asynchronous)."""
         system_message = ConversationMessage(role="system", content=content, timestamp=time.time())
 
         self.messages.append(system_message)
@@ -237,8 +252,12 @@ class Conversation:
         """Get context window statistics."""
         return self.context_manager.get_context_stats(self.messages)
 
-    async def save(self) -> None:
-        """Save the conversation to storage."""
+    def save(self) -> None:
+        """Save the conversation to storage (synchronous)."""
+        self._run_async(self.save_async())
+
+    async def save_async(self) -> None:
+        """Save the conversation to storage (asynchronous)."""
         if not self.storage:
             raise ValueError("No storage backend configured")
 
@@ -256,13 +275,38 @@ class Conversation:
             )
 
     @classmethod
-    async def load(
+    def load(
         cls,
         conversation_id: str,
         storage: ConversationStorage,
         client: Optional[Any] = None,
     ) -> Optional["Conversation"]:
-        """Load a conversation from storage."""
+        """Load a conversation from storage (synchronous)."""
+        
+        async def _load() -> Optional["Conversation"]:
+            return await cls.load_async(conversation_id, storage, client)
+
+        try:
+            # Try to get existing event loop
+            asyncio.get_running_loop()
+            # If we're already in an async context, we need to use a different approach
+            import concurrent.futures
+
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, _load())
+                return future.result()  # type: ignore
+        except RuntimeError:
+            # No event loop running, we can use asyncio.run
+            return asyncio.run(_load())
+
+    @classmethod
+    async def load_async(
+        cls,
+        conversation_id: str,
+        storage: ConversationStorage,
+        client: Optional[Any] = None,
+    ) -> Optional["Conversation"]:
+        """Load a conversation from storage (asynchronous)."""
         data = await storage.load_conversation(conversation_id)
         if not data:
             return None
@@ -343,46 +387,3 @@ class Conversation:
             # No event loop running, we can use asyncio.run
             return asyncio.run(coro)
 
-    def send_sync(
-        self,
-        content: str,
-        role: str = "user",
-        model: Optional[str] = None,
-        provider: Optional[str] = None,
-        **kwargs: Any,
-    ) -> ConversationMessage:
-        """Send a message and get a response (synchronous)."""
-        return self._run_async(self.send(content, role, model, provider, **kwargs))  # type: ignore
-
-    def add_system_message_sync(self, content: str) -> ConversationMessage:
-        """Add a system message to the conversation (synchronous)."""
-        return self._run_async(self.add_system_message(content))  # type: ignore
-
-    def save_sync(self) -> None:
-        """Save the conversation to storage (synchronous)."""
-        self._run_async(self.save())
-
-    @classmethod
-    def load_sync(
-        cls,
-        conversation_id: str,
-        storage: Any,
-        client: Optional[Any] = None,
-    ) -> Optional["Conversation"]:
-        """Load a conversation from storage (synchronous)."""
-
-        async def _load() -> Optional["Conversation"]:
-            return await cls.load(conversation_id, storage, client)
-
-        try:
-            # Try to get existing event loop
-            asyncio.get_running_loop()
-            # If we're already in an async context, we need to use a different approach
-            import concurrent.futures
-
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(asyncio.run, _load())
-                return future.result()  # type: ignore
-        except RuntimeError:
-            # No event loop running, we can use asyncio.run
-            return asyncio.run(_load())
