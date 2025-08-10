@@ -29,6 +29,7 @@ class Client:
         cache_manager: Optional[CacheManager] = None,
         monitor: Optional[Monitor] = None,
         conversation_manager: Optional[Any] = None,
+        retrieval_manager: Optional[Any] = None,
         default_model: Optional[str] = None,
         default_provider: Optional[str] = None,
     ):
@@ -50,6 +51,22 @@ class Client:
             self.conversations = ConversationManager(
                 storage_config=getattr(self.config, "conversations", {}), client=self
             )
+
+        # Initialize retrieval management
+        if retrieval_manager is not None:
+            self.retrieval = retrieval_manager
+        else:
+            retrieval_config = getattr(self.config, "retrieval", None)
+            if retrieval_config:
+                # Lazy import to avoid circular dependency
+                from justllms.retrieval import RetrievalManager, RetrievalConfig
+                
+                if isinstance(retrieval_config, dict):
+                    retrieval_config = RetrievalConfig(**retrieval_config)
+                
+                self.retrieval = RetrievalManager(retrieval_config)
+            else:
+                self.retrieval = None
 
         # Initialize analytics dashboard
         self.analytics = AnalyticsDashboard(
