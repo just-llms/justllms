@@ -126,7 +126,7 @@ class ConversationManager:
             return self._active_conversations[conversation_id]
 
         # Try to load from storage
-        conversation = await Conversation.load(
+        conversation = await Conversation.load_async(
             conversation_id=conversation_id,
             storage=self.storage,
             client=self.client,
