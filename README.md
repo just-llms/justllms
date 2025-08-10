@@ -138,17 +138,20 @@ for chunk in stream:
 Built-in conversation state management with context preservation:
 
 ```python
-# Create a managed conversation
-conversation = client.conversations.create_sync(
-    system_prompt="You are a helpful coding assistant"
-)
+# Create client
+conversation = Conversation(client=client)
 
-# Context is automatically maintained
-response1 = conversation.send_sync("How do I sort a list in Python?")
-response2 = conversation.send_sync("What about in reverse order?")
+# Set system message
+conversation.add_system_message("You are a helpful math tutor. Keep answers concise.")
 
-# Export conversations for analysis
-conversation.export_sync(format="markdown", path="chat_history.md")
+# Turn 1
+response = conversation.send("What is 15 + 25?")
+
+# Turn 2 - Context is automatically preserved
+response = conversation.send("Now divide that by 8")
+
+# Get conversation stats
+history = conversation.get_history()
 ```
 **Conversation Features:**
 - **Auto-save**: Persist conversations automatically
@@ -214,6 +217,76 @@ pdf_exporter.export(report, "executive_summary.pdf")
 ```
 
 **Business Impact**: Teams typically save 40-70% on LLM costs within the first month by identifying usage patterns and optimizing model selection.
+
+### Retrieval-Augmented Generation (RAG)
+**Enterprise-ready document search and knowledge retrieval** that seamlessly integrates with your LLM workflows. Transform your documents into a searchable knowledge base that enhances LLM responses with contextual information.
+
+#### RAG Features
+- **Multiple Vector Stores** - Support for Pinecone (cloud) and ChromaDB (local) 
+- **Built-in Embeddings** - Uses vector store native embeddings (no external providers needed)
+- **PDF Document Processing** - Automatic text extraction, chunking, and metadata extraction
+- **Intelligent Chunking** - Configurable chunk size, overlap, and splitting strategies
+- **Semantic Search** - Find relevant documents using natural language queries
+- **One-Step RAG Completion** - Retrieve and generate responses in a single API call
+
+```python
+from justllms import Client
+
+# Configure with Pinecone (uses built-in llama-text-embed-v2)
+pinecone_client = Client({
+    "providers": {
+        "google": {"api_key": "your-gemini-key"}
+    },
+    "retrieval": {
+        "vector_store": {
+            "type": "pinecone",
+            "api_key": "your-pinecone-key", 
+            "environment": "your-pinecone-host",
+            "index_name": "your-index-name"
+        },
+        "chunk_size": 1000,
+        "chunk_overlap": 200,
+        "default_k": 5
+    }
+})
+
+# Configure with ChromaDB (uses built-in all-MiniLM-L6-v2)
+chromadb_client = Client({
+    "providers": {
+        "google": {"api_key": "your-gemini-key"}
+    },
+    "retrieval": {
+        "vector_store": {"type": "chroma"},
+        "chunk_size": 1000,
+        "chunk_overlap": 200,
+        "default_k": 5
+    }
+})
+
+# Create knowledge collection
+success = client.retrieval.create_collection("company_docs")
+
+# Ingest PDF documents
+result = client.retrieval.ingest_documents([
+    "strategic_plan.pdf",
+    "technical_specs.pdf"
+], "company_docs")
+
+# RAG completion - retrieve relevant docs and generate response
+response = client.completion.retrieve_and_complete(
+    query="What are our key strategic recommendations?",
+    collection="company_docs",
+    model="gemini-2.5-flash",
+    k=3,  # Retrieve top 3 relevant documents
+    include_metadata=True,
+    temperature=0.7
+)
+
+print(f"Answer: {response.content}")
+print(f"Retrieved {len(response.retrieved_documents)} relevant documents")
+```
+
+**Knowledge Enhancement**: Turn your documents into an AI-accessible knowledge base, reducing hallucinations and providing contextually accurate responses.
 
 ### Business Rule Validation
 **Enterprise-grade content filtering and compliance** built for regulated industries. Ensure your LLM applications meet security, privacy, and business requirements without custom development.
@@ -347,23 +420,12 @@ client = JustLLM(config)
 | **Intelligent Routing** | ✅ Cost/speed/quality | ❌ Manual only | ⚠️ Basic routing | ❌ None | ❌ Pipeline-based |
 | **Built-in Analytics** | ✅ Enterprise-grade | ❌ External tools needed | ⚠️ Basic metrics | ❌ None | ⚠️ Pipeline metrics |
 | **Conversation Management** | ✅ Full lifecycle | ⚠️ Memory components | ❌ None | ❌ Manual handling | ✅ Dialog systems |
+| **RAG Support** | ✅ Built-in vector stores | ✅ Multiple integrations | ❌ None | ❌ None | ✅ Document retrieval |
 | **Business Rules** | ✅ Content validation | ❌ Custom implementation | ❌ None | ❌ None | ⚠️ Custom filters |
 | **Cost Optimization** | ✅ Automatic routing | ❌ Manual optimization | ⚠️ Basic cost tracking | ❌ None | ❌ None |
 | **Streaming Support** | ✅ All providers | ✅ Provider-dependent | ✅ Most providers | ✅ OpenAI only | ⚠️ Limited |
 | **Production Ready** | ✅ Out of the box | ⚠️ Requires setup | ✅ Minimal setup | ⚠️ Basic features | ✅ Complex setup |
-| **Learning Curve** | Low | High | Low | Low | High |
-| **Enterprise Features** | ✅ Full suite | ⚠️ Custom development | ❌ Limited | ❌ None | ✅ Workflow focus |
-| **Async Support** | ✅ Native async/await | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Caching** | ✅ Multi-backend | ⚠️ Custom implementation | ✅ Basic caching | ❌ None | ✅ Document stores |
-
-### Key Differentiators
-
-**JustLLMs is the sweet spot** for teams who need:
-- **Production-ready LLM orchestration** without the complexity of LangChain
-- **Enterprise features** that LiteLLM and OpenAI SDK lack
-- **Intelligent cost optimization** that others require manual implementation
-- **Lightweight package** compared to heavy frameworks
-- **Minimal learning curve** while maintaining powerful capabilities
 
 ## Enterprise Configuration
 
@@ -414,73 +476,6 @@ enterprise_config = {
 
 client = JustLLM(enterprise_config)
 ```
-
-## Monitoring & Observability
-
-Real-time insights into your LLM usage:
-
-```python
-# Live metrics
-metrics = client.analytics.get_live_metrics()
-print(f"Requests (last 5 min): {metrics['recent_requests_5min']}")
-print(f"Cache hit rate: {metrics['cache_hit_rate']:.1f}%")
-print(f"Active providers: {metrics['active_providers']}")
-
-# Detailed reporting
-report = client.analytics.generate_report()
-print(f"Most cost-efficient provider: {report.cross_provider_metrics.cost_efficiency_ranking[0]}")
-print(f"Average latency: {report.cross_provider_metrics.average_latency_ms:.0f}ms")
-
-# Export for business intelligence
-from justllms.analytics.reports import PDFExporter
-pdf_exporter = PDFExporter(include_charts=True)
-pdf_exporter.export(report, "executive_llm_report.pdf")
-```
-
-## 🚀 Upcoming Features
-
-**Next Release (v1.1.0)** - Coming Soon
-
-### Function Calling & Multi-modal Support
-Advanced model capabilities for complex workflows:
-
-```python
-# Function calling with automatic tool routing
-functions = [{
-    "name": "get_weather",
-    "description": "Get weather for a location", 
-    "parameters": {
-        "type": "object",
-        "properties": {"location": {"type": "string"}},
-        "required": ["location"]
-    }
-}]
-
-response = client.completion.create(
-    messages=[{"role": "user", "content": "What's the weather in Paris?"}],
-    functions=functions
-)
-
-# Vision capabilities across all compatible providers
-response = client.completion.create(
-    messages=[{
-        "role": "user", 
-        "content": [
-            {"type": "text", "text": "Analyze this chart"},
-            {"type": "image_url", "image_url": {"url": "data:image/png;base64,..."}}
-        ]
-    }],
-    model="auto"  # Automatically selects best vision model
-)
-```
-
-### Additional Planned Features
-- **Web-based Analytics Dashboard** - Visual insights and real-time monitoring
-- **Advanced Conversation Analytics** - Sentiment analysis, topic modeling, conversation scoring
-- **Custom Model Fine-tuning Integration** - Train and deploy custom models seamlessly
-- **Enterprise SSO Support** - OAuth, SAML, and directory integration
-- **Enhanced Compliance Tools** - SOC 2, ISO 27001 audit trails
-- **Multi-region Deployment** - Automatic geographic routing for performance
 
 ## Contributing
 

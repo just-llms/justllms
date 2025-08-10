@@ -103,10 +103,7 @@ class CostOptimizedStrategy(RoutingStrategy):
 
             raise ValueError("No suitable models found")
 
-        # Sort by cost and return cheapest
         candidates.sort(key=lambda x: x[2])
-        # Debug: print candidates for cost strategy
-        # Debug: Cost strategy selecting cheapest model
         return candidates[0][0], candidates[0][1]
 
 
