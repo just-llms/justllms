@@ -2,7 +2,7 @@
 
 A production-ready Python library that simplifies working with multiple Large Language Model providers through intelligent routing, comprehensive analytics, and enterprise-grade features.
 
-[![PyPI version](https://badge.fury.io/py/justllms.svg)](https://pypi.org/project/justllms/)
+[![PyPI version](https://badge.fury.io/py/justllms.svg)](https://pypi.org/project/justllms/) [![Downloads](https://pepy.tech/badge/justllms)](https://pepy.tech/project/justllms)
 
 ## Why JustLLMs?
 
