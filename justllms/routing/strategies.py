@@ -136,16 +136,16 @@ class LatencyOptimizedStrategy(RoutingStrategy):
                 latency_score = 1.0
 
                 # Prefer smaller/faster models for lower latency
-                if "mini" in model_name.lower() or "haiku" in model_name.lower():
+                if any(name in model_name.lower() for name in ["mini", "haiku", "nano", "lite"]):
                     latency_score = 0.3  # Fastest
                 elif "flash-8b" in model_name.lower():
                     latency_score = 0.4  # Very fast
-                elif "turbo" in model_name.lower() or "flash" in model_name.lower():
+                elif any(name in model_name.lower() for name in ["turbo", "flash", "gpt-4.1"]):
                     latency_score = 0.6  # Fast
-                elif "pro" in model_name.lower() or "sonnet" in model_name.lower():
+                elif any(name in model_name.lower() for name in ["pro", "sonnet", "gpt-4o", "grok-3"]):
                     latency_score = 0.8  # Medium
-                elif "opus" in model_name.lower():
-                    latency_score = 1.0  # Slowest
+                elif any(name in model_name.lower() for name in ["opus", "gpt-5", "grok-4", "o1", "o3"]):
+                    latency_score = 1.0  # Slowest (most capable)
 
                 # Add provider-specific latency estimates
                 if provider_name == "google":
@@ -154,6 +154,12 @@ class LatencyOptimizedStrategy(RoutingStrategy):
                     latency_score *= 0.8  # Very fast
                 elif provider_name == "anthropic":
                     latency_score *= 1.0  # Standard
+                elif provider_name == "deepseek":
+                    latency_score *= 0.7  # Very fast and efficient
+                elif provider_name == "grok":
+                    latency_score *= 1.1  # Slightly slower but intelligent
+                elif provider_name == "azure_openai":
+                    latency_score *= 0.85  # Similar to OpenAI but with Azure overhead
 
                 candidates.append((provider_name, model_name, latency_score))
 
@@ -166,15 +172,15 @@ class LatencyOptimizedStrategy(RoutingStrategy):
                     latency_score = 1.0
 
                     # Apply same scoring logic
-                    if "mini" in model_name.lower() or "haiku" in model_name.lower():
+                    if any(name in model_name.lower() for name in ["mini", "haiku", "nano", "lite"]):
                         latency_score = 0.3
                     elif "flash-8b" in model_name.lower():
                         latency_score = 0.4
-                    elif "turbo" in model_name.lower() or "flash" in model_name.lower():
+                    elif any(name in model_name.lower() for name in ["turbo", "flash", "gpt-4.1"]):
                         latency_score = 0.6
-                    elif "pro" in model_name.lower() or "sonnet" in model_name.lower():
+                    elif any(name in model_name.lower() for name in ["pro", "sonnet", "gpt-4o", "grok-3"]):
                         latency_score = 0.8
-                    elif "opus" in model_name.lower():
+                    elif any(name in model_name.lower() for name in ["opus", "gpt-5", "grok-4", "o1", "o3"]):
                         latency_score = 1.0
 
                     if provider_name == "google":
@@ -183,6 +189,12 @@ class LatencyOptimizedStrategy(RoutingStrategy):
                         latency_score *= 0.8
                     elif provider_name == "anthropic":
                         latency_score *= 1.0
+                    elif provider_name == "deepseek":
+                        latency_score *= 0.7
+                    elif provider_name == "grok":
+                        latency_score *= 1.1
+                    elif provider_name == "azure_openai":
+                        latency_score *= 0.85
 
                     candidates.append((provider_name, model_name, latency_score))
 
@@ -216,14 +228,17 @@ class QualityOptimizedStrategy(RoutingStrategy):
     def _get_quality_tier(self, model_info: ModelInfo, model_name: str) -> int:
         """Determine quality tier of a model."""
         # Check tags first - flagship models get highest tier
-        if "flagship" in model_info.tags:
-            return 4
+        if any(tag in model_info.tags for tag in ["flagship", "most-capable", "most-intelligent"]):
+            return 5
 
-        # Specific model name matching for Google models
+        # Specific model name matching
         model_lower = model_name.lower()
 
-        # Tier 4 - Flagship/Premium models
-        if any(name in model_lower for name in ["gemini-2.5-pro", "opus", "gpt-4o", "grok-4"]):
+        # Tier 5 - Premium/Most Capable models
+        if any(name in model_lower for name in ["gpt-5", "claude-opus-4.1", "grok-4", "o3"]):
+            return 5
+        # Tier 4 - Flagship models
+        elif any(name in model_lower for name in ["gemini-2.5-pro", "claude-sonnet-4", "gpt-4.1", "o1", "o4-mini", "grok-4-heavy"]):
             return 4
         # Tier 3 - Advanced models
         elif any(
@@ -231,21 +246,31 @@ class QualityOptimizedStrategy(RoutingStrategy):
             for name in [
                 "gemini-2.5-flash",
                 "gemini-1.5-pro",
-                "sonnet",
-                "gpt-4",
+                "gpt-5-mini",
+                "gpt-5-nano",
+                "gpt-4o",
                 "grok-3",
                 "deepseek-reasoner",
+                "claude-3-5-sonnet",
             ]
         ):
             return 3
-        # Tier 2 - Standard models
+        # Tier 2 - Standard/Efficient models
         elif any(
             name in model_lower
-            for name in ["gemini-1.5-flash", "gemini-1.0-pro", "haiku", "gpt-3.5", "deepseek-chat"]
+            for name in [
+                "gemini-2.5-flash-lite",
+                "gemini-1.5-flash",
+                "gpt-4o-mini",
+                "gpt-4.1-nano",
+                "claude-haiku-3.5",
+                "grok-3-mini",
+                "deepseek-chat",
+            ]
         ):
             return 2
-        # Tier 1 - Basic/Small models
-        elif any(name in model_lower for name in ["flash-8b", "mini"]):
+        # Tier 1 - Basic/Lightweight models
+        elif any(name in model_lower for name in ["flash-8b", "gpt-3.5", "gpt-35", "gpt-oss"]):
             return 1
         else:
             return 2  # Default to standard
@@ -368,51 +393,57 @@ class TaskBasedStrategy(RoutingStrategy):
         task_type = self._detect_task_type(messages)
         # Task detected and routed accordingly
 
-        # Define preferred models for each task type - including new providers
+        # Define preferred models for each task type with latest models
         preferences = {
             "code": [
-                ("google", "gemini-2.5-pro"),  # Best for complex code
+                ("google", "gemini-2.5-pro"),  # Best for complex code analysis
+                ("openai", "gpt-5"),  # Latest flagship with tool chaining
                 ("deepseek", "deepseek-reasoner"),  # Excellent for reasoning tasks
-                ("grok", "grok-4"),  # Latest reasoning model
-                ("anthropic", "claude-3-5-sonnet-20241022"),
+                ("grok", "grok-4"),  # Latest with coding support
+                ("anthropic", "claude-sonnet-4"),  # High-performance model
                 ("google", "gemini-2.5-flash"),
-                ("openai", "gpt-4o"),
+                ("openai", "gpt-4.1"),
             ],
             "analysis": [
+                ("openai", "o1"),  # Specialized reasoning model
+                ("anthropic", "claude-opus-4.1"),  # Most capable for analysis
                 ("deepseek", "deepseek-reasoner"),  # Specialized for reasoning
-                ("google", "gemini-2.5-pro"),  # Best for analysis
+                ("google", "gemini-2.5-pro"),  # Best for complex analysis
                 ("grok", "grok-4"),  # Good reasoning capabilities
-                ("anthropic", "claude-3-5-sonnet-20241022"),
-                ("google", "gemini-1.5-pro"),
-                ("openai", "gpt-4o"),
+                ("openai", "gpt-5"),
+                ("anthropic", "claude-sonnet-4"),
             ],
             "creative": [
-                ("anthropic", "claude-3-5-sonnet-20241022"),
+                ("anthropic", "claude-opus-4.1"),  # Most capable for creative tasks
                 ("grok", "grok-4"),  # Known for creative responses
-                ("google", "gemini-1.5-pro"),  # Good for creative tasks
+                ("anthropic", "claude-sonnet-4"),
+                ("google", "gemini-2.5-pro"),
+                ("openai", "gpt-5"),
                 ("google", "gemini-2.5-flash"),
-                ("openai", "gpt-4o"),
             ],
             "simple": [
                 ("deepseek", "deepseek-chat"),  # Very affordable for simple tasks
-                ("google", "gemini-1.5-flash-8b"),  # Fastest/cheapest
-                ("anthropic", "claude-3-5-haiku-20241022"),
-                ("google", "gemini-1.5-flash"),
-                ("openai", "gpt-3.5-turbo"),
+                ("google", "gemini-2.5-flash-lite"),  # Most cost-efficient
+                ("openai", "gpt-4.1-nano"),  # Cheapest and fastest
+                ("grok", "grok-3-mini"),  # Affordable mini version
+                ("google", "gemini-1.5-flash-8b"),  # Fast and affordable
+                ("anthropic", "claude-haiku-3.5"),  # Fastest Claude
             ],
             "vision": [
-                ("grok", "grok-4"),  # Supports vision
+                ("grok", "grok-4"),  # Latest with vision capabilities
                 ("google", "gemini-2.5-flash"),  # Latest multimodal
-                ("google", "gemini-1.5-pro"),
+                ("openai", "gpt-5"),  # Flagship with multimodal
+                ("anthropic", "claude-opus-4.1"),  # Most capable multimodal
+                ("google", "gemini-2.5-pro"),  # Pro with vision
                 ("openai", "gpt-4o"),
-                ("anthropic", "claude-3-5-sonnet-20241022"),
             ],
             "general": [
                 ("deepseek", "deepseek-chat"),  # Great value for general use
-                ("google", "gemini-1.5-flash"),  # Balanced option
+                ("google", "gemini-2.5-flash"),  # Balanced latest option
                 ("grok", "grok-3"),  # Good general purpose
-                ("google", "gemini-2.5-flash"),
-                ("anthropic", "claude-3-5-haiku-20241022"),
+                ("openai", "gpt-4.1"),  # Cost-efficient flagship
+                ("anthropic", "claude-haiku-3.5"),  # Fast and efficient
+                ("google", "gemini-1.5-flash"),
             ],
         }
 

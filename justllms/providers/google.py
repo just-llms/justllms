@@ -24,48 +24,60 @@ class GoogleProvider(BaseProvider):
         "gemini-2.5-pro": ModelInfo(
             name="gemini-2.5-pro",
             provider="google",
-            max_tokens=65536,  # 65k output tokens
-            max_context_length=1048576,  # 1M input tokens
+            max_tokens=65536,  
+            max_context_length=1048576,  
             supports_functions=True,
-            supports_vision=True,  # Supports audio, images, video, text, and PDF
+            supports_vision=True,  
             supports_streaming=True,
-            cost_per_1k_prompt_tokens=0.00125,  # Estimate - same as 1.5-pro
+            cost_per_1k_prompt_tokens=0.00125,  
             cost_per_1k_completion_tokens=0.005,
-            tags=["flagship", "multimodal", "long-context", "code-execution", "thinking", "pdf"],
+            tags=["flagship", "multimodal", "long-context", "complex-reasoning", "code-analysis", "pdf"],
         ),
         "gemini-2.5-flash": ModelInfo(
             name="gemini-2.5-flash",
             provider="google",
-            max_tokens=65536,  # 65k output tokens
-            max_context_length=1048576,  # 1M input tokens
+            max_tokens=65536,  
+            max_context_length=1048576,  
             supports_functions=True,
-            supports_vision=True,  # Supports images, video, audio
+            supports_vision=True,  
             supports_streaming=True,
-            cost_per_1k_prompt_tokens=0.000075,  # Same as 1.5-flash for now
+            cost_per_1k_prompt_tokens=0.000075,  
             cost_per_1k_completion_tokens=0.0003,
-            tags=["latest", "multimodal", "long-context", "code-execution", "thinking"],
+            tags=["latest", "multimodal", "long-context", "adaptive-thinking", "cost-efficient"],
+        ),
+        "gemini-2.5-flash-lite": ModelInfo(
+            name="gemini-2.5-flash-lite",
+            provider="google",
+            max_tokens=65536, 
+            max_context_length=1048576,  
+            supports_functions=True,
+            supports_vision=True,  
+            supports_streaming=True,
+            cost_per_1k_prompt_tokens=0.00005,  
+            cost_per_1k_completion_tokens=0.0002,
+            tags=["cost-efficient", "high-throughput", "multimodal", "long-context"],
         ),
         "gemini-1.5-pro": ModelInfo(
             name="gemini-1.5-pro",
             provider="google",
             max_tokens=8192,
-            max_context_length=2097152,  # 2M context window
+            max_context_length=2097152, 
             supports_functions=True,
             supports_vision=True,
             supports_streaming=True,
-            cost_per_1k_prompt_tokens=0.00125,  # <128k tokens
+            cost_per_1k_prompt_tokens=0.00125,  
             cost_per_1k_completion_tokens=0.005,
-            tags=["flagship", "reasoning", "multimodal", "long-context"],
+            tags=["reasoning", "multimodal", "long-context"],
         ),
         "gemini-1.5-flash": ModelInfo(
             name="gemini-1.5-flash",
             provider="google",
             max_tokens=8192,
-            max_context_length=1048576,  # 1M context window
+            max_context_length=1048576,  
             supports_functions=True,
             supports_vision=True,
             supports_streaming=True,
-            cost_per_1k_prompt_tokens=0.000075,  # <128k tokens
+            cost_per_1k_prompt_tokens=0.000075,  
             cost_per_1k_completion_tokens=0.0003,
             tags=["fast", "efficient", "multimodal", "long-context"],
         ),
@@ -73,25 +85,13 @@ class GoogleProvider(BaseProvider):
             name="gemini-1.5-flash-8b",
             provider="google",
             max_tokens=8192,
-            max_context_length=1048576,  # 1M context window
+            max_context_length=1048576,  
             supports_functions=True,
             supports_vision=True,
             supports_streaming=True,
-            cost_per_1k_prompt_tokens=0.0000375,  # <128k tokens
+            cost_per_1k_prompt_tokens=0.0000375,  
             cost_per_1k_completion_tokens=0.00015,
             tags=["fastest", "affordable", "multimodal"],
-        ),
-        "gemini-1.0-pro": ModelInfo(
-            name="gemini-1.0-pro",
-            provider="google",
-            max_tokens=8192,
-            max_context_length=32768,
-            supports_functions=True,
-            supports_vision=False,
-            supports_streaming=True,
-            cost_per_1k_prompt_tokens=0.0005,
-            cost_per_1k_completion_tokens=0.0015,
-            tags=["stable", "general-purpose"],
         ),
     }
 

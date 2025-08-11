@@ -20,6 +20,42 @@ class AnthropicProvider(BaseProvider):
     """Anthropic provider implementation."""
 
     MODELS = {
+        "claude-opus-4.1": ModelInfo(
+            name="claude-opus-4.1",
+            provider="anthropic",
+            max_tokens=32000,
+            max_context_length=200000,
+            supports_functions=True,
+            supports_vision=True,
+            supports_streaming=True,
+            cost_per_1k_prompt_tokens=15.0,
+            cost_per_1k_completion_tokens=75.0,
+            tags=["flagship", "most-capable", "multimodal", "extended-thinking"],
+        ),
+        "claude-sonnet-4": ModelInfo(
+            name="claude-sonnet-4",
+            provider="anthropic",
+            max_tokens=64000,
+            max_context_length=200000,
+            supports_functions=True,
+            supports_vision=True,
+            supports_streaming=True,
+            cost_per_1k_prompt_tokens=3.0,
+            cost_per_1k_completion_tokens=15.0,
+            tags=["high-performance", "multimodal", "extended-thinking"],
+        ),
+        "claude-haiku-3.5": ModelInfo(
+            name="claude-haiku-3.5",
+            provider="anthropic",
+            max_tokens=8192, 
+            max_context_length=200000,
+            supports_functions=True,
+            supports_vision=True,
+            supports_streaming=True,
+            cost_per_1k_prompt_tokens=0.8,
+            cost_per_1k_completion_tokens=4.0,
+            tags=["fastest", "efficient", "multimodal"],
+        ),
         "claude-3-5-sonnet-20241022": ModelInfo(
             name="claude-3-5-sonnet-20241022",
             provider="anthropic",
@@ -30,7 +66,7 @@ class AnthropicProvider(BaseProvider):
             supports_streaming=True,
             cost_per_1k_prompt_tokens=0.003,
             cost_per_1k_completion_tokens=0.015,
-            tags=["flagship", "reasoning", "multimodal"],
+            tags=["legacy", "reasoning", "multimodal"],
         ),
         "claude-3-5-haiku-20241022": ModelInfo(
             name="claude-3-5-haiku-20241022",
@@ -42,7 +78,7 @@ class AnthropicProvider(BaseProvider):
             supports_streaming=True,
             cost_per_1k_prompt_tokens=0.001,
             cost_per_1k_completion_tokens=0.005,
-            tags=["fast", "efficient"],
+            tags=["legacy", "fast", "efficient"],
         ),
         "claude-3-opus-20240229": ModelInfo(
             name="claude-3-opus-20240229",
@@ -54,7 +90,7 @@ class AnthropicProvider(BaseProvider):
             supports_streaming=True,
             cost_per_1k_prompt_tokens=0.015,
             cost_per_1k_completion_tokens=0.075,
-            tags=["powerful", "reasoning"],
+            tags=["legacy", "powerful", "reasoning"],
         ),
     }
 
