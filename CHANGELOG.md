@@ -2,6 +2,47 @@
 
 All notable changes to JustLLMs will be documented in this file.
 
+## [1.3.0] - 2025-08-11
+
+### Added - Major Model Updates 🚀
+- **Latest 2025 Models**: Comprehensive update with all newest models across providers
+  - **OpenAI**: GPT-5, GPT-5 Mini, GPT-4.1, GPT-4.1 Nano, O1, O4-Mini, GPT-OSS-120b
+  - **Google**: Gemini 2.5 Pro, Gemini 2.5 Flash, Gemini 2.5 Flash-Lite (latest generation)
+  - **Anthropic**: Claude Opus 4.1, Claude Sonnet 4, Claude Haiku 3.5 (new 4.x series)
+  - **Grok**: Grok 4, Grok 4 Heavy, Grok 3 Speedy, Grok 3 Mini variants
+  - **DeepSeek**: Enhanced models with cache-hit pricing variants (75% discount support)
+  - **Azure OpenAI**: GPT-5 series, O3, O4-Mini, and latest deployment mappings
+
+### Enhanced Routing Intelligence 🎯
+- **5-Tier Quality System**: Upgraded from 4-tier to 5-tier quality classification
+  - Tier 5: Premium models (GPT-5, Claude Opus 4.1, Grok 4)
+  - Enhanced model capability matching and selection logic
+- **Task-Based Routing Updates**: Optimized preferences for new models
+  - Code tasks: Prioritizes Gemini 2.5 Pro, GPT-5, DeepSeek Reasoner
+  - Analysis: Prioritizes O1, Claude Opus 4.1, reasoning specialists
+  - Creative: Prioritizes Claude Opus 4.1, Grok 4 for creative responses
+  - Simple: Cost-optimized with Flash-Lite, GPT-4.1 Nano, DeepSeek Chat
+- **Latency Optimization**: Updated scoring for nano/lite models, provider-specific adjustments
+- **Provider Performance**: Added DeepSeek (0.7x fastest), Grok (1.1x), Azure OpenAI (0.85x) multipliers
+
+### New Model Capabilities 🎨
+- **Extended Context Windows**: Up to 2M tokens (Gemini 1.5 Pro), 1M tokens (GPT-4.1, Gemini 2.5)
+- **Multimodal Enhancements**: Vision support across Grok 4, Gemini 2.5, Claude 4.x series
+- **Reasoning Models**: Specialized O1, O4-Mini for complex analytical tasks
+- **Cost Efficiency**: Ultra-affordable options (DeepSeek cached, Flash-Lite, GPT-4.1 Nano)
+- **Tool Chaining**: Enhanced function calling and tool integration (GPT-5, Grok 4)
+
+### Updated Model Specifications 📊
+- **Accurate Pricing**: 2025 pricing for all models including cache discounts
+- **Context Lengths**: Verified context windows and output token limits  
+- **Capability Tags**: Enhanced tagging system (flagship, reasoning, multimodal, cost-efficient)
+- **Provider-Specific**: Azure deployment name mapping for new models
+
+### Configuration Enhancements ⚙️
+- **Backward Compatibility**: Legacy models retained alongside new variants
+- **Smart Defaults**: Intelligent routing continues to select cost-optimal models
+- **Model Validation**: Enhanced model availability checking across providers
+
 ## [1.2.0] - 2025-08-10
 
 ### Added
@@ -126,11 +167,12 @@ This is the initial stable release of JustLLMs, providing enterprise-grade LLM o
 
 ## Roadmap
 
-### Next Release (1.3.0)
-- **Function Calling**: Enhanced function calling support across all compatible providers
-- **Vision Support**: Multi-modal capabilities for image processing
+### Next Release (1.4.0)
+- **Advanced Caching**: Redis-backed intelligent caching with semantic similarity
+- **Function Calling Enhancements**: Enhanced function calling support with tool chaining
 - **Additional Vector Stores**: Support for more vector databases (Weaviate, Qdrant, Elasticsearch)
 - **Advanced RAG**: Semantic chunking strategies and hybrid search capabilities
+- **Performance Monitoring**: Real-time latency tracking and provider health monitoring
 
 ### Future Plans
 - **Web-based Analytics Dashboard**: Visual insights and real-time monitoring
