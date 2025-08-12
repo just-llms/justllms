@@ -1,24 +1,36 @@
-# Add 'documentation' label to any change within the 'docs' folder or markdown files
+# Configuration for GitHub labeler action
+# This file defines which labels to apply based on file paths
+
+# Documentation changes
 documentation:
   - changed-files:
     - any-glob-to-any-file:
       - '**/*.md'
       - 'docs/**'
+      - 'README.md'
+      - 'CHANGELOG.md'
+      - 'CONTRIBUTING.md'
 
-# Add 'core' label to changes in the main justllms package
+# Core functionality
 core:
   - changed-files:
     - any-glob-to-any-file:
-      - 'justllms/**/*.py'
+      - 'justllms/core/**'
+      - 'justllms/__init__.py'
+      - 'justllms/__version__.py'
 
-# Add 'tests' label to any test file changes
+# Test changes
 tests:
   - changed-files:
     - any-glob-to-any-file:
       - 'tests/**'
       - '**/*test*.py'
+      - '**/*_test.py'
+      - '**/test_*.py'
+      - 'pytest.ini'
+      - '.coveragerc'
 
-# Add 'dependencies' label when dependencies are updated
+# Dependencies
 dependencies:
   - changed-files:
     - any-glob-to-any-file:
@@ -26,19 +38,91 @@ dependencies:
       - 'requirements*.txt'
       - 'setup.py'
       - 'setup.cfg'
+      - 'Pipfile'
+      - 'Pipfile.lock'
+      - 'poetry.lock'
 
-# Add 'ci' label to CI/CD changes
+# CI/CD changes
 ci:
   - changed-files:
     - any-glob-to-any-file:
       - '.github/workflows/**'
       - '.github/actions/**'
+      - '.github/*.yml'
+      - '.github/*.yaml'
 
-# Add 'config' label to configuration changes
+# Configuration changes
 config:
   - changed-files:
     - any-glob-to-any-file:
+      - '*.json'
+      - '*.yaml'
+      - '*.yml'
+      - '*.toml'
+      - '*.ini'
+      - '*.cfg'
+      - '.env*'
       - '.*rc'
       - '.*config.*'
       - '.github/**/*.yml'
       - '.github/**/*.yaml'
+
+# Provider-specific changes
+provider:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'justllms/providers/**'
+      - 'justllms/core/providers/**'
+
+# LLM/Model changes
+llm:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'justllms/models/**'
+      - 'justllms/core/models/**'
+      - '**/model_*.py'
+      - '**/*_model.py'
+
+# Routing changes
+routing:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'justllms/routing/**'
+      - 'justllms/core/routing/**'
+      - '**/router*.py'
+
+# RAG/Vector store changes
+rag:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'justllms/rag/**'
+      - 'justllms/core/rag/**'
+      - '**/vector*.py'
+      - '**/embedding*.py'
+      - '**/retrieval*.py'
+
+# Cache-related changes
+caching:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'justllms/cache/**'
+      - 'justllms/core/cache/**'
+      - '**/cache*.py'
+
+# Examples
+examples:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'examples/**'
+      - 'notebooks/**'
+      - '*.ipynb'
+
+# Security-related changes
+security:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/auth*.py'
+      - '**/security*.py'
+      - '**/token*.py'
+      - '**/crypt*.py'
+      - '.github/dependabot.yml'
