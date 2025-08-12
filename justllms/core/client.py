@@ -59,11 +59,11 @@ class Client:
             retrieval_config = getattr(self.config, "retrieval", None)
             if retrieval_config:
                 # Lazy import to avoid circular dependency
-                from justllms.retrieval import RetrievalManager, RetrievalConfig
-                
+                from justllms.retrieval import RetrievalConfig, RetrievalManager
+
                 if isinstance(retrieval_config, dict):
                     retrieval_config = RetrievalConfig(**retrieval_config)
-                
+
                 self.retrieval = RetrievalManager(retrieval_config)
             else:
                 self.retrieval = None

@@ -47,7 +47,7 @@ class AnthropicProvider(BaseProvider):
         "claude-haiku-3.5": ModelInfo(
             name="claude-haiku-3.5",
             provider="anthropic",
-            max_tokens=8192, 
+            max_tokens=8192,
             max_context_length=200000,
             supports_functions=True,
             supports_vision=True,

@@ -7,7 +7,7 @@ from justllms.retrieval.vector_stores import VectorStore
 
 __all__ = [
     "EmbeddingProvider",
-    "VectorStore", 
+    "VectorStore",
     "RetrievalManager",
     "Document",
     "RetrievalConfig",

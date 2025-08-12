@@ -3,7 +3,7 @@
 from typing import TYPE_CHECKING, Any, AsyncIterator, Dict, Iterator, List, Optional, Union
 
 from justllms.core.base import BaseResponse
-from justllms.core.models import Choice, Message, Usage
+from justllms.core.models import Choice, Message, Role, Usage
 
 if TYPE_CHECKING:
     from justllms.core.client import Client
@@ -212,17 +212,19 @@ class Completion:
     ) -> Union[CompletionResponse, Iterator[CompletionResponse]]:
         """Retrieve relevant context and create completion."""
         if not self.client.retrieval:
-            raise ValueError("Retrieval not configured. Please initialize client with retrieval_config.")
-        
+            raise ValueError(
+                "Retrieval not configured. Please initialize client with retrieval_config."
+            )
+
         # Perform retrieval
         retrieval_result = self.client.retrieval.search(
             query=query,
             collection=collection,
             k=k,
             similarity_threshold=similarity_threshold,
-            **kwargs
+            **kwargs,
         )
-        
+
         # Build context from retrieved documents
         context_parts = []
         for doc in retrieval_result.documents:
@@ -231,35 +233,31 @@ class Completion:
                 context_parts.append(f"[{metadata_str}]\n{doc.content}")
             else:
                 context_parts.append(doc.content)
-        
+
         retrieved_context = "\n\n".join(context_parts)
-        
+
         # Use provided template or default
         if context_template is None:
             context_template = "Context:\n{context}\n\nQuestion: {query}\n\nPlease answer based on the provided context."
-        
+
         # Format the context message
-        context_message = context_template.format(
-            context=retrieved_context,
-            query=query
-        )
-        
+        context_message = context_template.format(context=retrieved_context, query=query)
+
         # Prepare messages
         if messages is None:
-            formatted_messages = [Message(role="user", content=context_message)]
+            formatted_messages = [Message(role=Role.USER, content=context_message)]
         else:
             formatted_messages = self._format_messages(messages)
             # Insert context as the first user message or prepend to existing first message
             if formatted_messages and formatted_messages[0].role == "user":
                 # Prepend context to first user message
                 formatted_messages[0] = Message(
-                    role="user",
-                    content=f"{context_message}\n\n{formatted_messages[0].content}"
+                    role=Role.USER, content=f"{context_message}\n\n{formatted_messages[0].content}"
                 )
             else:
                 # Insert context as first message
-                formatted_messages.insert(0, Message(role="user", content=context_message))
-        
+                formatted_messages.insert(0, Message(role=Role.USER, content=context_message))
+
         # Create completion with enhanced messages
         params = {
             "messages": formatted_messages,
@@ -269,22 +267,22 @@ class Completion:
             "max_tokens": max_tokens,
             **kwargs,
         }
-        
+
         # Filter out None values, but keep model=None for routing
         params = {k: v for k, v in params.items() if v is not None or k == "model"}
-        
+
         if stream:
             return self.client._stream_completion(**params)
         else:
             response = self.client._create_completion(**params)
             # Add retrieval metadata to response
-            if hasattr(response, 'raw_response'):
-                response.raw_response['retrieval_metadata'] = {
-                    'query': query,
-                    'collection': collection,
-                    'documents_retrieved': len(retrieval_result.documents),
-                    'search_time_ms': retrieval_result.search_time_ms,
-                    'total_results': retrieval_result.total_results
+            if hasattr(response, "raw_response"):
+                response.raw_response["retrieval_metadata"] = {
+                    "query": query,
+                    "collection": collection,
+                    "documents_retrieved": len(retrieval_result.documents),
+                    "search_time_ms": retrieval_result.search_time_ms,
+                    "total_results": retrieval_result.total_results,
                 }
             return response
 
@@ -306,17 +304,19 @@ class Completion:
     ) -> Union[CompletionResponse, AsyncIterator[CompletionResponse]]:
         """Retrieve relevant context and create completion (async)."""
         if not self.client.retrieval:
-            raise ValueError("Retrieval not configured. Please initialize client with retrieval_config.")
-        
+            raise ValueError(
+                "Retrieval not configured. Please initialize client with retrieval_config."
+            )
+
         # Perform retrieval
         retrieval_result = await self.client.retrieval.asearch(
             query=query,
             collection=collection,
             k=k,
             similarity_threshold=similarity_threshold,
-            **kwargs
+            **kwargs,
         )
-        
+
         # Build context from retrieved documents
         context_parts = []
         for doc in retrieval_result.documents:
@@ -325,35 +325,31 @@ class Completion:
                 context_parts.append(f"[{metadata_str}]\n{doc.content}")
             else:
                 context_parts.append(doc.content)
-        
+
         retrieved_context = "\n\n".join(context_parts)
-        
+
         # Use provided template or default
         if context_template is None:
             context_template = "Context:\n{context}\n\nQuestion: {query}\n\nPlease answer based on the provided context."
-        
+
         # Format the context message
-        context_message = context_template.format(
-            context=retrieved_context,
-            query=query
-        )
-        
+        context_message = context_template.format(context=retrieved_context, query=query)
+
         # Prepare messages
         if messages is None:
-            formatted_messages = [Message(role="user", content=context_message)]
+            formatted_messages = [Message(role=Role.USER, content=context_message)]
         else:
             formatted_messages = self._format_messages(messages)
             # Insert context as the first user message or prepend to existing first message
             if formatted_messages and formatted_messages[0].role == "user":
                 # Prepend context to first user message
                 formatted_messages[0] = Message(
-                    role="user",
-                    content=f"{context_message}\n\n{formatted_messages[0].content}"
+                    role=Role.USER, content=f"{context_message}\n\n{formatted_messages[0].content}"
                 )
             else:
                 # Insert context as first message
-                formatted_messages.insert(0, Message(role="user", content=context_message))
-        
+                formatted_messages.insert(0, Message(role=Role.USER, content=context_message))
+
         # Create completion with enhanced messages
         params = {
             "messages": formatted_messages,
@@ -363,21 +359,21 @@ class Completion:
             "max_tokens": max_tokens,
             **kwargs,
         }
-        
+
         # Filter out None values, but keep model=None for routing
         params = {k: v for k, v in params.items() if v is not None or k == "model"}
-        
+
         if stream:
             return self.client._astream_completion(**params)
         else:
             response = await self.client._acreate_completion(**params)
             # Add retrieval metadata to response
-            if hasattr(response, 'raw_response'):
-                response.raw_response['retrieval_metadata'] = {
-                    'query': query,
-                    'collection': collection,
-                    'documents_retrieved': len(retrieval_result.documents),
-                    'search_time_ms': retrieval_result.search_time_ms,
-                    'total_results': retrieval_result.total_results
+            if hasattr(response, "raw_response"):
+                response.raw_response["retrieval_metadata"] = {
+                    "query": query,
+                    "collection": collection,
+                    "documents_retrieved": len(retrieval_result.documents),
+                    "search_time_ms": retrieval_result.search_time_ms,
+                    "total_results": retrieval_result.total_results,
                 }
             return response
