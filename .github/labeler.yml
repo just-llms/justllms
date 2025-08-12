@@ -1,0 +1,44 @@
+# Add 'documentation' label to any change within the 'docs' folder or markdown files
+documentation:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*.md'
+      - 'docs/**'
+
+# Add 'core' label to changes in the main justllms package
+core:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'justllms/**/*.py'
+
+# Add 'tests' label to any test file changes
+tests:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'tests/**'
+      - '**/*test*.py'
+
+# Add 'dependencies' label when dependencies are updated
+dependencies:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'pyproject.toml'
+      - 'requirements*.txt'
+      - 'setup.py'
+      - 'setup.cfg'
+
+# Add 'ci' label to CI/CD changes
+ci:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+
+# Add 'config' label to configuration changes
+config:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.*rc'
+      - '.*config.*'
+      - '.github/**/*.yml'
+      - '.github/**/*.yaml'
