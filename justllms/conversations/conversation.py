@@ -227,7 +227,8 @@ class Conversation:
 
     def add_system_message(self, content: str) -> ConversationMessage:
         """Add a system message to the conversation (synchronous)."""
-        return self._run_async(self.add_system_message_async(content))
+        result = self._run_async(self.add_system_message_async(content))
+        return result  # type: ignore[no-any-return]
 
     async def add_system_message_async(self, content: str) -> ConversationMessage:
         """Add a system message to the conversation (asynchronous)."""
@@ -282,7 +283,7 @@ class Conversation:
         client: Optional[Any] = None,
     ) -> Optional["Conversation"]:
         """Load a conversation from storage (synchronous)."""
-        
+
         async def _load() -> Optional["Conversation"]:
             return await cls.load_async(conversation_id, storage, client)
 
@@ -386,4 +387,3 @@ class Conversation:
         except RuntimeError:
             # No event loop running, we can use asyncio.run
             return asyncio.run(coro)
-

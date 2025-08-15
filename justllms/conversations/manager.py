@@ -115,7 +115,7 @@ class ConversationManager:
 
         # Save initial state if auto_save is enabled
         if final_config.auto_save:
-            await conversation.save()
+            conversation.save()
 
         return conversation
 
@@ -222,7 +222,7 @@ class ConversationManager:
                 conversation = await self.get(summary.id)
                 if conversation:
                     conversation.archive()
-                    await conversation.save()
+                    conversation.save()
                     archived_count += 1
 
         return archived_count
@@ -380,7 +380,7 @@ class ConversationManager:
         conversation.updated_at = time.time()
 
         # Save the imported conversation
-        await conversation.save()
+        conversation.save()
 
         return conversation
 

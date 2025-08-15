@@ -11,15 +11,36 @@ documentation:
       - 'CHANGELOG.md'
       - 'CONTRIBUTING.md'
 
+# Core functionality
+core:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'justllms/core/**'
+      - 'justllms/__init__.py'
+      - 'justllms/__version__.py'
+
 # Test changes
 tests:
   - changed-files:
     - any-glob-to-any-file:
       - 'tests/**'
+      - '**/*test*.py'
       - '**/*_test.py'
       - '**/test_*.py'
       - 'pytest.ini'
       - '.coveragerc'
+
+# Dependencies
+dependencies:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'pyproject.toml'
+      - 'requirements*.txt'
+      - 'setup.py'
+      - 'setup.cfg'
+      - 'Pipfile'
+      - 'Pipfile.lock'
+      - 'poetry.lock'
 
 # CI/CD changes
 ci:
@@ -41,6 +62,10 @@ config:
       - '*.ini'
       - '*.cfg'
       - '.env*'
+      - '.*rc'
+      - '.*config.*'
+      - '.github/**/*.yml'
+      - '.github/**/*.yaml'
 
 # Provider-specific changes
 provider:
@@ -91,25 +116,6 @@ examples:
       - 'examples/**'
       - 'notebooks/**'
       - '*.ipynb'
-
-# Dependencies
-dependencies:
-  - changed-files:
-    - any-glob-to-any-file:
-      - 'requirements*.txt'
-      - 'setup.py'
-      - 'pyproject.toml'
-      - 'Pipfile'
-      - 'Pipfile.lock'
-      - 'poetry.lock'
-
-# Core functionality
-core:
-  - changed-files:
-    - any-glob-to-any-file:
-      - 'justllms/core/**'
-      - 'justllms/__init__.py'
-      - 'justllms/__version__.py'
 
 # Security-related changes
 security:

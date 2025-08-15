@@ -142,9 +142,13 @@ class LatencyOptimizedStrategy(RoutingStrategy):
                     latency_score = 0.4  # Very fast
                 elif any(name in model_name.lower() for name in ["turbo", "flash", "gpt-4.1"]):
                     latency_score = 0.6  # Fast
-                elif any(name in model_name.lower() for name in ["pro", "sonnet", "gpt-4o", "grok-3"]):
+                elif any(
+                    name in model_name.lower() for name in ["pro", "sonnet", "gpt-4o", "grok-3"]
+                ):
                     latency_score = 0.8  # Medium
-                elif any(name in model_name.lower() for name in ["opus", "gpt-5", "grok-4", "o1", "o3"]):
+                elif any(
+                    name in model_name.lower() for name in ["opus", "gpt-5", "grok-4", "o1", "o3"]
+                ):
                     latency_score = 1.0  # Slowest (most capable)
 
                 # Add provider-specific latency estimates
@@ -172,15 +176,22 @@ class LatencyOptimizedStrategy(RoutingStrategy):
                     latency_score = 1.0
 
                     # Apply same scoring logic
-                    if any(name in model_name.lower() for name in ["mini", "haiku", "nano", "lite"]):
+                    if any(
+                        name in model_name.lower() for name in ["mini", "haiku", "nano", "lite"]
+                    ):
                         latency_score = 0.3
                     elif "flash-8b" in model_name.lower():
                         latency_score = 0.4
                     elif any(name in model_name.lower() for name in ["turbo", "flash", "gpt-4.1"]):
                         latency_score = 0.6
-                    elif any(name in model_name.lower() for name in ["pro", "sonnet", "gpt-4o", "grok-3"]):
+                    elif any(
+                        name in model_name.lower() for name in ["pro", "sonnet", "gpt-4o", "grok-3"]
+                    ):
                         latency_score = 0.8
-                    elif any(name in model_name.lower() for name in ["opus", "gpt-5", "grok-4", "o1", "o3"]):
+                    elif any(
+                        name in model_name.lower()
+                        for name in ["opus", "gpt-5", "grok-4", "o1", "o3"]
+                    ):
                         latency_score = 1.0
 
                     if provider_name == "google":
@@ -238,7 +249,17 @@ class QualityOptimizedStrategy(RoutingStrategy):
         if any(name in model_lower for name in ["gpt-5", "claude-opus-4.1", "grok-4", "o3"]):
             return 5
         # Tier 4 - Flagship models
-        elif any(name in model_lower for name in ["gemini-2.5-pro", "claude-sonnet-4", "gpt-4.1", "o1", "o4-mini", "grok-4-heavy"]):
+        elif any(
+            name in model_lower
+            for name in [
+                "gemini-2.5-pro",
+                "claude-sonnet-4",
+                "gpt-4.1",
+                "o1",
+                "o4-mini",
+                "grok-4-heavy",
+            ]
+        ):
             return 4
         # Tier 3 - Advanced models
         elif any(
