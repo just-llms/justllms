@@ -218,75 +218,8 @@ pdf_exporter.export(report, "executive_summary.pdf")
 
 **Business Impact**: Teams typically save 40-70% on LLM costs within the first month by identifying usage patterns and optimizing model selection.
 
-### Retrieval-Augmented Generation (RAG)
-**Enterprise-ready document search and knowledge retrieval** that seamlessly integrates with your LLM workflows. Transform your documents into a searchable knowledge base that enhances LLM responses with contextual information.
-
-#### RAG Features
-- **Multiple Vector Stores** - Support for Pinecone (cloud) and ChromaDB (local) 
-- **Built-in Embeddings** - Uses vector store native embeddings (no external providers needed)
-- **PDF Document Processing** - Automatic text extraction, chunking, and metadata extraction
-- **Intelligent Chunking** - Configurable chunk size, overlap, and splitting strategies
-- **Semantic Search** - Find relevant documents using natural language queries
-- **One-Step RAG Completion** - Retrieve and generate responses in a single API call
-
-```python
-from justllms import Client
-
-# Configure with Pinecone (uses built-in llama-text-embed-v2)
-pinecone_client = Client({
-    "providers": {
-        "google": {"api_key": "your-gemini-key"}
-    },
-    "retrieval": {
-        "vector_store": {
-            "type": "pinecone",
-            "api_key": "your-pinecone-key", 
-            "environment": "your-pinecone-host",
-            "index_name": "your-index-name"
-        },
-        "chunk_size": 1000,
-        "chunk_overlap": 200,
-        "default_k": 5
-    }
-})
-
-# Configure with ChromaDB (uses built-in all-MiniLM-L6-v2)
-chromadb_client = Client({
-    "providers": {
-        "google": {"api_key": "your-gemini-key"}
-    },
-    "retrieval": {
-        "vector_store": {"type": "chroma"},
-        "chunk_size": 1000,
-        "chunk_overlap": 200,
-        "default_k": 5
-    }
-})
-
-# Create knowledge collection
-success = client.retrieval.create_collection("company_docs")
-
-# Ingest PDF documents
-result = client.retrieval.ingest_documents([
-    "strategic_plan.pdf",
-    "technical_specs.pdf"
-], "company_docs")
-
-# RAG completion - retrieve relevant docs and generate response
-response = client.completion.retrieve_and_complete(
-    query="What are our key strategic recommendations?",
-    collection="company_docs",
-    model="gemini-2.5-flash",
-    k=3,  # Retrieve top 3 relevant documents
-    include_metadata=True,
-    temperature=0.7
-)
-
-print(f"Answer: {response.content}")
-print(f"Retrieved {len(response.retrieved_documents)} relevant documents")
-```
-
-**Knowledge Enhancement**: Turn your documents into an AI-accessible knowledge base, reducing hallucinations and providing contextually accurate responses.
+### Unified LLM Interface
+**Streamlined access to multiple LLM providers** with intelligent routing, comprehensive analytics, and enterprise-grade features for production deployments.
 
 ### Business Rule Validation
 **Enterprise-grade content filtering and compliance** built for regulated industries. Ensure your LLM applications meet security, privacy, and business requirements without custom development.
@@ -420,7 +353,6 @@ client = JustLLM(config)
 | **Intelligent Routing** | ✅ Cost/speed/quality | ❌ Manual only | ⚠️ Basic routing | ❌ None | ❌ Pipeline-based |
 | **Built-in Analytics** | ✅ Enterprise-grade | ❌ External tools needed | ⚠️ Basic metrics | ❌ None | ⚠️ Pipeline metrics |
 | **Conversation Management** | ✅ Full lifecycle | ⚠️ Memory components | ❌ None | ❌ Manual handling | ✅ Dialog systems |
-| **RAG Support** | ✅ Built-in vector stores | ✅ Multiple integrations | ❌ None | ❌ None | ✅ Document retrieval |
 | **Business Rules** | ✅ Content validation | ❌ Custom implementation | ❌ None | ❌ None | ⚠️ Custom filters |
 | **Cost Optimization** | ✅ Automatic routing | ❌ Manual optimization | ⚠️ Basic cost tracking | ❌ None | ❌ None |
 | **Streaming Support** | ✅ All providers | ✅ Provider-dependent | ✅ Most providers | ✅ OpenAI only | ⚠️ Limited |
