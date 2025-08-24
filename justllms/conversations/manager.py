@@ -174,7 +174,9 @@ class ConversationManager:
         """Search conversations (basic implementation)."""
         # Get all conversations with filters
         all_conversations = await self.list(
-            state=state, tags=tags, limit=None  # Get all for searching
+            state=state,
+            tags=tags,
+            limit=None,  # Get all for searching
         )
 
         results = all_conversations

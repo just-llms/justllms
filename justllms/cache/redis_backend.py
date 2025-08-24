@@ -36,7 +36,7 @@ class RedisCacheBackend(BaseCacheBackend):
     ) -> None:
         if not REDIS_AVAILABLE:
             raise ImportError(
-                "Redis support requires the 'redis' package. " "Install with: pip install redis"
+                "Redis support requires the 'redis' package. Install with: pip install redis"
             )
 
         self.prefix = prefix

@@ -3,7 +3,7 @@
 from typing import TYPE_CHECKING, Any, AsyncIterator, Dict, Iterator, List, Optional, Union
 
 from justllms.core.base import BaseResponse
-from justllms.core.models import Choice, Message, Role, Usage
+from justllms.core.models import Choice, Message, Usage
 
 if TYPE_CHECKING:
     from justllms.core.client import Client
@@ -193,4 +193,3 @@ class Completion:
                 formatted.append(msg)
 
         return formatted
-
