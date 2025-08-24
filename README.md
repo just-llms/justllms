@@ -15,10 +15,10 @@ Managing multiple LLM providers is complex. You need to handle different APIs, o
 pip install justllms
 
 # With PDF export capabilities
-pip install justllms[pdf]
+pip install "justllms[pdf]"
 
 # All optional dependencies (PDF export, Redis caching, advanced analytics)
-pip install justllms[all]
+pip install "justllms[all]"
 ```
 
 **Package size**: 1.1MB | **Lines of code**: ~11K | **Dependencies**: Minimal production requirements
