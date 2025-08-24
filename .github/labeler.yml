@@ -91,15 +91,23 @@ routing:
       - 'justllms/core/routing/**'
       - '**/router*.py'
 
-# RAG/Vector store changes
-rag:
+# Analytics and monitoring changes
+analytics:
   - changed-files:
     - any-glob-to-any-file:
-      - 'justllms/rag/**'
-      - 'justllms/core/rag/**'
-      - '**/vector*.py'
-      - '**/embedding*.py'
-      - '**/retrieval*.py'
+      - 'justllms/analytics/**'
+      - 'justllms/monitoring/**'
+      - '**/analytics*.py'
+      - '**/dashboard*.py'
+      - '**/metrics*.py'
+
+# Conversation management changes
+conversations:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'justllms/conversations/**'
+      - '**/conversation*.py'
+      - '**/storage*.py'
 
 # Cache-related changes
 caching:
