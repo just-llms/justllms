@@ -68,8 +68,7 @@ def validate_messages(  # noqa: C901
                     if item_type == "text":
                         if "text" not in item:
                             raise ValidationError(
-                                f"Message {i} content item {j} of type 'text' "
-                                "missing 'text' field"
+                                f"Message {i} content item {j} of type 'text' missing 'text' field"
                             )
                     elif item_type == "image":
                         if "image" not in item and "image_url" not in item:

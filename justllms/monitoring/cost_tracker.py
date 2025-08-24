@@ -98,8 +98,7 @@ class CostTracker:
             daily_cost = self.get_cost_summary(period="daily")["total_cost"]
             if daily_cost > self.budget_daily:
                 warnings.append(
-                    f"Daily cost ${daily_cost:.4f} exceeds "
-                    f"daily budget ${self.budget_daily:.4f}"
+                    f"Daily cost ${daily_cost:.4f} exceeds daily budget ${self.budget_daily:.4f}"
                 )
 
         # Monthly budget

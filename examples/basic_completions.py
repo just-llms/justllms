@@ -1,11 +1,13 @@
 from justllms import JustLLM
 
 # Initialize client
-client = JustLLM({
-    "providers": {
-        "google": {"api_key": "YOUR_GOOGLE_API_KEY"},
+client = JustLLM(
+    {
+        "providers": {
+            "google": {"api_key": "YOUR_GOOGLE_API_KEY"},
+        }
     }
-})
+)
 
 # Basic completion
 response = client.completion.create(
@@ -19,7 +21,7 @@ print("Cost:", f"${response.usage.estimated_cost:.6f}")
 response = client.completion.create(
     messages=[
         {"role": "system", "content": "You are a helpful coding assistant."},
-        {"role": "user", "content": "Write a Python hello world program"}
+        {"role": "user", "content": "Write a Python hello world program"},
     ]
 )
 print("\nCoding Assistant:", response.content)

@@ -234,7 +234,8 @@ class DiskStorage(ConversationStorage):
             for file_path in self.storage_dir.glob("*.json"):
                 try:
                     data = await asyncio.get_event_loop().run_in_executor(
-                        None, lambda fp=file_path: json.loads(fp.read_text())  # type: ignore
+                        None,
+                        lambda fp=file_path: json.loads(fp.read_text()),  # type: ignore
                     )
 
                     summary = ConversationSummary(**data["summary"])
