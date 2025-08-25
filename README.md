@@ -409,29 +409,10 @@ enterprise_config = {
 client = JustLLM(enterprise_config)
 ```
 
-## Contributing
 
-We welcome contributions! Whether it's adding new providers, improving routing strategies, or enhancing analytics capabilities.
-
-```bash
-# Development setup
-git clone https://github.com/your-org/justllms.git
-cd justllms
-pip install -e ".[dev]"
-pytest
-```
 
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
 
-## Support
-
-- **Documentation**: Comprehensive guides and API reference
-- **Examples**: Ready-to-run code samples in the `examples/` directory
-- **Issues**: Report bugs and request features via GitHub Issues
-- **Discussions**: Community support and ideas via GitHub Discussions
-
----
-
-**JustLLMs** - Simple to start, powerful to scale, intelligent by design.
+[![Star History Chart](https://api.star-history.com/svg?repos=just-llms/justllms&type=Date)](https://www.star-history.com/#just-llms/justllms&Date)
