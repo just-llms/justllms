@@ -144,5 +144,3 @@ def validate_model_name(model: str) -> str:
             )
 
     return model
-
-
