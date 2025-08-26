@@ -1,9 +1,9 @@
 """Cluster artifact loader for intelligent routing."""
 
 import json
-import os
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
 
 try:
@@ -50,7 +50,7 @@ class ClusterArtifactLoader:
             if not rankings_path.exists():
                 raise FileNotFoundError(f"Cluster rankings not found: {rankings_path}")
             
-            with open(rankings_path, 'r') as f:
+            with open(rankings_path) as f:
                 self._cluster_rankings = json.load(f)
         return self._cluster_rankings
     
@@ -62,7 +62,7 @@ class ClusterArtifactLoader:
             if not metadata_path.exists():
                 raise FileNotFoundError(f"Metadata not found: {metadata_path}")
             
-            with open(metadata_path, 'r') as f:
+            with open(metadata_path) as f:
                 self._metadata = json.load(f)
         return self._metadata
     

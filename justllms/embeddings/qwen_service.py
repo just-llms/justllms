@@ -1,16 +1,18 @@
 """Qwen3 embedding service with local model support."""
 
-import os
-import sqlite3
 import hashlib
 import json
-from typing import List, Optional, Union
+import os
+import sqlite3
 from pathlib import Path
+from typing import List, Optional
+
 import numpy as np
 
 try:
-    from transformers import AutoModel, AutoTokenizer
     import torch
+    from transformers import AutoModel, AutoTokenizer
+    
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
     TRANSFORMERS_AVAILABLE = False
@@ -70,7 +72,7 @@ class Qwen3EmbeddingService:
             self.model.to(self.device)
             self.model.eval()
         except Exception as e:
-            raise RuntimeError(f"Failed to load {self.model_name}: {e}")
+            raise RuntimeError(f"Failed to load {self.model_name}: {e}") from e
     
     def _get_cache_key(self, text: str) -> str:
         """Generate cache key for text."""

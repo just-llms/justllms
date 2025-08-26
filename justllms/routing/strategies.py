@@ -506,8 +506,8 @@ class ClusterBasedStrategy(RoutingStrategy):
         similarity_threshold: float = 0.0,
         enable_logging: bool = False,
     ):
-        from .cluster_loader import ClusterArtifactLoader
         from ..embeddings import Qwen3EmbeddingService
+        from .cluster_loader import ClusterArtifactLoader
         
         self.top_k_clusters = top_k_clusters
         self.fallback_strategy = fallback_strategy
@@ -520,13 +520,13 @@ class ClusterBasedStrategy(RoutingStrategy):
             if not self.cluster_loader.validate_artifacts():
                 raise ValueError("Invalid cluster artifacts")
         except Exception as e:
-            raise RuntimeError(f"Failed to load cluster artifacts: {e}")
+            raise RuntimeError(f"Failed to load cluster artifacts: {e}") from e
         
         # Initialize embedding service
         try:
             self.embedding_service = Qwen3EmbeddingService()
         except Exception as e:
-            raise RuntimeError(f"Failed to initialize embedding service: {e}")
+            raise RuntimeError(f"Failed to initialize embedding service: {e}") from e
         
         # Cache for provider mappings
         self._provider_mapping = None
