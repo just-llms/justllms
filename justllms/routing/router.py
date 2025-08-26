@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from justllms.core.base import BaseProvider
 from justllms.core.models import Message
 from justllms.routing.strategies import (
+    ClusterBasedStrategy,
     CostOptimizedStrategy,
     LatencyOptimizedStrategy,
     QualityOptimizedStrategy,
@@ -44,7 +45,10 @@ class Router:
         """Create a routing strategy from name."""
         strategy_configs = self.config.get("strategy_configs", {})
 
-        if strategy_name == "cost":
+        if strategy_name == "cluster":
+            config = strategy_configs.get("cluster", {})
+            return ClusterBasedStrategy(**config)
+        elif strategy_name == "cost":
             config = strategy_configs.get("cost", {})
             return CostOptimizedStrategy(**config)
         elif strategy_name == "latency":

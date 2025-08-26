@@ -1,0 +1,38 @@
+{
+  "n_clusters": 8,
+  "available_models": [
+    "anthropic/claude-opus-4.1",
+    "anthropic/claude-sonnet-4",
+    "google/gemini-2.5-flash",
+    "google/gemini-2.5-pro",
+    "openai/gpt-5-chat",
+    "qwen/qwen3-235b-a22b-2507",
+    "qwen/qwen3-235b-a22b-thinking-2507",
+    "openai/gpt-5-medium"
+  ],
+  "embedding_model": "Qwen/Qwen3-Embedding-0.6B",
+  "normalizer_type": "l2",
+  "timestamp": "2025-08-26 14:34:14.952756",
+  "config": {
+    "data_path": "sample_data.json",
+    "train_ratio": 0.7,
+    "seed": 42,
+    "n_clusters": 8,
+    "max_router": 1,
+    "top_k": 1,
+    "beta": 9.0,
+    "max_workers": 4,
+    "cluster_batch_size": 1000,
+    "max_tokens": 7500,
+    "embedding_model": "text-embedding-3-large",
+    "cost_sensitivity": 0.3,
+    "performance_weight": 0.7,
+    "min_accuracy_threshold": 0.0,
+    "budget_limit": null,
+    "excluded_models": [],
+    "excluded_datasets": [],
+    "dataset_exclusion_mode": "hard",
+    "export_cluster": "artifacts"
+  },
+  "model_type": "qwen_cluster_router"
+}

@@ -79,12 +79,22 @@ response2 = client.completion.create(
 ### Intelligent Routing
 **The game-changing feature that sets JustLLMs apart.** Instead of manually choosing models, let our intelligent routing engine automatically select the optimal provider and model for each request based on your priorities.
 
-#### How It Works
-Our routing engine analyzes each request and considers:
-- **Cost efficiency** - Real-time pricing across all providers
-- **Performance metrics** - Historical latency and success rates
-- **Model capabilities** - Task complexity and model strengths
-- **Provider health** - Current availability and response times
+#### Available Strategies
+
+**🆕 Cluster-Based Routing** - *AI-Powered Query Analysis*
+Our most advanced routing strategy uses machine learning to analyze query semantics and route to the optimal model based on similarity to training data. Achieves **+7% accuracy improvement** and **-27% cost reduction** compared to single-model approaches.
+
+```python
+# Cluster-based routing (recommended for production)
+client = JustLLM({
+    "providers": {...},
+    "routing": {"strategy": "cluster"}
+})
+```
+
+*Based on research from "[Beyond GPT-5: Making LLMs Cheaper and Better via Performance–Efficiency Optimized Routing](https://arxiv.org/pdf/2508.12631)" - AvengersPro framework*
+
+**Traditional Routing Strategies**
 
 ```python
 # Cost-optimized: Always picks the cheapest option
@@ -94,7 +104,6 @@ client = JustLLM({
 })
 
 # Speed-optimized: Prioritizes fastest response times
-# Routes to providers with lowest latency in your region
 client = JustLLM({
     "providers": {...},
     "routing": {"strategy": "latency"}
@@ -106,20 +115,20 @@ client = JustLLM({
     "routing": {"strategy": "quality"}
 })
 
-# Advanced: Custom routing with business rules
+# Task-based: Automatically detects query type and routes accordingly
 client = JustLLM({
     "providers": {...},
-    "routing": {
-        "strategy": "hybrid",
-        "cost_weight": 0.4,
-        "quality_weight": 0.6,
-        "max_cost_per_request": 0.05,
-        "fallback_provider": "openai"
-    }
+    "routing": {"strategy": "task"}
 })
 ```
 
-**Result**: 60% cost reduction on average while maintaining quality, with automatic failover to backup providers.
+#### How Cluster Routing Works
+1. **Query Analysis**: Your request is embedded using Qwen3-Embedding-0.6B
+2. **Cluster Matching**: Finds the most similar cluster from pre-trained data
+3. **Model Selection**: Routes to the best-performing model for that cluster
+4. **Fallback**: Falls back to quality-based routing if needed
+
+**Result**: Up to 60% cost reduction while improving accuracy, with automatic failover to backup providers.
 
 ### Real-time Streaming
 Full streaming support with proper token handling across all providers:
@@ -408,9 +417,6 @@ enterprise_config = {
 
 client = JustLLM(enterprise_config)
 ```
-
-
-
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
