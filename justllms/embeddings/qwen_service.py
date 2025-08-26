@@ -5,7 +5,7 @@ import json
 import os
 import sqlite3
 from pathlib import Path
-from typing import List, Optional, Any
+from typing import Any, List, Optional
 
 import numpy as np
 
