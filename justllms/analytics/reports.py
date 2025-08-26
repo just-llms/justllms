@@ -1,5 +1,3 @@
-"""Report export functionality for analytics dashboard."""
-
 import csv
 import io
 from abc import ABC, abstractmethod

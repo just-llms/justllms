@@ -1,5 +1,3 @@
-"""Storage backends for conversation persistence."""
-
 import asyncio
 import json
 import pickle

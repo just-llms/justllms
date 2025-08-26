@@ -1,5 +1,3 @@
-"""Base classes for providers and responses."""
-
 from abc import ABC, abstractmethod
 from typing import Any, AsyncIterator, Dict, Iterator, List, Optional
 

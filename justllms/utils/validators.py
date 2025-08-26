@@ -1,5 +1,3 @@
-"""Validation utilities for inputs."""
-
 import re
 from typing import Any, Dict, List, Optional, Union
 

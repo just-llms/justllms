@@ -1,5 +1,3 @@
-"""Health checking implementation using dummy LLM calls."""
-
 import asyncio
 import hashlib
 import time

@@ -1,5 +1,3 @@
-"""Exception classes for JustLLMs."""
-
 from typing import Any, Dict, Optional
 
 

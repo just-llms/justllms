@@ -1,5 +1,3 @@
-"""Anthropic (Claude) provider implementation."""
-
 from typing import Any, AsyncIterator, Dict, Iterator, List, Optional
 
 import httpx

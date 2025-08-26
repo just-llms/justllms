@@ -1,5 +1,3 @@
-"""Cache module for response caching."""
-
 from justllms.cache.backends import (
     BaseCacheBackend,
     DiskCacheBackend,

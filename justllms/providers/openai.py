@@ -1,5 +1,3 @@
-"""OpenAI provider implementation."""
-
 from typing import Any, AsyncIterator, Dict, Iterator, List
 
 import httpx

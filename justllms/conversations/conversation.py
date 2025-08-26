@@ -1,5 +1,3 @@
-"""Core conversation implementation."""
-
 import asyncio
 import time
 from typing import Any, Dict, List, Optional

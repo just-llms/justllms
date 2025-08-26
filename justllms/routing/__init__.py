@@ -1,5 +1,3 @@
-"""Intelligent routing module for model selection."""
-
 from justllms.routing.router import Router
 from justllms.routing.strategies import (
     CostOptimizedStrategy,

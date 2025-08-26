@@ -1,5 +1,3 @@
-"""Qwen3 embedding service with local model support."""
-
 import hashlib
 import json
 import os

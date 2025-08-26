@@ -1,5 +1,3 @@
-"""Main monitoring class that coordinates logging, metrics, and cost tracking."""
-
 import time
 import uuid
 from pathlib import Path

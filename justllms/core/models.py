@@ -1,5 +1,3 @@
-"""Common data models used across the package."""
-
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 

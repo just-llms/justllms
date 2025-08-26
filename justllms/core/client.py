@@ -1,5 +1,3 @@
-"""Main client class for JustLLMs."""
-
 from typing import TYPE_CHECKING, Any, AsyncIterator, Dict, Iterator, List, Optional, Union
 
 from justllms.analytics import AnalyticsDashboard

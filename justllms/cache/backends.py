@@ -1,5 +1,3 @@
-"""Cache backend implementations."""
-
 import asyncio
 import contextlib
 import json
