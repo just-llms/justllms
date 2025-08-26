@@ -1,5 +1,5 @@
 import re
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Union
 
 from justllms.core.models import Message, Role
 from justllms.exceptions import ValidationError
@@ -146,55 +146,3 @@ def validate_model_name(model: str) -> str:
     return model
 
 
-def validate_temperature(temperature: float) -> float:
-    """Validate temperature parameter."""
-    if not isinstance(temperature, (int, float)):
-        raise ValidationError(f"Temperature must be a number, got {type(temperature)}")
-
-    if temperature < 0 or temperature > 2:
-        raise ValidationError(f"Temperature must be between 0 and 2, got {temperature}")
-
-    return float(temperature)
-
-
-def validate_max_tokens(max_tokens: int) -> int:
-    """Validate max_tokens parameter."""
-    if not isinstance(max_tokens, int):
-        raise ValidationError(f"max_tokens must be an integer, got {type(max_tokens)}")
-
-    if max_tokens < 1:
-        raise ValidationError(f"max_tokens must be positive, got {max_tokens}")
-
-    if max_tokens > 1000000:  # Reasonable upper limit
-        raise ValidationError(f"max_tokens is too large (max 1000000), got {max_tokens}")
-
-    return max_tokens
-
-
-def validate_stop_sequences(stop: Union[str, List[str], None]) -> Optional[List[str]]:
-    """Validate stop sequences."""
-    if stop is None:
-        return None
-
-    if isinstance(stop, str):
-        stop = [stop]
-    elif not isinstance(stop, list):
-        raise ValidationError(f"stop must be a string or list of strings, got {type(stop)}")
-
-    validated_stop = []
-    for i, seq in enumerate(stop):
-        if not isinstance(seq, str):
-            raise ValidationError(f"stop sequence {i} must be a string, got {type(seq)}")
-
-        if not seq:
-            raise ValidationError(f"stop sequence {i} cannot be empty")
-
-        if len(seq) > 500:  # Reasonable limit
-            raise ValidationError(f"stop sequence {i} is too long (max 500 characters)")
-
-        validated_stop.append(seq)
-
-    if len(validated_stop) > 20:  # Reasonable limit
-        raise ValidationError("Too many stop sequences (max 20)")
-
-    return validated_stop
