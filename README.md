@@ -92,7 +92,7 @@ client = JustLLM({
 })
 ```
 
-*Based on research from "[Beyond GPT-5: Making LLMs Cheaper and Better via Performance–Efficiency Optimized Routing](https://arxiv.org/pdf/2508.12631)" - AvengersPro framework*
+*Based on research from [Beyond GPT-5: Making LLMs Cheaper and Better via Performance–Efficiency Optimized Routing](https://arxiv.org/pdf/2508.12631) - AvengersPro framework*
 
 **Traditional Routing Strategies**
 
