@@ -1,5 +1,3 @@
-"""Report export functionality for analytics dashboard."""
-
 import csv
 import io
 from abc import ABC, abstractmethod
@@ -29,13 +27,11 @@ except ImportError:
 try:
     import matplotlib.dates as mdates
     import matplotlib.pyplot as plt
-    import pandas as pd
 
     MATPLOTLIB_AVAILABLE = True
 except ImportError:
     MATPLOTLIB_AVAILABLE = False
     plt = None
-    pd = None
 
 from justllms.analytics.models import AnalyticsReport
 

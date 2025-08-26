@@ -1,5 +1,3 @@
-"""Unified analytics and reporting system."""
-
 from .dashboard import AnalyticsDashboard
 from .models import (
     AnalyticsReport,

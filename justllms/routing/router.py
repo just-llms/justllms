@@ -1,5 +1,3 @@
-"""Main router class for intelligent model selection."""
-
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from justllms.core.base import BaseProvider

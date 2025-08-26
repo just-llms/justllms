@@ -1,5 +1,3 @@
-"""Configuration management for JustLLMs."""
-
 import json
 import os
 from pathlib import Path

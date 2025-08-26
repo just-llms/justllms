@@ -1,5 +1,3 @@
-"""Redis cache backend implementation."""
-
 import asyncio
 import json
 import pickle

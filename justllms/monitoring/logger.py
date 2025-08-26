@@ -1,5 +1,3 @@
-"""Logging functionality for JustLLMs."""
-
 import logging
 import sys
 from enum import Enum

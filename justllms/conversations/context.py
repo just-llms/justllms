@@ -1,5 +1,3 @@
-"""Context window management for conversations."""
-
 from typing import Dict, List, Tuple
 
 import tiktoken

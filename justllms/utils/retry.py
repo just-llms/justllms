@@ -1,5 +1,3 @@
-"""Retry utilities for handling API failures."""
-
 import asyncio
 import random
 import time
@@ -161,7 +159,6 @@ def exponential_backoff(
     max_delay: float = 60.0,
     exponential_base: float = 2.0,
     jitter: bool = True,
-    exceptions: tuple = (Exception,),
 ) -> Union[Callable, Any]:
     """Decorator for exponential backoff retry logic."""
 

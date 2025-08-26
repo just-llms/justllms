@@ -1,5 +1,3 @@
-"""Core module for JustLLMs - contains base classes and unified API."""
-
 from justllms.core.base import BaseProvider, BaseResponse
 from justllms.core.client import Client
 from justllms.core.completion import Completion, CompletionResponse

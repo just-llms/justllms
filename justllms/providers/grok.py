@@ -1,5 +1,3 @@
-"""Grok provider implementation."""
-
 import time
 from typing import Any, AsyncIterator, Dict, Iterator, List
 

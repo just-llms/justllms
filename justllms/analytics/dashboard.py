@@ -1,5 +1,3 @@
-"""Unified analytics dashboard for cross-provider metrics."""
-
 import uuid
 from collections import defaultdict
 from datetime import datetime, timedelta

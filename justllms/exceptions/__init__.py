@@ -1,5 +1,3 @@
-"""Exception classes for JustLLMs."""
-
 from justllms.exceptions.exceptions import (
     AuthenticationError,
     ConfigurationError,

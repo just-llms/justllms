@@ -1,5 +1,3 @@
-"""Token counting utilities."""
-
 from typing import Any, Dict, List, Optional, Union
 
 try:

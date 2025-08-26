@@ -1,5 +1,3 @@
-"""Conversation management for JustLLMs."""
-
 from .conversation import Conversation
 from .manager import ConversationManager
 from .models import ConversationConfig, ConversationMessage, ConversationState

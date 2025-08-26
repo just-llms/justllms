@@ -1,5 +1,3 @@
-"""Routing strategies for intelligent model selection."""
-
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Tuple
 

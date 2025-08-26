@@ -1,5 +1,3 @@
-"""Unified completion interface."""
-
 from typing import TYPE_CHECKING, Any, AsyncIterator, Dict, Iterator, List, Optional, Union
 
 from justllms.core.base import BaseResponse
