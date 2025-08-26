@@ -495,9 +495,10 @@ class TaskBasedStrategy(RoutingStrategy):
 
         raise ValueError("No suitable models found")
 
+
 class ClusterBasedStrategy(RoutingStrategy):
     """Intelligent cluster-based routing using pre-trained embeddings."""
-    
+
     def __init__(
         self,
         artifacts_path: Optional[str] = None,
@@ -508,12 +509,12 @@ class ClusterBasedStrategy(RoutingStrategy):
     ):
         from ..embeddings import Qwen3EmbeddingService
         from .cluster_loader import ClusterArtifactLoader
-        
+
         self.top_k_clusters = top_k_clusters
         self.fallback_strategy = fallback_strategy
         self.similarity_threshold = similarity_threshold
         self.enable_logging = enable_logging
-        
+
         # Load cluster artifacts
         try:
             self.cluster_loader = ClusterArtifactLoader(artifacts_path)
@@ -521,19 +522,19 @@ class ClusterBasedStrategy(RoutingStrategy):
                 raise ValueError("Invalid cluster artifacts")
         except Exception as e:
             raise RuntimeError(f"Failed to load cluster artifacts: {e}") from e
-        
+
         # Initialize embedding service
         try:
             self.embedding_service = Qwen3EmbeddingService()
         except Exception as e:
             raise RuntimeError(f"Failed to initialize embedding service: {e}") from e
-        
+
         # Cache for provider mappings
-        self._provider_mapping = None
-        
+        self._provider_mapping: Optional[Dict[str, Tuple[str, str]]] = None
+
         # Initialize fallback strategy
         self._fallback_strategy = self._create_fallback_strategy()
-    
+
     def _create_fallback_strategy(self) -> RoutingStrategy:
         """Create fallback strategy instance."""
         if self.fallback_strategy == "cost":
@@ -546,13 +547,13 @@ class ClusterBasedStrategy(RoutingStrategy):
             return TaskBasedStrategy()
         else:
             return QualityOptimizedStrategy()
-    
+
     def _get_provider_mapping(self) -> Dict[str, Tuple[str, str]]:
         """Get cached provider mapping."""
         if self._provider_mapping is None:
             self._provider_mapping = self.cluster_loader.get_model_provider_mapping()
-        return self._provider_mapping
-    
+        return self._provider_mapping or {}
+
     def _extract_query_text(self, messages: List[Message]) -> str:
         """Extract text content from messages for embedding."""
         texts = []
@@ -566,9 +567,9 @@ class ClusterBasedStrategy(RoutingStrategy):
                         texts.append(item.get("text", ""))
                     elif isinstance(item, str):
                         texts.append(item)
-        
+
         return " ".join(texts).strip()
-    
+
     def select(
         self,
         messages: List[Message],
@@ -584,72 +585,81 @@ class ClusterBasedStrategy(RoutingStrategy):
                 if self.enable_logging:
                     print("ClusterBasedStrategy: No text content found, falling back")
                 return self._fallback_strategy.select(messages, providers, constraints, **kwargs)
-            
+
             # Generate embedding
             query_embedding = self.embedding_service.embed(query_text)
-            
+
             # Find closest clusters
             closest_clusters = self.cluster_loader.find_closest_clusters(
-                query_embedding, 
-                top_k=self.top_k_clusters
+                query_embedding, top_k=self.top_k_clusters
             )
-            
+
             if not closest_clusters:
                 if self.enable_logging:
                     print("ClusterBasedStrategy: No clusters found, falling back")
                 return self._fallback_strategy.select(messages, providers, constraints, **kwargs)
-            
+
             # Check similarity threshold
             best_cluster_id, best_similarity = closest_clusters[0]
             if best_similarity < self.similarity_threshold:
                 if self.enable_logging:
-                    print(f"ClusterBasedStrategy: Similarity {best_similarity:.3f} below threshold {self.similarity_threshold}, falling back")
+                    print(
+                        f"ClusterBasedStrategy: Similarity {best_similarity:.3f} below threshold {self.similarity_threshold}, falling back"
+                    )
                 return self._fallback_strategy.select(messages, providers, constraints, **kwargs)
-            
+
             # Get provider mapping
             provider_mapping = self._get_provider_mapping()
-            
+
             # Try each cluster in order of similarity
             for cluster_id, similarity in closest_clusters:
                 try:
                     # Get model ranking for this cluster
                     ranking = self.cluster_loader.get_cluster_ranking(cluster_id)
-                    
+
                     # Try models in order of performance
                     for model_name in ranking:
                         if model_name in provider_mapping:
                             provider_name, actual_model = provider_mapping[model_name]
-                            
+
                             # Check if provider is available
                             if provider_name in providers:
                                 provider = providers[provider_name]
                                 available_models = provider.get_available_models()
-                                
+
                                 # Check if model is available
                                 if actual_model in available_models:
                                     if self.enable_logging:
-                                        print(f"ClusterBasedStrategy: Routed to cluster {cluster_id} (sim={similarity:.3f}), selected {provider_name}/{actual_model}")
-                                    
+                                        print(
+                                            f"ClusterBasedStrategy: Routed to cluster {cluster_id} (sim={similarity:.3f}), selected {provider_name}/{actual_model}"
+                                        )
+
                                     # Store routing metadata for analysis
-                                    kwargs.setdefault("_routing_metadata", {}).update({
-                                        "strategy": "cluster",
-                                        "cluster_id": cluster_id,
-                                        "similarity_score": similarity,
-                                        "query_text": query_text[:100] + "..." if len(query_text) > 100 else query_text
-                                    })
-                                    
+                                    kwargs.setdefault("_routing_metadata", {}).update(
+                                        {
+                                            "strategy": "cluster",
+                                            "cluster_id": cluster_id,
+                                            "similarity_score": similarity,
+                                            "query_text": (
+                                                query_text[:100] + "..."
+                                                if len(query_text) > 100
+                                                else query_text
+                                            ),
+                                        }
+                                    )
+
                                     return provider_name, actual_model
-                
+
                 except Exception as e:
                     if self.enable_logging:
                         print(f"ClusterBasedStrategy: Error processing cluster {cluster_id}: {e}")
                     continue
-            
+
             # If we get here, no suitable models found in any cluster
             if self.enable_logging:
                 print("ClusterBasedStrategy: No suitable models found in clusters, falling back")
             return self._fallback_strategy.select(messages, providers, constraints, **kwargs)
-        
+
         except Exception as e:
             if self.enable_logging:
                 print(f"ClusterBasedStrategy: Error in cluster routing: {e}, falling back")
