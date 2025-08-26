@@ -1,0 +1,186 @@
+{
+  "2": {
+    "total": 4,
+    "scores": {
+      "openai/gpt-5-medium": 0.90955,
+      "google/gemini-2.5-pro": 0.88165,
+      "qwen/qwen3-235b-a22b-thinking-2507": 0.856175,
+      "openai/gpt-5-chat": 0.7259,
+      "qwen/qwen3-235b-a22b-2507": 0.7205250000000001,
+      "google/gemini-2.5-flash": 0.5162249999999999,
+      "anthropic/claude-opus-4.1": 0.46247499999999997,
+      "anthropic/claude-sonnet-4": 0.43189999999999995
+    },
+    "ranking": [
+      "openai/gpt-5-medium",
+      "google/gemini-2.5-pro",
+      "qwen/qwen3-235b-a22b-thinking-2507",
+      "openai/gpt-5-chat",
+      "qwen/qwen3-235b-a22b-2507",
+      "google/gemini-2.5-flash",
+      "anthropic/claude-opus-4.1",
+      "anthropic/claude-sonnet-4"
+    ]
+  },
+  "0": {
+    "total": 6,
+    "scores": {
+      "openai/gpt-5-medium": 0.3528833333333334,
+      "google/gemini-2.5-pro": 0.2758833333333333,
+      "qwen/qwen3-235b-a22b-thinking-2507": 0.15571666666666667,
+      "anthropic/claude-opus-4.1": 0.14178333333333334,
+      "anthropic/claude-sonnet-4": 0.09899999999999999,
+      "qwen/qwen3-235b-a22b-2507": 0.09046666666666665,
+      "google/gemini-2.5-flash": 0.08313333333333332,
+      "openai/gpt-5-chat": 0.06721666666666666
+    },
+    "ranking": [
+      "openai/gpt-5-medium",
+      "google/gemini-2.5-pro",
+      "qwen/qwen3-235b-a22b-thinking-2507",
+      "anthropic/claude-opus-4.1",
+      "anthropic/claude-sonnet-4",
+      "qwen/qwen3-235b-a22b-2507",
+      "google/gemini-2.5-flash",
+      "openai/gpt-5-chat"
+    ]
+  },
+  "1": {
+    "total": 2,
+    "scores": {
+      "google/gemini-2.5-pro": 0.85515,
+      "openai/gpt-5-medium": 0.84395,
+      "qwen/qwen3-235b-a22b-thinking-2507": 0.82555,
+      "anthropic/claude-opus-4.1": 0.739,
+      "openai/gpt-5-chat": 0.7343500000000001,
+      "anthropic/claude-sonnet-4": 0.68495,
+      "qwen/qwen3-235b-a22b-2507": 0.5893999999999999,
+      "google/gemini-2.5-flash": 0.21115
+    },
+    "ranking": [
+      "google/gemini-2.5-pro",
+      "openai/gpt-5-medium",
+      "qwen/qwen3-235b-a22b-thinking-2507",
+      "anthropic/claude-opus-4.1",
+      "openai/gpt-5-chat",
+      "anthropic/claude-sonnet-4",
+      "qwen/qwen3-235b-a22b-2507",
+      "google/gemini-2.5-flash"
+    ]
+  },
+  "4": {
+    "total": 2,
+    "scores": {
+      "openai/gpt-5-medium": 0.6598999999999999,
+      "qwen/qwen3-235b-a22b-thinking-2507": 0.5603,
+      "openai/gpt-5-chat": 0.5272,
+      "google/gemini-2.5-pro": 0.5039,
+      "qwen/qwen3-235b-a22b-2507": 0.49844999999999995,
+      "google/gemini-2.5-flash": 0.45735000000000003,
+      "anthropic/claude-opus-4.1": 0.43679999999999997,
+      "anthropic/claude-sonnet-4": 0.39365
+    },
+    "ranking": [
+      "openai/gpt-5-medium",
+      "qwen/qwen3-235b-a22b-thinking-2507",
+      "openai/gpt-5-chat",
+      "google/gemini-2.5-pro",
+      "qwen/qwen3-235b-a22b-2507",
+      "google/gemini-2.5-flash",
+      "anthropic/claude-opus-4.1",
+      "anthropic/claude-sonnet-4"
+    ]
+  },
+  "3": {
+    "total": 1,
+    "scores": {
+      "openai/gpt-5-medium": 0.6477,
+      "openai/gpt-5-chat": 0.5583,
+      "qwen/qwen3-235b-a22b-thinking-2507": 0.5434,
+      "qwen/qwen3-235b-a22b-2507": 0.5236,
+      "google/gemini-2.5-pro": 0.481,
+      "anthropic/claude-opus-4.1": 0.4482,
+      "google/gemini-2.5-flash": 0.4433,
+      "anthropic/claude-sonnet-4": 0.4119
+    },
+    "ranking": [
+      "openai/gpt-5-medium",
+      "openai/gpt-5-chat",
+      "qwen/qwen3-235b-a22b-thinking-2507",
+      "qwen/qwen3-235b-a22b-2507",
+      "google/gemini-2.5-pro",
+      "anthropic/claude-opus-4.1",
+      "google/gemini-2.5-flash",
+      "anthropic/claude-sonnet-4"
+    ]
+  },
+  "6": {
+    "total": 3,
+    "scores": {
+      "openai/gpt-5-medium": 0.8809,
+      "google/gemini-2.5-pro": 0.7907666666666667,
+      "qwen/qwen3-235b-a22b-thinking-2507": 0.7790666666666667,
+      "qwen/qwen3-235b-a22b-2507": 0.6638666666666667,
+      "anthropic/claude-opus-4.1": 0.6394666666666667,
+      "openai/gpt-5-chat": 0.6306333333333333,
+      "google/gemini-2.5-flash": 0.6299333333333333,
+      "anthropic/claude-sonnet-4": 0.6038
+    },
+    "ranking": [
+      "openai/gpt-5-medium",
+      "google/gemini-2.5-pro",
+      "qwen/qwen3-235b-a22b-thinking-2507",
+      "qwen/qwen3-235b-a22b-2507",
+      "anthropic/claude-opus-4.1",
+      "openai/gpt-5-chat",
+      "google/gemini-2.5-flash",
+      "anthropic/claude-sonnet-4"
+    ]
+  },
+  "7": {
+    "total": 3,
+    "scores": {
+      "google/gemini-2.5-pro": 0.5636666666666666,
+      "qwen/qwen3-235b-a22b-2507": 0.5257333333333333,
+      "openai/gpt-5-medium": 0.4785333333333333,
+      "qwen/qwen3-235b-a22b-thinking-2507": 0.4533666666666667,
+      "openai/gpt-5-chat": 0.39443333333333336,
+      "anthropic/claude-opus-4.1": 0.3156666666666667,
+      "google/gemini-2.5-flash": 0.2892333333333333,
+      "anthropic/claude-sonnet-4": 0.15113333333333331
+    },
+    "ranking": [
+      "google/gemini-2.5-pro",
+      "qwen/qwen3-235b-a22b-2507",
+      "openai/gpt-5-medium",
+      "qwen/qwen3-235b-a22b-thinking-2507",
+      "openai/gpt-5-chat",
+      "anthropic/claude-opus-4.1",
+      "google/gemini-2.5-flash",
+      "anthropic/claude-sonnet-4"
+    ]
+  },
+  "5": {
+    "total": 3,
+    "scores": {
+      "openai/gpt-5-medium": 0.8267666666666668,
+      "anthropic/claude-opus-4.1": 0.7380666666666666,
+      "anthropic/claude-sonnet-4": 0.6394666666666667,
+      "google/gemini-2.5-pro": 0.6055333333333334,
+      "qwen/qwen3-235b-a22b-thinking-2507": 0.5379666666666667,
+      "qwen/qwen3-235b-a22b-2507": 0.5317666666666666,
+      "google/gemini-2.5-flash": 0.3666333333333333,
+      "openai/gpt-5-chat": 0.0
+    },
+    "ranking": [
+      "openai/gpt-5-medium",
+      "anthropic/claude-opus-4.1",
+      "anthropic/claude-sonnet-4",
+      "google/gemini-2.5-pro",
+      "qwen/qwen3-235b-a22b-thinking-2507",
+      "qwen/qwen3-235b-a22b-2507",
+      "google/gemini-2.5-flash",
+      "openai/gpt-5-chat"
+    ]
+  }
+}
