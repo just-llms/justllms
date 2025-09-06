@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "justllms"
-version = "1.4.0"
-description = "Production-ready Python library for multi-provider LLM orchestration with intelligent routing"
+version = "2.0.0"
+description = "Production-focused Python library for intelligent LLM routing and multi-provider management"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
