@@ -120,7 +120,7 @@ class Qwen3EmbeddingService:
             # Use mean pooling on last hidden states
             embedding = outputs.last_hidden_state.mean(dim=1).squeeze()
 
-        return embedding.cpu().numpy()
+        return embedding.cpu().numpy()  # type: ignore[no-any-return]
 
     def embed(self, text: str) -> np.ndarray:
         """Get embedding for text with caching."""

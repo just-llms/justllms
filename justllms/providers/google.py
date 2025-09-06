@@ -1,5 +1,5 @@
 import time
-from typing import Any, AsyncIterator, Dict, Iterator, List
+from typing import Any, Dict, List
 
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -26,7 +26,6 @@ class GoogleProvider(BaseProvider):
             max_context_length=1048576,
             supports_functions=True,
             supports_vision=True,
-            supports_streaming=True,
             cost_per_1k_prompt_tokens=0.00125,
             cost_per_1k_completion_tokens=0.005,
             tags=[
@@ -45,7 +44,6 @@ class GoogleProvider(BaseProvider):
             max_context_length=1048576,
             supports_functions=True,
             supports_vision=True,
-            supports_streaming=True,
             cost_per_1k_prompt_tokens=0.000075,
             cost_per_1k_completion_tokens=0.0003,
             tags=["latest", "multimodal", "long-context", "adaptive-thinking", "cost-efficient"],
@@ -57,7 +55,6 @@ class GoogleProvider(BaseProvider):
             max_context_length=1048576,
             supports_functions=True,
             supports_vision=True,
-            supports_streaming=True,
             cost_per_1k_prompt_tokens=0.00005,
             cost_per_1k_completion_tokens=0.0002,
             tags=["cost-efficient", "high-throughput", "multimodal", "long-context"],
@@ -69,7 +66,6 @@ class GoogleProvider(BaseProvider):
             max_context_length=2097152,
             supports_functions=True,
             supports_vision=True,
-            supports_streaming=True,
             cost_per_1k_prompt_tokens=0.00125,
             cost_per_1k_completion_tokens=0.005,
             tags=["reasoning", "multimodal", "long-context"],
@@ -81,7 +77,6 @@ class GoogleProvider(BaseProvider):
             max_context_length=1048576,
             supports_functions=True,
             supports_vision=True,
-            supports_streaming=True,
             cost_per_1k_prompt_tokens=0.000075,
             cost_per_1k_completion_tokens=0.0003,
             tags=["fast", "efficient", "multimodal", "long-context"],
@@ -93,7 +88,6 @@ class GoogleProvider(BaseProvider):
             max_context_length=1048576,
             supports_functions=True,
             supports_vision=True,
-            supports_streaming=True,
             cost_per_1k_prompt_tokens=0.0000375,
             cost_per_1k_completion_tokens=0.00015,
             tags=["fastest", "affordable", "multimodal"],
@@ -107,11 +101,10 @@ class GoogleProvider(BaseProvider):
     def get_available_models(self) -> Dict[str, ModelInfo]:
         return self.MODELS.copy()
 
-    def _get_api_endpoint(self, model: str, stream: bool = False) -> str:
+    def _get_api_endpoint(self, model: str) -> str:
         """Get the API endpoint for a model."""
         base_url = self.config.api_base or "https://generativelanguage.googleapis.com"
-        method = "streamGenerateContent" if stream else "generateContent"
-        return f"{base_url}/v1beta/models/{model}:{method}"
+        return f"{base_url}/v1beta/models/{model}:generateContent"
 
     def _format_messages(self, messages: List[Message]) -> Dict[str, Any]:
         """Format messages for Gemini API."""
@@ -259,7 +252,7 @@ class GoogleProvider(BaseProvider):
         **kwargs: Any,
     ) -> BaseResponse:
         """Synchronous completion."""
-        url = self._get_api_endpoint(model, stream=False)
+        url = self._get_api_endpoint(model)
 
         # Format request
         request_data = self._format_messages(messages)
@@ -285,220 +278,3 @@ class GoogleProvider(BaseProvider):
                 raise ProviderError(f"Gemini API error: {response.status_code} - {response.text}")
 
             return self._parse_response(response.json(), model)
-
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-    )
-    async def acomplete(
-        self,
-        messages: List[Message],
-        model: str,
-        **kwargs: Any,
-    ) -> BaseResponse:
-        """Asynchronous completion."""
-        url = self._get_api_endpoint(model, stream=False)
-
-        # Format request
-        request_data = self._format_messages(messages)
-
-        # Add generation config
-        generation_config = self._format_generation_config(**kwargs)
-        if generation_config:
-            request_data["generationConfig"] = generation_config
-
-        # Add safety settings if provided
-        if "safety_settings" in kwargs:
-            request_data["safetySettings"] = kwargs["safety_settings"]
-
-        async with httpx.AsyncClient(timeout=self.config.timeout) as client:
-            response = await client.post(
-                url,
-                json=request_data,
-                headers=self._get_headers(),
-                params=self._get_params(),
-            )
-
-            if response.status_code != 200:
-                raise ProviderError(f"Gemini API error: {response.status_code} - {response.text}")
-
-            return self._parse_response(response.json(), model)
-
-    def stream(  # noqa: C901
-        self,
-        messages: List[Message],
-        model: str,
-        **kwargs: Any,
-    ) -> Iterator[BaseResponse]:
-        """Synchronous streaming completion."""
-        url = self._get_api_endpoint(model, stream=True)
-
-        # Format request
-        request_data = self._format_messages(messages)
-
-        # Add generation config
-        generation_config = self._format_generation_config(**kwargs)
-        if generation_config:
-            request_data["generationConfig"] = generation_config
-
-        # Add safety settings if provided
-        if "safety_settings" in kwargs:
-            request_data["safetySettings"] = kwargs["safety_settings"]
-
-        # For Gemini streaming, we need to send alt=sse parameter
-        params = self._get_params()
-        params["alt"] = "sse"
-
-        with httpx.Client(timeout=self.config.timeout) as client, client.stream(
-            "POST",
-            url,
-            json=request_data,
-            headers=self._get_headers(),
-            params=params,
-        ) as response:
-            if response.status_code != 200:
-                raise ProviderError(
-                    f"Gemini API error: {response.status_code} - {response.read().decode('utf-8', errors='ignore')}"
-                )
-
-            # Buffer for accumulating partial lines
-            buffer = ""
-
-            for chunk in response.iter_bytes():
-                buffer += chunk.decode("utf-8", errors="ignore")
-
-                # Process complete lines
-                while "\n" in buffer:
-                    line, buffer = buffer.split("\n", 1)
-                    line = line.strip()
-
-                    # Skip empty lines
-                    if not line:
-                        continue
-
-                    # Skip SSE data prefix
-                    if line.startswith("data: "):
-                        line = line[6:]
-
-                    # Skip non-JSON lines
-                    if not line or line == "[DONE]":
-                        continue
-
-                    try:
-                        import json
-
-                        chunk_data = json.loads(line)
-
-                        # Extract text from the chunk
-                        candidates = chunk_data.get("candidates", [])
-                        if candidates:
-                            candidate = candidates[0]
-                            content = candidate.get("content", {})
-                            parts = content.get("parts", [])
-
-                            for part in parts:
-                                if "text" in part:
-                                    message = Message(role=Role.ASSISTANT, content=part["text"])
-                                    choice = Choice(
-                                        index=0,
-                                        message=message,
-                                        finish_reason=candidate.get("finishReason"),
-                                    )
-                                    yield GoogleResponse(
-                                        id=f"gemini-stream-{int(time.time())}",
-                                        model=model,
-                                        choices=[choice],
-                                        created=int(time.time()),
-                                    )
-                    except json.JSONDecodeError:
-                        continue
-
-    async def astream(  # noqa: C901
-        self,
-        messages: List[Message],
-        model: str,
-        **kwargs: Any,
-    ) -> AsyncIterator[BaseResponse]:
-        """Asynchronous streaming completion."""
-        url = self._get_api_endpoint(model, stream=True)
-
-        # Format request
-        request_data = self._format_messages(messages)
-
-        # Add generation config
-        generation_config = self._format_generation_config(**kwargs)
-        if generation_config:
-            request_data["generationConfig"] = generation_config
-
-        # Add safety settings if provided
-        if "safety_settings" in kwargs:
-            request_data["safetySettings"] = kwargs["safety_settings"]
-
-        # For Gemini streaming, we need to send alt=sse parameter
-        params = self._get_params()
-        params["alt"] = "sse"
-
-        async with httpx.AsyncClient(timeout=self.config.timeout) as client, client.stream(
-            "POST",
-            url,
-            json=request_data,
-            headers=self._get_headers(),
-            params=params,
-        ) as response:
-            if response.status_code != 200:
-                content = await response.aread()
-                raise ProviderError(
-                    f"Gemini API error: {response.status_code} - {content.decode()}"
-                )
-
-            # Buffer for accumulating partial lines
-            buffer = ""
-
-            async for chunk in response.aiter_bytes():
-                buffer += chunk.decode("utf-8", errors="ignore")
-
-                # Process complete lines
-                while "\n" in buffer:
-                    line, buffer = buffer.split("\n", 1)
-                    line = line.strip()
-
-                    # Skip empty lines
-                    if not line:
-                        continue
-
-                    # Skip SSE data prefix
-                    if line.startswith("data: "):
-                        line = line[6:]
-
-                    # Skip non-JSON lines
-                    if not line or line == "[DONE]":
-                        continue
-
-                    try:
-                        import json
-
-                        chunk_data = json.loads(line)
-
-                        # Extract text from the chunk
-                        candidates = chunk_data.get("candidates", [])
-                        if candidates:
-                            candidate = candidates[0]
-                            content = candidate.get("content", {})
-                            parts = content.get("parts", [])
-
-                            for part in parts:
-                                if "text" in part:
-                                    message = Message(role=Role.ASSISTANT, content=part["text"])
-                                    choice = Choice(
-                                        index=0,
-                                        message=message,
-                                        finish_reason=candidate.get("finishReason"),
-                                    )
-                                    yield GoogleResponse(
-                                        id=f"gemini-stream-{int(time.time())}",
-                                        model=model,
-                                        choices=[choice],
-                                        created=int(time.time()),
-                                    )
-                    except json.JSONDecodeError:
-                        continue

@@ -112,7 +112,7 @@ class ClusterArtifactLoader:
     def normalize_embedding(self, embedding: np.ndarray) -> np.ndarray:
         """Normalize embedding using the saved normalizer or fallback to L2."""
         if self.normalizer is not None:
-            return self.normalizer.transform(embedding.reshape(1, -1))[0]
+            return self.normalizer.transform(embedding.reshape(1, -1))[0]  # type: ignore[no-any-return]
         else:
             # Fallback to L2 normalization
             norm = np.linalg.norm(embedding)

@@ -1,6 +1,4 @@
 from justllms.__version__ import __version__
-from justllms.conversations import Conversation, ConversationManager
-from justllms.conversations.models import ConversationConfig, ConversationState
 from justllms.core.client import Client
 from justllms.core.completion import Completion, CompletionResponse
 from justllms.core.models import Message, Role
@@ -16,10 +14,6 @@ __all__ = [
     "CompletionResponse",
     "Message",
     "Role",
-    "Conversation",
-    "ConversationManager",
-    "ConversationConfig",
-    "ConversationState",
     "JustLLMsError",
     "ProviderError",
     "RouteError",
