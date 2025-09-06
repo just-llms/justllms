@@ -14,6 +14,7 @@ class DeepSeekResponse(BaseResponse):
 
     pass
 
+
 class DeepSeekProvider(BaseProvider):
     """DeepSeek provider implementation."""
 
@@ -25,7 +26,6 @@ class DeepSeekProvider(BaseProvider):
             max_context_length=65536,
             supports_functions=True,
             supports_vision=False,
-            
             cost_per_1k_prompt_tokens=0.27,
             cost_per_1k_completion_tokens=1.10,
             tags=["chat", "general-purpose", "json-output", "function-calling"],
@@ -37,7 +37,6 @@ class DeepSeekProvider(BaseProvider):
             max_context_length=65536,
             supports_functions=True,
             supports_vision=False,
-            
             cost_per_1k_prompt_tokens=0.07,
             cost_per_1k_completion_tokens=1.10,
             tags=["chat", "cached", "discount", "general-purpose"],
@@ -49,7 +48,6 @@ class DeepSeekProvider(BaseProvider):
             max_context_length=65536,
             supports_functions=True,
             supports_vision=False,
-            
             cost_per_1k_prompt_tokens=0.55,
             cost_per_1k_completion_tokens=2.19,
             tags=["reasoning", "analysis", "complex-tasks", "json-output", "advanced"],
@@ -61,7 +59,6 @@ class DeepSeekProvider(BaseProvider):
             max_context_length=65536,
             supports_functions=True,
             supports_vision=False,
-            
             cost_per_1k_prompt_tokens=0.14,
             cost_per_1k_completion_tokens=2.19,
             tags=["reasoning", "cached", "discount", "advanced"],

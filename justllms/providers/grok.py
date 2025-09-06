@@ -14,6 +14,7 @@ class GrokResponse(BaseResponse):
 
     pass
 
+
 class GrokProvider(BaseProvider):
     """Grok provider implementation."""
 
@@ -25,7 +26,6 @@ class GrokProvider(BaseProvider):
             max_context_length=130000,
             supports_functions=True,
             supports_vision=True,
-            
             cost_per_1k_prompt_tokens=6.0,
             cost_per_1k_completion_tokens=30.0,
             tags=["flagship", "most-intelligent", "multimodal", "coding", "latest"],
@@ -37,7 +37,6 @@ class GrokProvider(BaseProvider):
             max_context_length=130000,
             supports_functions=True,
             supports_vision=True,
-            
             cost_per_1k_prompt_tokens=8.0,
             cost_per_1k_completion_tokens=40.0,
             tags=["heavy", "premium", "exclusive", "multimodal"],
@@ -49,7 +48,6 @@ class GrokProvider(BaseProvider):
             max_context_length=131072,
             supports_functions=True,
             supports_vision=False,
-            
             cost_per_1k_prompt_tokens=3.0,
             cost_per_1k_completion_tokens=15.0,
             tags=["advanced", "reasoning", "long-context"],
@@ -61,7 +59,6 @@ class GrokProvider(BaseProvider):
             max_context_length=131072,
             supports_functions=True,
             supports_vision=False,
-            
             cost_per_1k_prompt_tokens=5.0,
             cost_per_1k_completion_tokens=25.0,
             tags=["speedy", "premium", "fast"],
@@ -73,7 +70,6 @@ class GrokProvider(BaseProvider):
             max_context_length=131072,
             supports_functions=True,
             supports_vision=False,
-            
             cost_per_1k_prompt_tokens=0.3,
             cost_per_1k_completion_tokens=0.5,
             tags=["mini", "affordable", "efficient"],
@@ -85,7 +81,6 @@ class GrokProvider(BaseProvider):
             max_context_length=131072,
             supports_functions=True,
             supports_vision=False,
-            
             cost_per_1k_prompt_tokens=0.6,
             cost_per_1k_completion_tokens=4.0,
             tags=["mini", "speedy", "fast", "affordable"],
@@ -226,5 +221,3 @@ class GrokProvider(BaseProvider):
                 raise ProviderError(f"Grok API error: {response.status_code} - {response.text}")
 
             return self._parse_response(response.json(), model)
-
-

@@ -14,6 +14,7 @@ class GoogleResponse(BaseResponse):
 
     pass
 
+
 class GoogleProvider(BaseProvider):
     """Google Gemini provider implementation."""
 
@@ -25,7 +26,6 @@ class GoogleProvider(BaseProvider):
             max_context_length=1048576,
             supports_functions=True,
             supports_vision=True,
-            
             cost_per_1k_prompt_tokens=0.00125,
             cost_per_1k_completion_tokens=0.005,
             tags=[
@@ -44,7 +44,6 @@ class GoogleProvider(BaseProvider):
             max_context_length=1048576,
             supports_functions=True,
             supports_vision=True,
-            
             cost_per_1k_prompt_tokens=0.000075,
             cost_per_1k_completion_tokens=0.0003,
             tags=["latest", "multimodal", "long-context", "adaptive-thinking", "cost-efficient"],
@@ -56,7 +55,6 @@ class GoogleProvider(BaseProvider):
             max_context_length=1048576,
             supports_functions=True,
             supports_vision=True,
-            
             cost_per_1k_prompt_tokens=0.00005,
             cost_per_1k_completion_tokens=0.0002,
             tags=["cost-efficient", "high-throughput", "multimodal", "long-context"],
@@ -68,7 +66,6 @@ class GoogleProvider(BaseProvider):
             max_context_length=2097152,
             supports_functions=True,
             supports_vision=True,
-            
             cost_per_1k_prompt_tokens=0.00125,
             cost_per_1k_completion_tokens=0.005,
             tags=["reasoning", "multimodal", "long-context"],
@@ -80,7 +77,6 @@ class GoogleProvider(BaseProvider):
             max_context_length=1048576,
             supports_functions=True,
             supports_vision=True,
-            
             cost_per_1k_prompt_tokens=0.000075,
             cost_per_1k_completion_tokens=0.0003,
             tags=["fast", "efficient", "multimodal", "long-context"],
@@ -92,7 +88,6 @@ class GoogleProvider(BaseProvider):
             max_context_length=1048576,
             supports_functions=True,
             supports_vision=True,
-            
             cost_per_1k_prompt_tokens=0.0000375,
             cost_per_1k_completion_tokens=0.00015,
             tags=["fastest", "affordable", "multimodal"],

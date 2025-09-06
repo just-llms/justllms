@@ -137,7 +137,6 @@ class Router:
 
             raise ValueError(f"No suitable model found: {str(e)}") from e
 
-
     def set_strategy(self, strategy: Union[str, RoutingStrategy]) -> None:
         """Set the routing strategy."""
         if isinstance(strategy, RoutingStrategy):

@@ -13,6 +13,7 @@ class AnthropicResponse(BaseResponse):
 
     pass
 
+
 class AnthropicProvider(BaseProvider):
     """Anthropic provider implementation."""
 
@@ -24,7 +25,6 @@ class AnthropicProvider(BaseProvider):
             max_context_length=200000,
             supports_functions=True,
             supports_vision=True,
-            
             cost_per_1k_prompt_tokens=15.0,
             cost_per_1k_completion_tokens=75.0,
             tags=["flagship", "most-capable", "multimodal", "extended-thinking"],
@@ -36,7 +36,6 @@ class AnthropicProvider(BaseProvider):
             max_context_length=200000,
             supports_functions=True,
             supports_vision=True,
-            
             cost_per_1k_prompt_tokens=3.0,
             cost_per_1k_completion_tokens=15.0,
             tags=["high-performance", "multimodal", "extended-thinking"],
@@ -48,7 +47,6 @@ class AnthropicProvider(BaseProvider):
             max_context_length=200000,
             supports_functions=True,
             supports_vision=True,
-            
             cost_per_1k_prompt_tokens=0.8,
             cost_per_1k_completion_tokens=4.0,
             tags=["fastest", "efficient", "multimodal"],
@@ -60,7 +58,6 @@ class AnthropicProvider(BaseProvider):
             max_context_length=200000,
             supports_functions=True,
             supports_vision=True,
-            
             cost_per_1k_prompt_tokens=0.003,
             cost_per_1k_completion_tokens=0.015,
             tags=["legacy", "reasoning", "multimodal"],
@@ -72,7 +69,6 @@ class AnthropicProvider(BaseProvider):
             max_context_length=200000,
             supports_functions=True,
             supports_vision=False,
-            
             cost_per_1k_prompt_tokens=0.001,
             cost_per_1k_completion_tokens=0.005,
             tags=["legacy", "fast", "efficient"],
@@ -84,7 +80,6 @@ class AnthropicProvider(BaseProvider):
             max_context_length=200000,
             supports_functions=True,
             supports_vision=True,
-            
             cost_per_1k_prompt_tokens=0.015,
             cost_per_1k_completion_tokens=0.075,
             tags=["legacy", "powerful", "reasoning"],

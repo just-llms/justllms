@@ -62,29 +62,26 @@ class Config(BaseModel):
     def from_env(cls) -> "Config":
         """Create configuration from environment variables."""
         providers = {}
-        
+
         # Common provider environment variables
         provider_keys = {
             "openai": "OPENAI_API_KEY",
-            "anthropic": "ANTHROPIC_API_KEY", 
+            "anthropic": "ANTHROPIC_API_KEY",
             "google": "GOOGLE_API_KEY",
             "azure_openai": "AZURE_OPENAI_KEY",
             "deepseek": "DEEPSEEK_API_KEY",
             "grok": "GROK_API_KEY",
         }
-        
+
         for provider_name, env_key in provider_keys.items():
             api_key = os.getenv(env_key)
             if api_key:
                 providers[provider_name] = {"api_key": api_key}
-        
+
         # Routing strategy from environment
         routing_strategy = os.getenv("JUSTLLMS_ROUTING_STRATEGY", "quality")
-        
-        return cls(
-            providers=providers,
-            routing=RoutingConfig(strategy=routing_strategy)
-        )
+
+        return cls(providers=providers, routing=RoutingConfig(strategy=routing_strategy))
 
 
 def load_config(
@@ -95,17 +92,17 @@ def load_config(
     """Load configuration from various sources."""
     if config_path:
         return Config.from_file(config_path)
-    
+
     # Try to find config file
     config_files = ["justllms.yaml", "justllms.yml", "justllms.json"]
     for config_file in config_files:
         if Path(config_file).exists():
             return Config.from_file(config_file)
-    
+
     if use_env:
         return Config.from_env()
-    
+
     if use_defaults:
         return Config()
-    
+
     raise FileNotFoundError("No configuration file found and environment variables not available")

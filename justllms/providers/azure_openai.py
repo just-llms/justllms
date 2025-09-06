@@ -13,6 +13,7 @@ class AzureOpenAIResponse(BaseResponse):
 
     pass
 
+
 class AzureOpenAIProvider(BaseProvider):
     """Azure OpenAI provider implementation."""
 
@@ -25,7 +26,6 @@ class AzureOpenAIProvider(BaseProvider):
             max_context_length=272000,
             supports_functions=True,
             supports_vision=True,
-            
             cost_per_1k_prompt_tokens=1.25,
             cost_per_1k_completion_tokens=10.0,
             tags=["flagship", "reasoning", "multimodal", "long-context"],
@@ -37,7 +37,6 @@ class AzureOpenAIProvider(BaseProvider):
             max_context_length=272000,
             supports_functions=True,
             supports_vision=True,
-            
             cost_per_1k_prompt_tokens=0.3,
             cost_per_1k_completion_tokens=1.2,
             tags=["efficient", "multimodal", "long-context"],
@@ -49,7 +48,6 @@ class AzureOpenAIProvider(BaseProvider):
             max_context_length=272000,
             supports_functions=True,
             supports_vision=True,
-            
             cost_per_1k_prompt_tokens=0.15,
             cost_per_1k_completion_tokens=0.6,
             tags=["nano", "affordable", "multimodal", "long-context"],
@@ -61,7 +59,6 @@ class AzureOpenAIProvider(BaseProvider):
             max_context_length=128000,
             supports_functions=True,
             supports_vision=True,
-            
             cost_per_1k_prompt_tokens=0.8,
             cost_per_1k_completion_tokens=3.2,
             tags=["chat", "multimodal", "conversational"],
@@ -73,7 +70,6 @@ class AzureOpenAIProvider(BaseProvider):
             max_context_length=128000,
             supports_functions=True,
             supports_vision=True,
-            
             cost_per_1k_prompt_tokens=0.005,
             cost_per_1k_completion_tokens=0.015,
             tags=["multimodal", "general-purpose"],
@@ -85,7 +81,6 @@ class AzureOpenAIProvider(BaseProvider):
             max_context_length=128000,
             supports_functions=True,
             supports_vision=True,
-            
             cost_per_1k_prompt_tokens=0.00015,
             cost_per_1k_completion_tokens=0.0006,
             tags=["multimodal", "efficient", "affordable"],
@@ -97,7 +92,6 @@ class AzureOpenAIProvider(BaseProvider):
             max_context_length=200000,
             supports_functions=True,
             supports_vision=False,
-            
             cost_per_1k_prompt_tokens=3.0,
             cost_per_1k_completion_tokens=12.0,
             tags=["reasoning", "complex-tasks", "long-context"],
@@ -109,7 +103,6 @@ class AzureOpenAIProvider(BaseProvider):
             max_context_length=200000,
             supports_functions=True,
             supports_vision=False,
-            
             cost_per_1k_prompt_tokens=15.0,
             cost_per_1k_completion_tokens=60.0,
             tags=["reasoning", "advanced", "complex-tasks"],
@@ -121,7 +114,6 @@ class AzureOpenAIProvider(BaseProvider):
             max_context_length=16385,
             supports_functions=True,
             supports_vision=False,
-            
             cost_per_1k_prompt_tokens=0.0005,
             cost_per_1k_completion_tokens=0.0015,
             tags=["fast", "affordable", "legacy"],
@@ -280,7 +272,6 @@ class AzureOpenAIProvider(BaseProvider):
             system_fingerprint=response_data.get("system_fingerprint"),
             **raw_response,
         )
-
 
     @retry(
         stop=stop_after_attempt(3),

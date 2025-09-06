@@ -53,7 +53,7 @@ class ModelInfo(BaseModel):
     max_context_length: Optional[int] = None
     supports_functions: bool = False
     supports_vision: bool = False
-    
+
     cost_per_1k_prompt_tokens: Optional[float] = None
     cost_per_1k_completion_tokens: Optional[float] = None
     latency_ms_per_token: Optional[float] = None

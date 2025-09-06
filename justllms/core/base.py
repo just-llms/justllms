@@ -57,7 +57,6 @@ class BaseProvider(ABC):
         """Return the provider name."""
         pass
 
-
     @abstractmethod
     def complete(
         self,
@@ -67,7 +66,6 @@ class BaseProvider(ABC):
     ) -> BaseResponse:
         """Sync completion method."""
         pass
-
 
     @abstractmethod
     def get_available_models(self) -> Dict[str, ModelInfo]:
