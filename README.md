@@ -8,8 +8,6 @@ A production-ready Python library focused on intelligent LLM routing and multi-p
 
 Managing multiple LLM providers is complex. You need to handle different APIs, optimize costs, and ensure reliability. JustLLMs solves these challenges by providing a unified interface that automatically routes requests to the best provider based on your criteria—whether that's cost, speed, or quality.
 
-**Key Differentiator**: Advanced cluster-based routing using semantic embeddings to intelligently route queries to optimal models based on research from [AvengersPro](https://arxiv.org/pdf/2508.12631).
-
 ## Installation
 
 ```bash
