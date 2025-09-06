@@ -1,4 +1,4 @@
-from typing import Any, AsyncIterator, Dict, Iterator, List
+from typing import Any, Dict, List
 
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -15,7 +15,7 @@ class OpenAIResponse(BaseResponse):
 
 
 class OpenAIProvider(BaseProvider):
-    """OpenAI provider implementation."""
+    """Simplified OpenAI provider implementation."""
 
     MODELS = {
         "gpt-5": ModelInfo(
@@ -25,7 +25,6 @@ class OpenAIProvider(BaseProvider):
             max_context_length=272000,
             supports_functions=True,
             supports_vision=True,
-            supports_streaming=True,
             cost_per_1k_prompt_tokens=1.25,
             cost_per_1k_completion_tokens=10.0,
             tags=["flagship", "reasoning", "multimodal", "long-context", "tool-chaining"],
@@ -37,7 +36,6 @@ class OpenAIProvider(BaseProvider):
             max_context_length=272000,
             supports_functions=True,
             supports_vision=True,
-            supports_streaming=True,
             cost_per_1k_prompt_tokens=0.3,
             cost_per_1k_completion_tokens=1.2,
             tags=["efficient", "multimodal", "long-context"],
@@ -49,7 +47,6 @@ class OpenAIProvider(BaseProvider):
             max_context_length=1000000,
             supports_functions=True,
             supports_vision=True,
-            supports_streaming=True,
             cost_per_1k_prompt_tokens=0.004,
             cost_per_1k_completion_tokens=0.012,
             tags=["reasoning", "multimodal", "long-context", "cost-efficient"],
@@ -61,7 +58,6 @@ class OpenAIProvider(BaseProvider):
             max_context_length=128000,
             supports_functions=True,
             supports_vision=False,
-            supports_streaming=True,
             cost_per_1k_prompt_tokens=0.00008,
             cost_per_1k_completion_tokens=0.0003,
             tags=["fastest", "cheapest", "efficient"],
@@ -73,7 +69,6 @@ class OpenAIProvider(BaseProvider):
             max_context_length=128000,
             supports_functions=True,
             supports_vision=True,
-            supports_streaming=True,
             cost_per_1k_prompt_tokens=0.005,
             cost_per_1k_completion_tokens=0.015,
             tags=["multimodal", "general-purpose"],
@@ -85,7 +80,6 @@ class OpenAIProvider(BaseProvider):
             max_context_length=128000,
             supports_functions=True,
             supports_vision=True,
-            supports_streaming=True,
             cost_per_1k_prompt_tokens=0.00015,
             cost_per_1k_completion_tokens=0.0006,
             tags=["multimodal", "efficient", "affordable"],
@@ -97,7 +91,6 @@ class OpenAIProvider(BaseProvider):
             max_context_length=200000,
             supports_functions=True,
             supports_vision=False,
-            supports_streaming=True,
             cost_per_1k_prompt_tokens=15.0,
             cost_per_1k_completion_tokens=60.0,
             tags=["reasoning", "complex-tasks", "long-context"],
@@ -109,7 +102,6 @@ class OpenAIProvider(BaseProvider):
             max_context_length=200000,
             supports_functions=True,
             supports_vision=False,
-            supports_streaming=True,
             cost_per_1k_prompt_tokens=3.0,
             cost_per_1k_completion_tokens=12.0,
             tags=["reasoning", "complex-tasks", "affordable"],
@@ -121,7 +113,6 @@ class OpenAIProvider(BaseProvider):
             max_context_length=128000,
             supports_functions=True,
             supports_vision=False,
-            supports_streaming=True,
             cost_per_1k_prompt_tokens=0.0,
             cost_per_1k_completion_tokens=0.0,
             tags=["open-source", "code", "problem-solving", "tool-calling"],
@@ -245,112 +236,3 @@ class OpenAIProvider(BaseProvider):
                 raise ProviderError(f"OpenAI API error: {response.status_code} - {response.text}")
 
             return self._parse_response(response.json())
-
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-    )
-    async def acomplete(
-        self,
-        messages: List[Message],
-        model: str,
-        **kwargs: Any,
-    ) -> BaseResponse:
-        """Asynchronous completion."""
-        url = f"{self.config.api_base or 'https://api.openai.com'}/v1/chat/completions"
-
-        payload = {
-            "model": model,
-            "messages": self._format_messages(messages),
-            **kwargs,
-        }
-
-        async with httpx.AsyncClient(timeout=self.config.timeout) as client:
-            response = await client.post(
-                url,
-                json=payload,
-                headers=self._get_headers(),
-            )
-
-            if response.status_code != 200:
-                raise ProviderError(f"OpenAI API error: {response.status_code} - {response.text}")
-
-            return self._parse_response(response.json())
-
-    def stream(
-        self,
-        messages: List[Message],
-        model: str,
-        **kwargs: Any,
-    ) -> Iterator[BaseResponse]:
-        """Synchronous streaming completion."""
-        url = f"{self.config.api_base or 'https://api.openai.com'}/v1/chat/completions"
-
-        payload = {
-            "model": model,
-            "messages": self._format_messages(messages),
-            "stream": True,
-            **kwargs,
-        }
-
-        with httpx.Client(timeout=self.config.timeout) as client, client.stream(
-            "POST",
-            url,
-            json=payload,
-            headers=self._get_headers(),
-        ) as response:
-            if response.status_code != 200:
-                raise ProviderError(f"OpenAI API error: {response.status_code}")
-
-            for line in response.iter_lines():
-                if line.startswith("data: "):
-                    data = line[6:]
-                    if data == "[DONE]":
-                        break
-
-                    try:
-                        import json
-
-                        chunk = json.loads(data)
-                        yield self._parse_response(chunk)
-                    except json.JSONDecodeError:
-                        continue
-
-    async def astream(
-        self,
-        messages: List[Message],
-        model: str,
-        **kwargs: Any,
-    ) -> AsyncIterator[BaseResponse]:
-        """Asynchronous streaming completion."""
-        url = f"{self.config.api_base or 'https://api.openai.com'}/v1/chat/completions"
-
-        payload = {
-            "model": model,
-            "messages": self._format_messages(messages),
-            "stream": True,
-            **kwargs,
-        }
-
-        async with httpx.AsyncClient(timeout=self.config.timeout) as client, client.stream(
-            "POST",
-            url,
-            json=payload,
-            headers=self._get_headers(),
-        ) as response:
-            if response.status_code != 200:
-                raise ProviderError(f"OpenAI API error: {response.status_code}")
-
-            async for line in response.aiter_lines():
-                if line.startswith("data: "):
-                    data = line[6:]
-                    if data == "[DONE]":
-                        break
-
-                    try:
-                        import json
-
-                        chunk = json.loads(data)
-                        yield self._parse_response(chunk)
-                    except json.JSONDecodeError:
-                        continue

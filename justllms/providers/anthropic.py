@@ -1,4 +1,4 @@
-from typing import Any, AsyncIterator, Dict, Iterator, List, Optional
+from typing import Any, Dict, List, Optional
 
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -13,7 +13,6 @@ class AnthropicResponse(BaseResponse):
 
     pass
 
-
 class AnthropicProvider(BaseProvider):
     """Anthropic provider implementation."""
 
@@ -25,7 +24,7 @@ class AnthropicProvider(BaseProvider):
             max_context_length=200000,
             supports_functions=True,
             supports_vision=True,
-            supports_streaming=True,
+            
             cost_per_1k_prompt_tokens=15.0,
             cost_per_1k_completion_tokens=75.0,
             tags=["flagship", "most-capable", "multimodal", "extended-thinking"],
@@ -37,7 +36,7 @@ class AnthropicProvider(BaseProvider):
             max_context_length=200000,
             supports_functions=True,
             supports_vision=True,
-            supports_streaming=True,
+            
             cost_per_1k_prompt_tokens=3.0,
             cost_per_1k_completion_tokens=15.0,
             tags=["high-performance", "multimodal", "extended-thinking"],
@@ -49,7 +48,7 @@ class AnthropicProvider(BaseProvider):
             max_context_length=200000,
             supports_functions=True,
             supports_vision=True,
-            supports_streaming=True,
+            
             cost_per_1k_prompt_tokens=0.8,
             cost_per_1k_completion_tokens=4.0,
             tags=["fastest", "efficient", "multimodal"],
@@ -61,7 +60,7 @@ class AnthropicProvider(BaseProvider):
             max_context_length=200000,
             supports_functions=True,
             supports_vision=True,
-            supports_streaming=True,
+            
             cost_per_1k_prompt_tokens=0.003,
             cost_per_1k_completion_tokens=0.015,
             tags=["legacy", "reasoning", "multimodal"],
@@ -73,7 +72,7 @@ class AnthropicProvider(BaseProvider):
             max_context_length=200000,
             supports_functions=True,
             supports_vision=False,
-            supports_streaming=True,
+            
             cost_per_1k_prompt_tokens=0.001,
             cost_per_1k_completion_tokens=0.005,
             tags=["legacy", "fast", "efficient"],
@@ -85,7 +84,7 @@ class AnthropicProvider(BaseProvider):
             max_context_length=200000,
             supports_functions=True,
             supports_vision=True,
-            supports_streaming=True,
+            
             cost_per_1k_prompt_tokens=0.015,
             cost_per_1k_completion_tokens=0.075,
             tags=["legacy", "powerful", "reasoning"],
@@ -217,177 +216,3 @@ class AnthropicProvider(BaseProvider):
                 )
 
             return self._parse_response(response.json(), model)
-
-    async def acomplete(
-        self,
-        messages: List[Message],
-        model: str,
-        **kwargs: Any,
-    ) -> BaseResponse:
-        """Asynchronous completion."""
-        url = f"{self.config.api_base or 'https://api.anthropic.com'}/v1/messages"
-
-        system_message, formatted_messages = self._format_messages(messages)
-
-        payload = {
-            "model": model,
-            "messages": formatted_messages,
-            "max_tokens": kwargs.get("max_tokens", 4096),
-        }
-
-        if system_message:
-            payload["system"] = system_message
-
-        # Map common parameters
-        if "temperature" in kwargs:
-            payload["temperature"] = kwargs["temperature"]
-        if "top_p" in kwargs:
-            payload["top_p"] = kwargs["top_p"]
-        if "stop" in kwargs:
-            payload["stop_sequences"] = (
-                kwargs["stop"] if isinstance(kwargs["stop"], list) else [kwargs["stop"]]
-            )
-
-        async with httpx.AsyncClient(timeout=self.config.timeout) as client:
-            response = await client.post(
-                url,
-                json=payload,
-                headers=self._get_headers(),
-            )
-
-            if response.status_code != 200:
-                raise ProviderError(
-                    f"Anthropic API error: {response.status_code} - {response.text}"
-                )
-
-            return self._parse_response(response.json(), model)
-
-    def stream(  # noqa: C901
-        self,
-        messages: List[Message],
-        model: str,
-        **kwargs: Any,
-    ) -> Iterator[BaseResponse]:
-        """Synchronous streaming completion."""
-        url = f"{self.config.api_base or 'https://api.anthropic.com'}/v1/messages"
-
-        system_message, formatted_messages = self._format_messages(messages)
-
-        payload = {
-            "model": model,
-            "messages": formatted_messages,
-            "max_tokens": kwargs.get("max_tokens", 4096),
-            "stream": True,
-        }
-
-        if system_message:
-            payload["system"] = system_message
-
-        # Map common parameters
-        if "temperature" in kwargs:
-            payload["temperature"] = kwargs["temperature"]
-        if "top_p" in kwargs:
-            payload["top_p"] = kwargs["top_p"]
-        if "stop" in kwargs:
-            payload["stop_sequences"] = (
-                kwargs["stop"] if isinstance(kwargs["stop"], list) else [kwargs["stop"]]
-            )
-
-        with httpx.Client(timeout=self.config.timeout) as client, client.stream(
-            "POST",
-            url,
-            json=payload,
-            headers=self._get_headers(),
-        ) as response:
-            if response.status_code != 200:
-                raise ProviderError(f"Anthropic API error: {response.status_code}")
-
-            for line in response.iter_lines():
-                if line.startswith("data: "):
-                    data = line[6:]
-                    if data == "[DONE]":
-                        break
-
-                    try:
-                        import json
-
-                        chunk = json.loads(data)
-                        if chunk.get("type") == "message_start":
-                            continue
-                        elif chunk.get("type") == "content_block_delta":
-                            text = chunk.get("delta", {}).get("text", "")
-                            if text:
-                                message = Message(role=Role.ASSISTANT, content=text)
-                                choice = Choice(index=0, message=message)
-                                yield AnthropicResponse(
-                                    id=chunk.get("id", ""),
-                                    model=model,
-                                    choices=[choice],
-                                )
-                    except json.JSONDecodeError:
-                        continue
-
-    async def astream(  # noqa: C901
-        self,
-        messages: List[Message],
-        model: str,
-        **kwargs: Any,
-    ) -> AsyncIterator[BaseResponse]:
-        """Asynchronous streaming completion."""
-        url = f"{self.config.api_base or 'https://api.anthropic.com'}/v1/messages"
-
-        system_message, formatted_messages = self._format_messages(messages)
-
-        payload = {
-            "model": model,
-            "messages": formatted_messages,
-            "max_tokens": kwargs.get("max_tokens", 4096),
-            "stream": True,
-        }
-
-        if system_message:
-            payload["system"] = system_message
-
-        # Map common parameters
-        if "temperature" in kwargs:
-            payload["temperature"] = kwargs["temperature"]
-        if "top_p" in kwargs:
-            payload["top_p"] = kwargs["top_p"]
-        if "stop" in kwargs:
-            payload["stop_sequences"] = (
-                kwargs["stop"] if isinstance(kwargs["stop"], list) else [kwargs["stop"]]
-            )
-
-        async with httpx.AsyncClient(timeout=self.config.timeout) as client, client.stream(
-            "POST",
-            url,
-            json=payload,
-            headers=self._get_headers(),
-        ) as response:
-            if response.status_code != 200:
-                raise ProviderError(f"Anthropic API error: {response.status_code}")
-
-            async for line in response.aiter_lines():
-                if line.startswith("data: "):
-                    data = line[6:]
-                    if data == "[DONE]":
-                        break
-
-                    try:
-                        import json
-
-                        chunk = json.loads(data)
-                        if chunk.get("type") == "message_start":
-                            continue
-                        elif chunk.get("type") == "content_block_delta":
-                            text = chunk.get("delta", {}).get("text", "")
-                            if text:
-                                message = Message(role=Role.ASSISTANT, content=text)
-                                choice = Choice(index=0, message=message)
-                                yield AnthropicResponse(
-                                    id=chunk.get("id", ""),
-                                    model=model,
-                                    choices=[choice],
-                                )
-                    except json.JSONDecodeError:
-                        continue

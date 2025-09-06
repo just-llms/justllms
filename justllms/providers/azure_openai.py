@@ -1,4 +1,4 @@
-from typing import Any, AsyncIterator, Dict, Iterator, List
+from typing import Any, Dict, List
 
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -13,7 +13,6 @@ class AzureOpenAIResponse(BaseResponse):
 
     pass
 
-
 class AzureOpenAIProvider(BaseProvider):
     """Azure OpenAI provider implementation."""
 
@@ -26,7 +25,7 @@ class AzureOpenAIProvider(BaseProvider):
             max_context_length=272000,
             supports_functions=True,
             supports_vision=True,
-            supports_streaming=True,
+            
             cost_per_1k_prompt_tokens=1.25,
             cost_per_1k_completion_tokens=10.0,
             tags=["flagship", "reasoning", "multimodal", "long-context"],
@@ -38,7 +37,7 @@ class AzureOpenAIProvider(BaseProvider):
             max_context_length=272000,
             supports_functions=True,
             supports_vision=True,
-            supports_streaming=True,
+            
             cost_per_1k_prompt_tokens=0.3,
             cost_per_1k_completion_tokens=1.2,
             tags=["efficient", "multimodal", "long-context"],
@@ -50,7 +49,7 @@ class AzureOpenAIProvider(BaseProvider):
             max_context_length=272000,
             supports_functions=True,
             supports_vision=True,
-            supports_streaming=True,
+            
             cost_per_1k_prompt_tokens=0.15,
             cost_per_1k_completion_tokens=0.6,
             tags=["nano", "affordable", "multimodal", "long-context"],
@@ -62,7 +61,7 @@ class AzureOpenAIProvider(BaseProvider):
             max_context_length=128000,
             supports_functions=True,
             supports_vision=True,
-            supports_streaming=True,
+            
             cost_per_1k_prompt_tokens=0.8,
             cost_per_1k_completion_tokens=3.2,
             tags=["chat", "multimodal", "conversational"],
@@ -74,7 +73,7 @@ class AzureOpenAIProvider(BaseProvider):
             max_context_length=128000,
             supports_functions=True,
             supports_vision=True,
-            supports_streaming=True,
+            
             cost_per_1k_prompt_tokens=0.005,
             cost_per_1k_completion_tokens=0.015,
             tags=["multimodal", "general-purpose"],
@@ -86,7 +85,7 @@ class AzureOpenAIProvider(BaseProvider):
             max_context_length=128000,
             supports_functions=True,
             supports_vision=True,
-            supports_streaming=True,
+            
             cost_per_1k_prompt_tokens=0.00015,
             cost_per_1k_completion_tokens=0.0006,
             tags=["multimodal", "efficient", "affordable"],
@@ -98,7 +97,7 @@ class AzureOpenAIProvider(BaseProvider):
             max_context_length=200000,
             supports_functions=True,
             supports_vision=False,
-            supports_streaming=True,
+            
             cost_per_1k_prompt_tokens=3.0,
             cost_per_1k_completion_tokens=12.0,
             tags=["reasoning", "complex-tasks", "long-context"],
@@ -110,7 +109,7 @@ class AzureOpenAIProvider(BaseProvider):
             max_context_length=200000,
             supports_functions=True,
             supports_vision=False,
-            supports_streaming=True,
+            
             cost_per_1k_prompt_tokens=15.0,
             cost_per_1k_completion_tokens=60.0,
             tags=["reasoning", "advanced", "complex-tasks"],
@@ -122,7 +121,7 @@ class AzureOpenAIProvider(BaseProvider):
             max_context_length=16385,
             supports_functions=True,
             supports_vision=False,
-            supports_streaming=True,
+            
             cost_per_1k_prompt_tokens=0.0005,
             cost_per_1k_completion_tokens=0.0015,
             tags=["fast", "affordable", "legacy"],
@@ -205,7 +204,7 @@ class AzureOpenAIProvider(BaseProvider):
 
         return deployment_name_mapping.get(model, model)
 
-    def _build_url(self, model: str, stream: bool = False) -> str:
+    def _build_url(self, model: str) -> str:
         """Build Azure OpenAI API URL."""
         deployment_name = self._get_deployment_name(model)
         endpoint = "chat/completions"
@@ -282,61 +281,6 @@ class AzureOpenAIProvider(BaseProvider):
             **raw_response,
         )
 
-    def _parse_streaming_chunk(self, chunk_data: Dict[str, Any]) -> AzureOpenAIResponse:
-        """Parse Azure OpenAI streaming chunk (uses delta instead of message)."""
-        choices = []
-
-        for choice_data in chunk_data.get("choices", []):
-            # Streaming chunks have 'delta' instead of 'message'
-            delta_data = choice_data.get("delta", {})
-
-            # Convert delta to message format for consistent interface
-            message = Message(
-                role=delta_data.get("role", "assistant"),
-                content=delta_data.get("content", ""),
-                name=delta_data.get("name"),
-                function_call=delta_data.get("function_call"),
-                tool_calls=delta_data.get("tool_calls"),
-            )
-
-            choice = Choice(
-                index=choice_data.get("index", 0),
-                message=message,
-                finish_reason=choice_data.get("finish_reason"),
-                logprobs=choice_data.get("logprobs"),
-            )
-            choices.append(choice)
-
-        # Usage is typically not included in streaming chunks
-        usage = Usage(prompt_tokens=0, completion_tokens=0, total_tokens=0)
-
-        # Extract only the keys we want to avoid conflicts
-        raw_response = {
-            k: v
-            for k, v in chunk_data.items()
-            if k
-            not in [
-                "choices",
-                "usage",
-                "created",
-                "id",
-                "model",
-                "system_fingerprint",
-                "provider",
-                "cached",
-                "raw_response",
-            ]
-        }
-
-        return AzureOpenAIResponse(
-            id=chunk_data.get("id", ""),
-            choices=choices,
-            created=chunk_data.get("created", 0),
-            model=chunk_data.get("model", ""),
-            usage=usage,
-            system_fingerprint=chunk_data.get("system_fingerprint"),
-            **raw_response,
-        )
 
     @retry(
         stop=stop_after_attempt(3),
@@ -371,115 +315,3 @@ class AzureOpenAIProvider(BaseProvider):
                 )
 
             return self._parse_response(response.json())
-
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-    )
-    async def acomplete(
-        self,
-        messages: List[Message],
-        model: str,
-        **kwargs: Any,
-    ) -> BaseResponse:
-        """Asynchronous completion."""
-        url = self._build_url(model)
-
-        # Remove model from payload since it's in the URL path
-        payload = {
-            "messages": self._format_messages(messages),
-            **kwargs,
-        }
-
-        timeout = getattr(self.config, "timeout", 30) or 30
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            response = await client.post(
-                url,
-                json=payload,
-                headers=self._get_headers(),
-            )
-
-            if response.status_code != 200:
-                raise ProviderError(
-                    f"Azure OpenAI API error: {response.status_code} - {response.text}"
-                )
-
-            return self._parse_response(response.json())
-
-    def stream(
-        self,
-        messages: List[Message],
-        model: str,
-        **kwargs: Any,
-    ) -> Iterator[BaseResponse]:
-        """Synchronous streaming completion."""
-        url = self._build_url(model, stream=True)
-
-        payload = {
-            "messages": self._format_messages(messages),
-            "stream": True,
-            **kwargs,
-        }
-
-        timeout = getattr(self.config, "timeout", 30) or 30
-        with httpx.Client(timeout=timeout) as client, client.stream(
-            "POST",
-            url,
-            json=payload,
-            headers=self._get_headers(),
-        ) as response:
-            if response.status_code != 200:
-                raise ProviderError(f"Azure OpenAI API error: {response.status_code}")
-
-            for line in response.iter_lines():
-                if line.startswith("data: "):
-                    data = line[6:]
-                    if data == "[DONE]":
-                        break
-
-                    try:
-                        import json
-
-                        chunk = json.loads(data)
-                        yield self._parse_streaming_chunk(chunk)
-                    except json.JSONDecodeError:
-                        continue
-
-    async def astream(
-        self,
-        messages: List[Message],
-        model: str,
-        **kwargs: Any,
-    ) -> AsyncIterator[BaseResponse]:
-        """Asynchronous streaming completion."""
-        url = self._build_url(model, stream=True)
-
-        payload = {
-            "messages": self._format_messages(messages),
-            "stream": True,
-            **kwargs,
-        }
-
-        timeout = getattr(self.config, "timeout", 30) or 30
-        async with httpx.AsyncClient(timeout=timeout) as client, client.stream(
-            "POST",
-            url,
-            json=payload,
-            headers=self._get_headers(),
-        ) as response:
-            if response.status_code != 200:
-                raise ProviderError(f"Azure OpenAI API error: {response.status_code}")
-
-            async for line in response.aiter_lines():
-                if line.startswith("data: "):
-                    data = line[6:]
-                    if data == "[DONE]":
-                        break
-
-                    try:
-                        import json
-
-                        chunk = json.loads(data)
-                        yield self._parse_streaming_chunk(chunk)
-                    except json.JSONDecodeError:
-                        continue

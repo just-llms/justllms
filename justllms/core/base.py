@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, AsyncIterator, Dict, Iterator, List, Optional
+from typing import Any, Dict, List, Optional
 
 from justllms.core.models import Choice, Message, ModelInfo, ProviderConfig, Usage
 
@@ -57,15 +57,6 @@ class BaseProvider(ABC):
         """Return the provider name."""
         pass
 
-    @abstractmethod
-    async def acomplete(
-        self,
-        messages: List[Message],
-        model: str,
-        **kwargs: Any,
-    ) -> BaseResponse:
-        """Async completion method."""
-        pass
 
     @abstractmethod
     def complete(
@@ -77,25 +68,6 @@ class BaseProvider(ABC):
         """Sync completion method."""
         pass
 
-    @abstractmethod
-    def astream(
-        self,
-        messages: List[Message],
-        model: str,
-        **kwargs: Any,
-    ) -> AsyncIterator[BaseResponse]:
-        """Async streaming completion method."""
-        pass
-
-    @abstractmethod
-    def stream(
-        self,
-        messages: List[Message],
-        model: str,
-        **kwargs: Any,
-    ) -> Iterator[BaseResponse]:
-        """Sync streaming completion method."""
-        pass
 
     @abstractmethod
     def get_available_models(self) -> Dict[str, ModelInfo]:

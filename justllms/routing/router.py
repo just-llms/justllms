@@ -137,24 +137,6 @@ class Router:
 
             raise ValueError(f"No suitable model found: {str(e)}") from e
 
-    async def aroute(
-        self,
-        messages: List[Message],
-        model: Optional[str] = None,
-        providers: Optional[Dict[str, BaseProvider]] = None,
-        constraints: Optional[Dict[str, Any]] = None,
-        **kwargs: Any,
-    ) -> Tuple[str, str]:
-        """Async version of route."""
-        # For now, routing logic is synchronous
-        # In the future, this could do async operations like checking provider health
-        return self.route(
-            messages=messages,
-            model=model,
-            providers=providers,
-            constraints=constraints,
-            **kwargs,
-        )
 
     def set_strategy(self, strategy: Union[str, RoutingStrategy]) -> None:
         """Set the routing strategy."""

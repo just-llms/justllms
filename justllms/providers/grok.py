@@ -1,11 +1,11 @@
 import time
-from typing import Any, AsyncIterator, Dict, Iterator, List
+from typing import Any, Dict, List
 
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from justllms.core.base import BaseProvider, BaseResponse
-from justllms.core.models import Choice, Message, ModelInfo, Role, Usage
+from justllms.core.models import Choice, Message, ModelInfo, Usage
 from justllms.exceptions import ProviderError
 
 
@@ -13,7 +13,6 @@ class GrokResponse(BaseResponse):
     """Grok-specific response implementation."""
 
     pass
-
 
 class GrokProvider(BaseProvider):
     """Grok provider implementation."""
@@ -26,7 +25,7 @@ class GrokProvider(BaseProvider):
             max_context_length=130000,
             supports_functions=True,
             supports_vision=True,
-            supports_streaming=True,
+            
             cost_per_1k_prompt_tokens=6.0,
             cost_per_1k_completion_tokens=30.0,
             tags=["flagship", "most-intelligent", "multimodal", "coding", "latest"],
@@ -38,7 +37,7 @@ class GrokProvider(BaseProvider):
             max_context_length=130000,
             supports_functions=True,
             supports_vision=True,
-            supports_streaming=True,
+            
             cost_per_1k_prompt_tokens=8.0,
             cost_per_1k_completion_tokens=40.0,
             tags=["heavy", "premium", "exclusive", "multimodal"],
@@ -50,7 +49,7 @@ class GrokProvider(BaseProvider):
             max_context_length=131072,
             supports_functions=True,
             supports_vision=False,
-            supports_streaming=True,
+            
             cost_per_1k_prompt_tokens=3.0,
             cost_per_1k_completion_tokens=15.0,
             tags=["advanced", "reasoning", "long-context"],
@@ -62,7 +61,7 @@ class GrokProvider(BaseProvider):
             max_context_length=131072,
             supports_functions=True,
             supports_vision=False,
-            supports_streaming=True,
+            
             cost_per_1k_prompt_tokens=5.0,
             cost_per_1k_completion_tokens=25.0,
             tags=["speedy", "premium", "fast"],
@@ -74,7 +73,7 @@ class GrokProvider(BaseProvider):
             max_context_length=131072,
             supports_functions=True,
             supports_vision=False,
-            supports_streaming=True,
+            
             cost_per_1k_prompt_tokens=0.3,
             cost_per_1k_completion_tokens=0.5,
             tags=["mini", "affordable", "efficient"],
@@ -86,7 +85,7 @@ class GrokProvider(BaseProvider):
             max_context_length=131072,
             supports_functions=True,
             supports_vision=False,
-            supports_streaming=True,
+            
             cost_per_1k_prompt_tokens=0.6,
             cost_per_1k_completion_tokens=4.0,
             tags=["mini", "speedy", "fast", "affordable"],
@@ -228,190 +227,4 @@ class GrokProvider(BaseProvider):
 
             return self._parse_response(response.json(), model)
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-    )
-    async def acomplete(
-        self,
-        messages: List[Message],
-        model: str,
-        **kwargs: Any,
-    ) -> BaseResponse:
-        """Asynchronous completion."""
-        url = self._get_api_endpoint()
 
-        # Format request
-        request_data = {
-            "model": model,
-            "messages": self._format_messages(messages),
-            **{
-                k: v
-                for k, v in kwargs.items()
-                if k
-                in [
-                    "temperature",
-                    "max_tokens",
-                    "top_p",
-                    "frequency_penalty",
-                    "presence_penalty",
-                    "stop",
-                    "stream",
-                ]
-                and v is not None
-            },
-        }
-
-        async with httpx.AsyncClient(timeout=self.config.timeout) as client:
-            response = await client.post(
-                url,
-                json=request_data,
-                headers=self._get_headers(),
-            )
-
-            if response.status_code != 200:
-                raise ProviderError(f"Grok API error: {response.status_code} - {response.text}")
-
-            return self._parse_response(response.json(), model)
-
-    def stream(
-        self,
-        messages: List[Message],
-        model: str,
-        **kwargs: Any,
-    ) -> Iterator[BaseResponse]:
-        """Synchronous streaming completion."""
-        url = self._get_api_endpoint()
-
-        # Format request
-        request_data = {
-            "model": model,
-            "messages": self._format_messages(messages),
-            "stream": True,
-            **{
-                k: v
-                for k, v in kwargs.items()
-                if k
-                in [
-                    "temperature",
-                    "max_tokens",
-                    "top_p",
-                    "frequency_penalty",
-                    "presence_penalty",
-                    "stop",
-                ]
-                and v is not None
-            },
-        }
-
-        with httpx.Client(timeout=self.config.timeout) as client, client.stream(
-            "POST",
-            url,
-            json=request_data,
-            headers=self._get_headers(),
-        ) as response:
-            if response.status_code != 200:
-                raise ProviderError(f"Grok API error: {response.status_code}")
-
-            for line in response.iter_lines():
-                if line.startswith("data: "):
-                    data = line[6:]
-                    if data == "[DONE]":
-                        break
-
-                    try:
-                        import json
-
-                        chunk_data = json.loads(data)
-
-                        choices = chunk_data.get("choices", [])
-                        if choices:
-                            delta = choices[0].get("delta", {})
-                            content = delta.get("content", "")
-
-                            if content:
-                                message = Message(role=Role.ASSISTANT, content=content)
-                                choice = Choice(
-                                    index=0,
-                                    message=message,
-                                    finish_reason=choices[0].get("finish_reason"),
-                                )
-                                yield GrokResponse(
-                                    id=chunk_data.get("id", f"grok-stream-{int(time.time())}"),
-                                    model=model,
-                                    choices=[choice],
-                                    created=int(time.time()),
-                                )
-                    except json.JSONDecodeError:
-                        continue
-
-    async def astream(
-        self,
-        messages: List[Message],
-        model: str,
-        **kwargs: Any,
-    ) -> AsyncIterator[BaseResponse]:
-        """Asynchronous streaming completion."""
-        url = self._get_api_endpoint()
-
-        # Format request
-        request_data = {
-            "model": model,
-            "messages": self._format_messages(messages),
-            "stream": True,
-            **{
-                k: v
-                for k, v in kwargs.items()
-                if k
-                in [
-                    "temperature",
-                    "max_tokens",
-                    "top_p",
-                    "frequency_penalty",
-                    "presence_penalty",
-                    "stop",
-                ]
-                and v is not None
-            },
-        }
-
-        async with httpx.AsyncClient(timeout=self.config.timeout) as client, client.stream(
-            "POST",
-            url,
-            json=request_data,
-            headers=self._get_headers(),
-        ) as response:
-            if response.status_code != 200:
-                raise ProviderError(f"Grok API error: {response.status_code}")
-
-            async for line in response.aiter_lines():
-                if line.startswith("data: "):
-                    data = line[6:]
-                    if data == "[DONE]":
-                        break
-
-                    try:
-                        import json
-
-                        chunk_data = json.loads(data)
-
-                        choices = chunk_data.get("choices", [])
-                        if choices:
-                            delta = choices[0].get("delta", {})
-                            content = delta.get("content", "")
-
-                            if content:
-                                message = Message(role=Role.ASSISTANT, content=content)
-                                choice = Choice(
-                                    index=0,
-                                    message=message,
-                                    finish_reason=choices[0].get("finish_reason"),
-                                )
-                                yield GrokResponse(
-                                    id=chunk_data.get("id", f"grok-stream-{int(time.time())}"),
-                                    model=model,
-                                    choices=[choice],
-                                    created=int(time.time()),
-                                )
-                    except json.JSONDecodeError:
-                        continue
