@@ -155,8 +155,4 @@ client = JustLLM(production_config)
 4. **Unified Interface**: Same API across all providers
 5. **Reliability**: Built-in fallback and error handling
 
-## License
-
-MIT License - see [LICENSE](LICENSE) file for details.
-
 [![Star History Chart](https://api.star-history.com/svg?repos=just-llms/justllms&type=Date)](https://www.star-history.com/#just-llms/justllms&Date)
