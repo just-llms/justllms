@@ -4,6 +4,8 @@ A production-ready Python library focused on intelligent LLM routing and multi-p
 
 [![PyPI version](https://badge.fury.io/py/justllms.svg)](https://pypi.org/project/justllms/) [![Downloads](https://pepy.tech/badge/justllms)](https://pepy.tech/project/justllms)
 
+[![Star History Chart](https://api.star-history.com/svg?repos=just-llms/justllms&type=Date)](https://www.star-history.com/#just-llms/justllms&Date)
+
 ## Why JustLLMs?
 
 Managing multiple LLM providers is complex. You need to handle different APIs, optimize costs, and ensure reliability. JustLLMs solves these challenges by providing a unified interface that automatically routes requests to the best provider based on your criteria—whether that's cost, speed, or quality.
@@ -154,5 +156,3 @@ client = JustLLM(production_config)
 3. **Cost Optimization**: Automatic routing to reduce costs by up to 60%
 4. **Unified Interface**: Same API across all providers
 5. **Reliability**: Built-in fallback and error handling
-
-[![Star History Chart](https://api.star-history.com/svg?repos=just-llms/justllms&type=Date)](https://www.star-history.com/#just-llms/justllms&Date)
