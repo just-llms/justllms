@@ -60,16 +60,12 @@ client = JustLLM({
 # Same interface, different providers automatically chosen
 response1 = client.completion.create(
     messages=[{"role": "user", "content": "Explain AI"}],
-    provider="openai"  # Force specific provider
-)
-
-response2 = client.completion.create(
-    messages=[{"role": "user", "content": "Explain AI"}]
-    # Auto-routes to best provider based on your strategy
+    provider="openai",  # Force specific provider
+    model="gpt-5"
 )
 ```
 
-### Intelligent Routing
+## **Intelligent Routing**
 **The game-changing feature that sets JustLLMs apart.** Instead of manually choosing models, let our intelligent routing engine automatically select the optimal provider and model for each request based on your priorities.
 
 #### Available Strategies
@@ -86,34 +82,6 @@ client = JustLLM({
 ```
 
 *Based on research from [Beyond GPT-5: Making LLMs Cheaper and Better via Performance–Efficiency Optimized Routing](https://arxiv.org/pdf/2508.12631) - AvengersPro framework*
-
-**Traditional Routing Strategies**
-
-```python
-# Cost-optimized: Always picks the cheapest option
-client = JustLLM({
-    "providers": {...},
-    "routing": {"strategy": "cost"}
-})
-
-# Speed-optimized: Prioritizes fastest response times
-client = JustLLM({
-    "providers": {...},
-    "routing": {"strategy": "latency"}
-})
-
-# Quality-optimized: Uses the best models for complex tasks
-client = JustLLM({
-    "providers": {...},
-    "routing": {"strategy": "quality"}
-})
-
-# Task-based: Automatically detects query type and routes accordingly
-client = JustLLM({
-    "providers": {...},
-    "routing": {"strategy": "task"}
-})
-```
 
 #### How Cluster Routing Works
 1. **Query Analysis**: Your request is embedded using Qwen3-Embedding-0.6B
@@ -138,30 +106,6 @@ print(f"Selected model: {cost_estimate.selected_model}")
 print(f"Provider: {cost_estimate.provider}")
 ```
 
-## Configuration Management
-Flexible configuration with environment variable support:
-
-```python
-# Environment-based config
-import os
-client = JustLLM({
-    "providers": {
-        "openai": {"api_key": os.getenv("OPENAI_API_KEY")},
-        "azure_openai": {
-            "api_key": os.getenv("AZURE_OPENAI_KEY"),
-            "endpoint": os.getenv("AZURE_OPENAI_ENDPOINT"),
-            "resource_name": os.getenv("AZURE_RESOURCE_NAME"),
-            "api_version": "2024-12-01-preview"
-        }
-    }
-})
-
-# File-based config
-import yaml
-with open("config.yaml") as f:
-    config = yaml.safe_load(f)
-client = JustLLM(config)
-```
 
 ## 🏆 Comparison with Alternatives
 
