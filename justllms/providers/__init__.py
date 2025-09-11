@@ -51,31 +51,10 @@ except ImportError:
     pass
 
 try:
-    from justllms.providers.xai import XAIProvider
-
-    register_provider("xai", XAIProvider)
-    register_provider("grok", XAIProvider)
-except ImportError:
-    pass
-
-try:
-    from justllms.providers.cohere import CohereProvider
-
-    register_provider("cohere", CohereProvider)
-except ImportError:
-    pass
-
-try:
-    from justllms.providers.replicate import ReplicateProvider
-
-    register_provider("replicate", ReplicateProvider)
-except ImportError:
-    pass
-
-try:
     from justllms.providers.grok import GrokProvider
 
     register_provider("grok", GrokProvider)
+    register_provider("xai", GrokProvider)
 except ImportError:
     pass
 

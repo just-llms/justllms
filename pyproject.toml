@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "justllms"
-version = "2.0.0"
+version = "2.0.1"
 description = "Production-focused Python library for intelligent LLM routing and multi-provider management"
 readme = "README.md"
 license = {text = "MIT"}
@@ -34,6 +34,8 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "rich>=13.0.0",
     "PyYAML>=6.0.0",
+    "click>=8.0.0",
+    "questionary>=2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -70,6 +72,9 @@ cluster = [
     "numpy>=1.21.0",
     "scikit-learn>=1.0.0",
 ]
+
+[project.scripts]
+justllms = "justllms.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/just-llms/justllms"

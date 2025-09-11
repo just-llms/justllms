@@ -6,6 +6,7 @@ tiktoken>=0.5.0
 python-dotenv>=1.0.0
 rich>=13.0.0
 PyYAML>=6.0.0
+textual>=0.41.0
 
 # Optional dependencies
 transformers>=4.30.0  # For cluster-based routing with Qwen3 embeddings (optional)
