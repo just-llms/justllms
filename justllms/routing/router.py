@@ -37,7 +37,7 @@ class Router:
         if isinstance(strategy, RoutingStrategy):
             self.strategy = strategy
         else:
-            self.strategy = self._create_strategy(strategy or self.config.get("strategy", "cost"))
+            self.strategy = self._create_strategy(strategy or self.config.get("strategy", "least_cost"))
 
     def _create_strategy(self, strategy_name: str) -> RoutingStrategy:
         """Create a routing strategy from name."""
@@ -46,11 +46,11 @@ class Router:
         if strategy_name == "cluster":
             config = strategy_configs.get("cluster", {})
             return ClusterBasedStrategy(**config)
-        elif strategy_name == "cost":
-            config = strategy_configs.get("cost", {})
+        elif strategy_name == "least_cost":
+            config = strategy_configs.get("least_cost", {})
             return CostOptimizedStrategy(**config)
-        elif strategy_name == "latency":
-            config = strategy_configs.get("latency", {})
+        elif strategy_name == "fastest":
+            config = strategy_configs.get("fastest", {})
             return LatencyOptimizedStrategy(**config)
         elif strategy_name == "quality":
             config = strategy_configs.get("quality", {})
@@ -58,7 +58,7 @@ class Router:
         elif strategy_name == "task":
             return TaskBasedStrategy()
         else:
-            # Default to cost optimization
+            # Default to least_cost optimization
             return CostOptimizedStrategy()
 
     def route(  # noqa: C901

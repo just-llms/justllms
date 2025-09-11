@@ -93,20 +93,6 @@ client = JustLLM({
 
 **Result**: Up to 60% cost reduction while improving accuracy, with automatic failover to backup providers.
 
-### Cost Estimation
-Get cost estimates before making requests:
-
-```python
-# Estimate costs for different strategies
-cost_estimate = client.estimate_cost(
-    messages=[{"role": "user", "content": "Explain AI"}],
-    strategy="cluster"
-)
-
-print(f"Estimated cost: ${cost_estimate.total_cost:.4f}")
-print(f"Selected model: {cost_estimate.selected_model}")
-print(f"Provider: {cost_estimate.provider}")
-```
 
 
 ## 🏆 Comparison with Alternatives

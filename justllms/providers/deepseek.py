@@ -173,7 +173,6 @@ class DeepSeekProvider(BaseProvider):
                     "frequency_penalty",
                     "presence_penalty",
                     "stop",
-                    "stream",
                     "tools",
                     "tool_choice",
                 ]

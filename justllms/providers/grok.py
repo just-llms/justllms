@@ -204,7 +204,6 @@ class GrokProvider(BaseProvider):
                     "frequency_penalty",
                     "presence_penalty",
                     "stop",
-                    "stream",
                 ]
                 and v is not None
             },
