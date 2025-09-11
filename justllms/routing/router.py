@@ -37,7 +37,9 @@ class Router:
         if isinstance(strategy, RoutingStrategy):
             self.strategy = strategy
         else:
-            self.strategy = self._create_strategy(strategy or self.config.get("strategy", "least_cost"))
+            self.strategy = self._create_strategy(
+                strategy or self.config.get("strategy", "least_cost")
+            )
 
     def _create_strategy(self, strategy_name: str) -> RoutingStrategy:
         """Create a routing strategy from name."""
