@@ -8,10 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class ProviderConfig(BaseModel):
-    """Configuration for individual providers."""
-
     model_config = ConfigDict(extra="allow")
-
     name: str
     api_key: Optional[str] = None
     enabled: bool = True
@@ -70,7 +67,7 @@ class Config(BaseModel):
             "google": "GOOGLE_API_KEY",
             "azure_openai": "AZURE_OPENAI_KEY",
             "deepseek": "DEEPSEEK_API_KEY",
-            "grok": "GROK_API_KEY",
+            "grok": "XAI_API_KEY",
         }
 
         for provider_name, env_key in provider_keys.items():

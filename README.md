@@ -93,6 +93,64 @@ client = JustLLM({
 
 **Result**: Up to 60% cost reduction while improving accuracy, with automatic failover to backup providers.
 
+## Side-by-Side Model Comparison
+
+Compare multiple LLM providers and models simultaneously with our interactive SXS (Side-by-Side) comparison tool. Perfect for evaluating model performance, testing prompts, and making informed decisions about which models to use.
+
+### Features
+- **Interactive CLI**: Select providers and models using checkbox interface
+- **Parallel Execution**: All models run simultaneously for fair comparison
+- **Real-time Results**: Live display with loading animation until all models complete
+- **Comprehensive Metrics**: Compare latency, token usage, response quality and costs across models
+- **Multiple Providers**: Test OpenAI, Google, Anthropic, xAI, DeepSeek models side-by-side
+
+### Usage
+
+```bash
+# Run the interactive SXS comparison
+justllms sxs
+```
+
+The tool will guide you through:
+
+1. **Provider Selection**: Choose which LLM providers to compare
+2. **Model Selection**: Pick specific models from each provider  
+3. **Prompt Input**: Enter your test prompt
+4. **Real-time Comparison**: View all responses and metrics simultaneously
+
+### Example Output
+```
+================================================================================
+Prompt: explain quantum computing in 50 words
+================================================================================
+
+┌─ openai/gpt-5          ─────────────────────────────────────────────────────┐
+│ Quantum computing uses quantum bits (qubits) that can exist in multiple     │
+│ states simultaneously through superposition. It leverages entanglement and  │
+│ quantum interference to perform complex calculations far faster than        │
+│ classical computers. This enables breakthroughs in cryptography,            │
+│ optimization, drug discovery, and AI by solving problems traditional        │
+│ computers struggle with efficiently.                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─ google/gemini-2.5-flash ───────────────────────────────────────────────────┐
+│ Quantum computing harnesses quantum phenomena like superposition and        │
+│ entanglement. Qubits, unlike classical bits, can be 0, 1, or both          │
+│ simultaneously. This allows quantum computers to process vast information   │
+│ and solve problems intractable for classical machines, such as complex      │
+│ simulations in drug discovery, materials science, and cryptography, by      │
+│ exploring many possibilities at once.                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+Metrics Summary:
+
+| Model                   |  Status   | Latency (s) | Tokens | Cost ($) |
+|-------------------------|-----------|-------------|--------|----------|
+| openai/gpt-5            | ✓ Success |        5.69 |    715 |   0.0000 |
+| google/gemini-2.5-pro   | ✓ Success |       8.50 |    868 |   0.0003  |
+```
+
 
 
 ## 🏆 Comparison with Alternatives
@@ -103,6 +161,7 @@ client = JustLLM({
 | **Setup Complexity** | Simple config | Complex chains | Medium | Simple |
 | **Multi-Provider** | ✅ 6+ providers | ✅ Many integrations | ✅ 100+ providers | ❌ OpenAI only |
 | **Intelligent Routing** | ✅ Cost/speed/quality/cluster | ❌ Manual only | ⚠️ Basic routing | ❌ None |
+| **Side-by-Side Comparison** | ✅ Interactive CLI tool | ❌ None | ❌ None | ❌ None |
 | **Cost Optimization** | ✅ Automatic routing | ❌ Manual optimization | ⚠️ Basic cost tracking | ❌ None |
 | **Production Ready** | ✅ Out of the box | ⚠️ Requires setup | ✅ Minimal setup | ⚠️ Basic features |
 
