@@ -20,7 +20,6 @@ class CompletionResponse(BaseResponse):
         created: Optional[int] = None,
         system_fingerprint: Optional[str] = None,
         provider: Optional[str] = None,
-        cached: bool = False,
         **kwargs: Any,
     ):
         super().__init__(
@@ -33,7 +32,6 @@ class CompletionResponse(BaseResponse):
             **kwargs,
         )
         self.provider = provider
-        self.cached = cached
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert response to dictionary."""
@@ -64,7 +62,6 @@ class CompletionResponse(BaseResponse):
             "created": self.created,
             "system_fingerprint": self.system_fingerprint,
             "provider": self.provider,
-            "cached": self.cached,
         }
 
     @property

@@ -61,7 +61,7 @@ class AzureOpenAIProvider(BaseProvider):
             supports_vision=True,
             cost_per_1k_prompt_tokens=0.8,
             cost_per_1k_completion_tokens=3.2,
-            tags=["chat", "multimodal", "conversational"],
+            tags=["chat", "multimodal"],
         ),
         "gpt-4o": ModelInfo(
             name="gpt-4o",

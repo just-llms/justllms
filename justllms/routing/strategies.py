@@ -535,9 +535,9 @@ class ClusterBasedStrategy(RoutingStrategy):
 
     def _create_fallback_strategy(self) -> RoutingStrategy:
         """Create fallback strategy instance."""
-        if self.fallback_strategy == "cost":
+        if self.fallback_strategy == "least_cost":
             return CostOptimizedStrategy()
-        elif self.fallback_strategy == "latency":
+        elif self.fallback_strategy == "fastest":
             return LatencyOptimizedStrategy()
         elif self.fallback_strategy == "quality":
             return QualityOptimizedStrategy()

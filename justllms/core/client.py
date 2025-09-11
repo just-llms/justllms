@@ -125,6 +125,5 @@ class Client:
             created=response.created,
             system_fingerprint=response.system_fingerprint,
             provider=provider,
-            cached=False,
             **response.raw_response,
         )
