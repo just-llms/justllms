@@ -152,7 +152,9 @@ def get_all_available_models(client: Optional[JustLLM], provider: str) -> List[s
     return all_models.get(provider, [])
 
 
-def select_models_checkbox(client: Optional[JustLLM], providers: List[str]) -> List[Tuple[str, str]]:
+def select_models_checkbox(
+    client: Optional[JustLLM], providers: List[str]
+) -> List[Tuple[str, str]]:
     """Select models using checkbox interface for each provider."""
     selected_models = []
 
