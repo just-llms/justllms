@@ -1,17 +1,19 @@
-import click
 import sys
+
+import click
 
 
 @click.group()
 @click.version_option()
-def main():
+def main() -> None:
     pass
 
 
 @main.command()
-def sxs():
+def sxs() -> None:
     """Launch side-by-side model comparison."""
     from justllms.sxs.cli import run_interactive_sxs
+
     try:
         run_interactive_sxs()
     except KeyboardInterrupt:
