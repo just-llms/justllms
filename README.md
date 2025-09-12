@@ -16,7 +16,7 @@ Managing multiple LLM providers is complex. You need to handle different APIs, o
 pip install justllms
 ```
 
-**Package size**: Minimal | **Lines of code**: ~7K | **Dependencies**: Production-focused
+**Package size**: ~113KB | **Lines of code**: ~4.3K | **Dependencies**: Production-focused
 
 ## Quick Start
 
@@ -121,25 +121,25 @@ The tool will guide you through:
 ### Example Output
 ```
 ================================================================================
-Prompt: explain quantum computing in 50 words
+Prompt: Which programming language is better for beginners: Python or JavaScript?
 ================================================================================
 
 ┌─ openai/gpt-5          ─────────────────────────────────────────────────────┐
-│ Quantum computing uses quantum bits (qubits) that can exist in multiple     │
-│ states simultaneously through superposition. It leverages entanglement and  │
-│ quantum interference to perform complex calculations far faster than        │
-│ classical computers. This enables breakthroughs in cryptography,            │
-│ optimization, drug discovery, and AI by solving problems traditional        │
-│ computers struggle with efficiently.                                        │
+│ Python is generally better for beginners due to its clean, readable syntax │
+│ that resembles natural language. It has fewer confusing concepts like       │
+│ hoisting or prototypes, excellent learning resources, and is widely used    │
+│ in education. Python's "batteries included" philosophy means beginners can  │
+│ accomplish tasks without learning complex setups, making it ideal for       │
+│ building confidence early in programming.                                   │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 ┌─ google/gemini-2.5-flash ───────────────────────────────────────────────────┐
-│ Quantum computing harnesses quantum phenomena like superposition and        │
-│ entanglement. Qubits, unlike classical bits, can be 0, 1, or both          │
-│ simultaneously. This allows quantum computers to process vast information   │
-│ and solve problems intractable for classical machines, such as complex      │
-│ simulations in drug discovery, materials science, and cryptography, by      │
-│ exploring many possibilities at once.                                       │
+│ JavaScript has advantages for beginners because it runs everywhere - in     │
+│ browsers, servers, and mobile apps. You can see immediate visual results    │
+│ when building web pages, which is motivating. The job market heavily favors │
+│ JavaScript developers, and modern frameworks make it powerful. While syntax │
+│ can be tricky, the instant feedback and versatility make JavaScript a       │
+│ practical first language for aspiring developers.                           │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 ================================================================================
