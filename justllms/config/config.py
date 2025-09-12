@@ -13,7 +13,7 @@ class ProviderConfig(BaseModel):
     api_key: Optional[str] = None
     enabled: bool = True
     base_url: Optional[str] = None
-    timeout: int = 60
+    timeout: Optional[int] = None
     max_retries: int = 3
     rate_limit: Optional[int] = None
     deployment_mapping: Dict[str, str] = Field(default_factory=dict)

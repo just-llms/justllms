@@ -16,7 +16,7 @@ Managing multiple LLM providers is complex. You need to handle different APIs, o
 pip install justllms
 ```
 
-**Package size**: Minimal | **Lines of code**: ~7K | **Dependencies**: Production-focused
+**Package size**: ~113KB | **Lines of code**: ~4.3K | **Dependencies**: Production-focused
 
 ## Quick Start
 

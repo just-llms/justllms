@@ -70,7 +70,7 @@ class ProviderConfig(BaseModel):
     api_base: Optional[str] = None
     api_version: Optional[str] = None
     organization: Optional[str] = None
-    timeout: float = 30.0
+    timeout: Optional[float] = None
     max_retries: int = 3
     retry_delay: float = 1.0
     headers: Dict[str, str] = Field(default_factory=dict)
