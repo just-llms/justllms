@@ -42,7 +42,19 @@ class Router:
             )
 
     def _create_strategy(self, strategy_name: str) -> RoutingStrategy:
-        """Create a routing strategy from name."""
+        """Instantiate a routing strategy based on its name identifier.
+
+        Creates and configures routing strategy instances with settings from
+        the router configuration. Falls back to cost optimization if the
+        requested strategy is not recognized.
+
+        Args:
+            strategy_name: Name of the strategy to create ('cluster', 'least_cost',
+                          'fastest', 'quality', 'task').
+
+        Returns:
+            RoutingStrategy: Configured strategy instance ready for routing decisions.
+        """
         strategy_configs = self.config.get("strategy_configs", {})
 
         if strategy_name == "cluster":
@@ -140,12 +152,21 @@ class Router:
             raise ValueError(f"No suitable model found: {str(e)}") from e
 
     def set_strategy(self, strategy: Union[str, RoutingStrategy]) -> None:
-        """Set the routing strategy."""
+        """Update the routing strategy used by this router.
+
+        Args:
+            strategy: Either a strategy name string or a configured RoutingStrategy
+                     instance to use for future routing decisions.
+        """
         if isinstance(strategy, RoutingStrategy):
             self.strategy = strategy
         else:
             self.strategy = self._create_strategy(strategy)
 
     def get_strategy_name(self) -> str:
-        """Get the name of the current strategy."""
+        """Retrieve the class name of the currently active routing strategy.
+
+        Returns:
+            str: Name of the current strategy class (e.g., 'CostOptimizedStrategy').
+        """
         return self.strategy.__class__.__name__

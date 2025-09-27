@@ -1,7 +1,5 @@
 include README.md
 include LICENSE
-include CHANGELOG.md
-include requirements.txt
 include pyproject.toml
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]

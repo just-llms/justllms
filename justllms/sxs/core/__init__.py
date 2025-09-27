@@ -1,3 +1,3 @@
-from .executor import ParallelExecutor
+from justllms.sxs.core.executor import ParallelExecutor
 
 __all__ = ["ParallelExecutor"]

@@ -1,21 +1,15 @@
-import time
-from typing import Any, Dict, List
+from typing import Dict
 
-import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential
-
-from justllms.core.base import BaseProvider, BaseResponse
-from justllms.core.models import Choice, Message, ModelInfo, Usage
-from justllms.exceptions import ProviderError
+from justllms.core.base import BaseResponse
+from justllms.core.models import ModelInfo
+from justllms.core.openai_base import BaseOpenAIChatProvider
 
 
 class DeepSeekResponse(BaseResponse):
-    """DeepSeek-specific response implementation."""
-
     pass
 
 
-class DeepSeekProvider(BaseProvider):
+class DeepSeekProvider(BaseOpenAIChatProvider):
     """DeepSeek provider implementation."""
 
     MODELS = {
@@ -73,121 +67,21 @@ class DeepSeekProvider(BaseProvider):
         return self.MODELS.copy()
 
     def _get_api_endpoint(self) -> str:
-        """Get the API endpoint."""
+        """Get DeepSeek chat completions endpoint."""
         base_url = self.config.api_base or "https://api.deepseek.com"
         return f"{base_url}/chat/completions"
 
-    def _format_messages(self, messages: List[Message]) -> List[Dict[str, Any]]:
-        """Format messages for DeepSeek API (OpenAI-compatible format)."""
-        formatted_messages = []
-
-        for msg in messages:
-            formatted_msg = {"role": msg.role, "content": msg.content}
-
-            # Handle function calls and tool use if needed
-            if hasattr(msg, "tool_calls") and msg.tool_calls:
-                formatted_msg["tool_calls"] = msg.tool_calls
-
-            formatted_messages.append(formatted_msg)
-
-        return formatted_messages
-
-    def _get_headers(self) -> Dict[str, str]:
-        """Get request headers."""
-        return {
-            "Authorization": f"Bearer {self.config.api_key}",
-            "Content-Type": "application/json",
-        }
-
-    def _parse_response(self, response_data: Dict[str, Any], model: str) -> DeepSeekResponse:
-        """Parse DeepSeek API response."""
-        choices_data = response_data.get("choices", [])
-
-        if not choices_data:
-            raise ProviderError("No choices in DeepSeek response")
-
-        # Parse choices
-        choices = []
-        for choice_data in choices_data:
-            message_data = choice_data.get("message", {})
-            message = Message(
-                role=message_data.get("role", "assistant"),
-                content=message_data.get("content", ""),
-            )
-            choice = Choice(
-                index=choice_data.get("index", 0),
-                message=message,
-                finish_reason=choice_data.get("finish_reason", "stop"),
-            )
-            choices.append(choice)
-
-        # Parse usage
-        usage_data = response_data.get("usage", {})
-        usage = Usage(
-            prompt_tokens=usage_data.get("prompt_tokens", 0),
-            completion_tokens=usage_data.get("completion_tokens", 0),
-            total_tokens=usage_data.get("total_tokens", 0),
+    def _get_request_headers(self) -> Dict[str, str]:
+        """Generate HTTP headers for DeepSeek API requests."""
+        # Start with base headers if they exist
+        headers = {}
+        headers.update(
+            {
+                "Authorization": f"Bearer {self.config.api_key}",
+                "Content-Type": "application/json",
+            }
         )
-
-        # Extract only the keys we want to avoid conflicts
-        raw_response = {
-            k: v
-            for k, v in response_data.items()
-            if k not in ["id", "model", "choices", "usage", "created"]
-        }
-
-        return DeepSeekResponse(
-            id=response_data.get("id", f"deepseek-{int(time.time())}"),
-            model=model,
-            choices=choices,
-            usage=usage,
-            created=response_data.get("created", int(time.time())),
-            **raw_response,
-        )
-
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-    )
-    def complete(
-        self,
-        messages: List[Message],
-        model: str,
-        **kwargs: Any,
-    ) -> BaseResponse:
-        """Synchronous completion."""
-        url = self._get_api_endpoint()
-
-        # Format request
-        request_data = {
-            "model": model,
-            "messages": self._format_messages(messages),
-            **{
-                k: v
-                for k, v in kwargs.items()
-                if k
-                in [
-                    "temperature",
-                    "max_tokens",
-                    "top_p",
-                    "frequency_penalty",
-                    "presence_penalty",
-                    "stop",
-                    "tools",
-                    "tool_choice",
-                ]
-                and v is not None
-            },
-        }
-
-        with httpx.Client(timeout=self.config.timeout) as client:
-            response = client.post(
-                url,
-                json=request_data,
-                headers=self._get_headers(),
-            )
-
-            if response.status_code != 200:
-                raise ProviderError(f"DeepSeek API error: {response.status_code} - {response.text}")
-
-            return self._parse_response(response.json(), model)
+        # Add any custom headers from config
+        if self.config.headers:
+            headers.update(self.config.headers)
+        return headers

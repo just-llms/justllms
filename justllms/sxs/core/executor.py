@@ -1,9 +1,9 @@
 import logging
 import time
-from concurrent.futures import ThreadPoolExecutor, TimeoutError, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from ..models import ModelResponse, ResponseStatus
+from justllms.sxs.models import ModelResponse, ResponseStatus
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,10 @@ class ParallelExecutor:
         Returns:
             Dictionary mapping model_id to ModelResponse
         """
-        results = {}
+        results: Dict[str, ModelResponse] = {}
+
+        if not models:
+            return results
 
         def call_model(provider: str, model: str) -> Tuple[str, ModelResponse]:
             """Call a single model."""
@@ -90,32 +93,33 @@ class ParallelExecutor:
 
             return model_id, result
 
-        # Execute all models in parallel with timeout
         with ThreadPoolExecutor(max_workers=min(len(models), 10)) as executor:
             futures = [executor.submit(call_model, provider, model) for provider, model in models]
 
-            # Collect results as they complete with timeout
-            for future in as_completed(futures, timeout=30):
-                try:
-                    model_id, result = future.result(timeout=10)
-                    results[model_id] = result
-                except TimeoutError:
-                    logger.error("Timeout waiting for model response")
-                    # Try to identify which model timed out
-                    for provider, model in models:
-                        model_id = f"{provider}/{model}"
-                        if model_id not in results:
-                            results[model_id] = ModelResponse(
-                                provider=provider,
-                                model=model,
-                                content="",
-                                status=ResponseStatus.ERROR,
-                                latency=30.0,
-                                tokens=0,
-                                cost=0.0,
-                                error="Request timed out after 30 seconds",
-                            )
-                except Exception as e:
-                    logger.error(f"Error processing future: {e}")
+            try:
+                for future in as_completed(futures):
+                    try:
+                        model_id, result = future.result()
+                        results[model_id] = result
+                    except Exception as e:
+                        logger.error(f"Error processing future: {e}")
+            finally:
+                for future in futures:
+                    if not future.done():
+                        future.cancel()
+
+                for provider, model in models:
+                    model_id = f"{provider}/{model}"
+                    if model_id not in results:
+                        results[model_id] = ModelResponse(
+                            provider=provider,
+                            model=model,
+                            content="",
+                            status=ResponseStatus.ERROR,
+                            latency=0.0,
+                            tokens=0,
+                            cost=0.0,
+                            error="Request failed or was cancelled",
+                        )
 
         return results

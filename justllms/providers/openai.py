@@ -1,11 +1,8 @@
-from typing import Any, Dict, List
+from typing import Dict
 
-import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential
-
-from justllms.core.base import BaseProvider, BaseResponse
-from justllms.core.models import Choice, Message, ModelInfo, Usage
-from justllms.exceptions import ProviderError
+from justllms.core.base import BaseResponse
+from justllms.core.models import ModelInfo
+from justllms.core.openai_base import BaseOpenAIChatProvider
 
 
 class OpenAIResponse(BaseResponse):
@@ -14,7 +11,7 @@ class OpenAIResponse(BaseResponse):
     pass
 
 
-class OpenAIProvider(BaseProvider):
+class OpenAIProvider(BaseOpenAIChatProvider):
     """Simplified OpenAI provider implementation."""
 
     MODELS = {
@@ -126,8 +123,16 @@ class OpenAIProvider(BaseProvider):
     def get_available_models(self) -> Dict[str, ModelInfo]:
         return self.MODELS.copy()
 
-    def _get_headers(self) -> Dict[str, str]:
-        """Get request headers."""
+    def _get_api_endpoint(self) -> str:
+        """Get OpenAI chat completions endpoint."""
+        base_url = self.config.api_base or "https://api.openai.com"
+        base_url = base_url.rstrip("/")
+        if base_url.endswith("/v1"):
+            base_url = base_url[:-3]
+        return f"{base_url}/v1/chat/completions"
+
+    def _get_request_headers(self) -> Dict[str, str]:
+        """Generate HTTP headers for OpenAI API requests."""
         headers = {
             "Authorization": f"Bearer {self.config.api_key}",
             "Content-Type": "application/json",
@@ -138,101 +143,3 @@ class OpenAIProvider(BaseProvider):
 
         headers.update(self.config.headers)
         return headers
-
-    def _format_messages(self, messages: List[Message]) -> List[Dict[str, Any]]:
-        """Format messages for OpenAI API."""
-        formatted = []
-
-        for msg in messages:
-            formatted_msg: Dict[str, Any] = {
-                "role": msg.role.value,
-                "content": msg.content,
-            }
-
-            if msg.name:
-                formatted_msg["name"] = msg.name
-            if msg.function_call:
-                formatted_msg["function_call"] = msg.function_call
-            if msg.tool_calls:
-                formatted_msg["tool_calls"] = msg.tool_calls
-
-            formatted.append(formatted_msg)
-
-        return formatted
-
-    def _parse_response(self, response_data: Dict[str, Any]) -> OpenAIResponse:
-        """Parse OpenAI API response."""
-        choices = []
-
-        for choice_data in response_data.get("choices", []):
-            message_data = choice_data.get("message", {})
-            message = Message(
-                role=message_data.get("role", "assistant"),
-                content=message_data.get("content", ""),
-                name=message_data.get("name"),
-                function_call=message_data.get("function_call"),
-                tool_calls=message_data.get("tool_calls"),
-            )
-
-            choice = Choice(
-                index=choice_data.get("index", 0),
-                message=message,
-                finish_reason=choice_data.get("finish_reason"),
-                logprobs=choice_data.get("logprobs"),
-            )
-            choices.append(choice)
-
-        usage_data = response_data.get("usage", {})
-        usage = Usage(
-            prompt_tokens=usage_data.get("prompt_tokens", 0),
-            completion_tokens=usage_data.get("completion_tokens", 0),
-            total_tokens=usage_data.get("total_tokens", 0),
-        )
-
-        # Extract only the keys we want to avoid conflicts
-        raw_response = {
-            k: v
-            for k, v in response_data.items()
-            if k not in ["id", "model", "choices", "usage", "created", "system_fingerprint"]
-        }
-
-        return OpenAIResponse(
-            id=response_data.get("id", ""),
-            model=response_data.get("model", ""),
-            choices=choices,
-            usage=usage,
-            created=response_data.get("created"),
-            system_fingerprint=response_data.get("system_fingerprint"),
-            **raw_response,
-        )
-
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-    )
-    def complete(
-        self,
-        messages: List[Message],
-        model: str,
-        **kwargs: Any,
-    ) -> BaseResponse:
-        """Synchronous completion."""
-        url = f"{self.config.api_base or 'https://api.openai.com'}/v1/chat/completions"
-
-        payload = {
-            "model": model,
-            "messages": self._format_messages(messages),
-            **kwargs,
-        }
-
-        with httpx.Client(timeout=self.config.timeout) as client:
-            response = client.post(
-                url,
-                json=payload,
-                headers=self._get_headers(),
-            )
-
-            if response.status_code != 200:
-                raise ProviderError(f"OpenAI API error: {response.status_code} - {response.text}")
-
-            return self._parse_response(response.json())

@@ -209,7 +209,7 @@ class GrokProvider(BaseProvider):
             },
         }
 
-        with httpx.Client(timeout=self.config.timeout) as client:
+        with httpx.Client() as client:
             response = client.post(
                 url,
                 json=request_data,

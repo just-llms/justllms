@@ -133,7 +133,7 @@ Prompt: Which programming language is better for beginners: Python or JavaScript
 │ building confidence early in programming.                                   │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-┌─ google/gemini-2.5-flash ───────────────────────────────────────────────────┐
+┌─ google/gemini-2.5-pro ─────────────────────────────────────────────────────┐
 │ JavaScript has advantages for beginners because it runs everywhere - in     │
 │ browsers, servers, and mobile apps. You can see immediate visual results    │
 │ when building web pages, which is motivating. The job market heavily favors │
@@ -198,6 +198,15 @@ client = JustLLM(production_config)
 
 1. **Cluster-Based Routing**: AI-powered query analysis for optimal model selection
 2. **Production Simplicity**: Minimal dependencies, focused feature set
+3. **Router-Native Agents (Experimental)**: A new `justagents` module provides a multi-agent
+   copilot framework built directly on JustLLMs. Try it:
+
+   - Install: `pip install -e .`
+   - Set API keys via env (e.g., `OPENAI_API_KEY`)
+   - Run: `justagents "Design a CLI to format JSON logs as a table"`
+
+   The default Developer Copilot orchestrates Planner → Coder → Reviewer → Finalizer,
+   with per-agent model policies and simple function-calling tools.
 3. **Cost Optimization**: Automatic routing to reduce costs by up to 60%
 4. **Unified Interface**: Same API across all providers
 5. **Reliability**: Built-in fallback and error handling

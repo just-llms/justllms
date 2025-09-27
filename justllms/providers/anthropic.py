@@ -1,11 +1,7 @@
 from typing import Any, Dict, List, Optional
 
-import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential
-
 from justllms.core.base import BaseProvider, BaseResponse
 from justllms.core.models import Choice, Message, ModelInfo, Role, Usage
-from justllms.exceptions import ProviderError
 
 
 class AnthropicResponse(BaseResponse):
@@ -151,23 +147,14 @@ class AnthropicProvider(BaseProvider):
             total_tokens=usage_data.get("input_tokens", 0) + usage_data.get("output_tokens", 0),
         )
 
-        # Extract only the keys we want to avoid conflicts
-        raw_response = {
-            k: v for k, v in response_data.items() if k not in ["id", "model", "choices", "usage"]
-        }
-
-        return AnthropicResponse(
-            id=response_data.get("id", ""),
-            model=model,
-            choices=[choice],
-            usage=usage,
-            **raw_response,
+        return self._create_base_response(  # type: ignore[return-value]
+            AnthropicResponse,
+            response_data,
+            [choice],
+            usage,
+            model,
         )
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-    )
     def complete(
         self,
         messages: List[Message],
@@ -198,16 +185,10 @@ class AnthropicProvider(BaseProvider):
                 kwargs["stop"] if isinstance(kwargs["stop"], list) else [kwargs["stop"]]
             )
 
-        with httpx.Client(timeout=self.config.timeout) as client:
-            response = client.post(
-                url,
-                json=payload,
-                headers=self._get_headers(),
-            )
+        response_data = self._make_http_request(
+            url=url,
+            payload=payload,
+            headers=self._get_headers(),
+        )
 
-            if response.status_code != 200:
-                raise ProviderError(
-                    f"Anthropic API error: {response.status_code} - {response.text}"
-                )
-
-            return self._parse_response(response.json(), model)
+        return self._parse_response(response_data, model)
