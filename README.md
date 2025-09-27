@@ -193,10 +193,3 @@ client = JustLLM(production_config)
 ```
 
 [![Star History Chart](https://api.star-history.com/svg?repos=just-llms/justllms&type=Date)](https://www.star-history.com/#just-llms/justllms&Date)
-
-
-   The default Developer Copilot orchestrates Planner → Coder → Reviewer → Finalizer,
-   with per-agent model policies and simple function-calling tools.
-3. **Cost Optimization**: Automatic routing to reduce costs by up to 60%
-4. **Unified Interface**: Same API across all providers
-5. **Reliability**: Built-in fallback and error handling
