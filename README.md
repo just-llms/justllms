@@ -4,8 +4,6 @@ A production-ready Python library focused on intelligent LLM routing and multi-p
 
 [![PyPI version](https://badge.fury.io/py/justllms.svg)](https://pypi.org/project/justllms/) [![Downloads](https://pepy.tech/badge/justllms)](https://pepy.tech/project/justllms)
 
-[![Star History Chart](https://api.star-history.com/svg?repos=just-llms/justllms&type=Date)](https://www.star-history.com/#just-llms/justllms&Date)
-
 ## Why JustLLMs?
 
 Managing multiple LLM providers is complex. You need to handle different APIs, optimize costs, and ensure reliability. JustLLMs solves these challenges by providing a unified interface that automatically routes requests to the best provider based on your criteria—whether that's cost, speed, or quality.
@@ -194,16 +192,8 @@ production_config = {
 client = JustLLM(production_config)
 ```
 
-## Key Differentiators
+[![Star History Chart](https://api.star-history.com/svg?repos=just-llms/justllms&type=Date)](https://www.star-history.com/#just-llms/justllms&Date)
 
-1. **Cluster-Based Routing**: AI-powered query analysis for optimal model selection
-2. **Production Simplicity**: Minimal dependencies, focused feature set
-3. **Router-Native Agents (Experimental)**: A new `justagents` module provides a multi-agent
-   copilot framework built directly on JustLLMs. Try it:
-
-   - Install: `pip install -e .`
-   - Set API keys via env (e.g., `OPENAI_API_KEY`)
-   - Run: `justagents "Design a CLI to format JSON logs as a table"`
 
    The default Developer Copilot orchestrates Planner → Coder → Reviewer → Finalizer,
    with per-agent model policies and simple function-calling tools.
