@@ -1,12 +1,8 @@
 import time
 from typing import Any, Dict, List
 
-import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential
-
 from justllms.core.base import BaseProvider, BaseResponse
 from justllms.core.models import Choice, Message, ModelInfo, Role, Usage
-from justllms.exceptions import ProviderError
 
 
 class GoogleResponse(BaseResponse):
@@ -179,6 +175,8 @@ class GoogleProvider(BaseProvider):
         candidates = response_data.get("candidates", [])
 
         if not candidates:
+            from justllms.exceptions import ProviderError
+
             raise ProviderError("No candidates in Gemini response")
 
         # Get the first candidate
@@ -213,20 +211,17 @@ class GoogleProvider(BaseProvider):
             total_tokens=usage_metadata.get("totalTokenCount", 0),
         )
 
-        # Extract only the keys we want to avoid conflicts
-        raw_response = {
-            k: v
-            for k, v in response_data.items()
-            if k not in ["id", "model", "choices", "usage", "created"]
-        }
+        if "id" not in response_data:
+            response_data["id"] = f"gemini-{int(time.time())}"
+        if "created" not in response_data:
+            response_data["created"] = int(time.time())
 
-        return GoogleResponse(
-            id=response_data.get("id", f"gemini-{int(time.time())}"),
-            model=model,
-            choices=[choice],
-            usage=usage,
-            created=int(time.time()),
-            **raw_response,
+        return self._create_base_response(  # type: ignore[return-value]
+            GoogleResponse,
+            response_data,
+            [choice],
+            usage,
+            model,
         )
 
     def _get_headers(self) -> Dict[str, str]:
@@ -241,10 +236,6 @@ class GoogleProvider(BaseProvider):
             "key": self.config.api_key or "",
         }
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-    )
     def complete(
         self,
         messages: List[Message],
@@ -266,15 +257,11 @@ class GoogleProvider(BaseProvider):
         if "safety_settings" in kwargs:
             request_data["safetySettings"] = kwargs["safety_settings"]
 
-        with httpx.Client(timeout=self.config.timeout) as client:
-            response = client.post(
-                url,
-                json=request_data,
-                headers=self._get_headers(),
-                params=self._get_params(),
-            )
+        response_data = self._make_http_request(
+            url=url,
+            payload=request_data,
+            headers=self._get_headers(),
+            params=self._get_params(),
+        )
 
-            if response.status_code != 200:
-                raise ProviderError(f"Gemini API error: {response.status_code} - {response.text}")
-
-            return self._parse_response(response.json(), model)
+        return self._parse_response(response_data, model)

@@ -61,16 +61,32 @@ class ModelInfo(BaseModel):
 
 
 class ProviderConfig(BaseModel):
-    """Configuration for a provider."""
+    """Configuration for a provider instance.
+
+    Unified configuration model that combines settings from config files
+    and runtime provider requirements. Supports both application config
+    fields and provider-specific settings.
+    """
 
     model_config = ConfigDict(extra="allow")
 
     name: str
     api_key: Optional[str] = None
+    enabled: bool = True
     api_base: Optional[str] = None
+    base_url: Optional[str] = None
     api_version: Optional[str] = None
     organization: Optional[str] = None
     timeout: Optional[float] = None
     max_retries: int = 3
     retry_delay: float = 1.0
+    rate_limit: Optional[int] = None
     headers: Dict[str, str] = Field(default_factory=dict)
+    deployment_mapping: Dict[str, str] = Field(default_factory=dict)
+
+    def model_post_init(self, __context: Any) -> None:
+        """Handle alternative field names and normalize configuration."""
+        if self.base_url and not self.api_base:
+            self.api_base = self.base_url
+        elif self.api_base and not self.base_url:
+            self.base_url = self.api_base

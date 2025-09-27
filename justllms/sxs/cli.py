@@ -12,9 +12,8 @@ from rich.table import Table
 from rich.text import Text
 
 from justllms import JustLLM
-
-from .core import ParallelExecutor
-from .models import ResponseStatus
+from justllms.sxs.core import ParallelExecutor
+from justllms.sxs.models import ResponseStatus
 
 console = Console()
 
@@ -35,7 +34,7 @@ custom_style = Style(
 
 def get_all_providers() -> List[str]:
     """Get list of all supported providers."""
-    return ["openai", "anthropic", "google", "xai", "deepseek"]
+    return ["openai", "anthropic", "google", "xai", "deepseek", "azure"]
 
 
 def select_providers_checkbox() -> List[str]:
@@ -83,73 +82,42 @@ def collect_api_keys(providers: List[str]) -> Dict[str, str]:
 
 
 def get_all_available_models(client: Optional[JustLLM], provider: str) -> List[str]:
-    """Get all available models for a provider."""
+    """Get all available models for a provider using dynamic model discovery."""
     try:
-        # Try to get models from the client
         if client and hasattr(client, "list_models"):
             models_info = client.list_models(provider=provider)
-            if isinstance(models_info, dict):
-                if "models" in models_info:
-                    return [m["id"] for m in models_info["models"]]
-                elif provider in models_info:
-                    provider_models = models_info[provider]
-                    if isinstance(provider_models, list):
-                        return provider_models
-                    elif isinstance(provider_models, dict) and "models" in provider_models:
-                        return [m["id"] for m in provider_models["models"]]
+            if isinstance(models_info, dict) and provider in models_info:
+                provider_models = models_info[provider]
+                if isinstance(provider_models, dict):
+                    return list(provider_models.keys())
+                elif isinstance(provider_models, list):
+                    return provider_models
+
+        from justllms.providers import get_provider_class
+
+        provider_class = get_provider_class(provider)
+        if provider_class:
+            from justllms.core.models import ProviderConfig
+
+            temp_config = ProviderConfig(name=provider, api_key="temp")
+            temp_provider = provider_class(temp_config)
+            models = temp_provider.get_available_models()
+            return list(models.keys())
+
     except Exception as e:
         console.print(f"[dim]Could not fetch models for {provider}: {e}[/dim]")
 
-    all_models = {
-        "openai": [
-            "gpt-5",
-            "gpt-5-mini",
-            "gpt-5-nano",
-            "gpt-4.1",
-            "gpt-4.1-mini",
-            "gpt-4.1-nano",
-            "gpt-oss-120b",
-            "gpt-oss-20b",
-            "gpt-4o",
-            "gpt-4o-mini",
-            "gpt-4-turbo",
-        ],
-        "anthropic": [
-            "claude-opus-4.1",
-            "claude-opus-4",
-            "claude-sonnet-4",
-            "claude-3.5-haiku",
-        ],
-        "google": [
-            "gemini-2.5-pro",
-            "gemini-2.5-flash",
-            "gemini-2.5-flash-lite",
-            "gemini-live-2.5-flash-preview",
-            "gemini-2.0-flash",
-            "gemini-2.0-flash-exp",
-        ],
-        "deepseek": ["deepseek-chat", "deepseek-reasoner"],
-        "xai": [
-            "grok-code-fast-1",
-            "grok-4",
-            "grok-4-heavy",
-            "grok-3",
-            "grok-3-mini",
-        ],
-        "azure": [
-            "gpt-5",
-            "gpt-5-mini",
-            "gpt-5-nano",
-            "gpt-4.1",
-            "gpt-4.1-mini",
-            "gpt-4o",
-            "gpt-4o-mini",
-            "gpt-4-turbo",
-            "gpt-4",
-        ],
+    fallback_models = {
+        "openai": ["gpt-4o", "gpt-4o-mini"],
+        "anthropic": ["claude-3-5-sonnet-20241022"],
+        "google": ["gemini-1.5-flash"],
+        "deepseek": ["deepseek-chat"],
+        "xai": ["grok-3"],
+        "grok": ["grok-3"],
+        "azure_openai": ["gpt-4o"],
     }
 
-    return all_models.get(provider, [])
+    return fallback_models.get(provider, [])
 
 
 def select_models_checkbox(
@@ -237,31 +205,26 @@ def display_live_results(
         """Create the current display layout."""
         nonlocal frame_index
 
-        # Check if ALL models have completed
-        all_completed = all(completed.values())
+        panels = []
+        for model_id in responses:
+            if completed[model_id]:
+                content = responses[model_id] or ""
+                border_style = "green"
+            else:
+                frame = loading_frames[frame_index % len(loading_frames)]
+                content = f"[dim]Generating... {frame}[/dim]"
+                border_style = "yellow"
 
-        if not all_completed:
-            # Show loading animation until ALL models complete
-            frame = loading_frames[frame_index % len(loading_frames)]
-            frame_index += 1
-            return Text(f"Generating answer {frame}", style="dim")
-        else:
-            # Show model panels only once ALL models have completed
-            panels = []
-            for model_id in responses:
-                content = responses[model_id]
-                if not content:
-                    content = ""
+            panel = Panel(
+                Text(content),
+                title=f"[bold]{model_id}[/bold]",
+                expand=True,
+                border_style=border_style,
+            )
+            panels.append(panel)
 
-                panel = Panel(
-                    Text(content),
-                    title=f"[bold]{model_id}[/bold]",
-                    expand=True,
-                    border_style="green",  # All are completed, so use green
-                )
-                panels.append(panel)
-
-            return Group(*panels)
+        frame_index += 1
+        return Group(*panels)
 
     def on_model_complete(model_id: str, result: Any) -> None:
         """Callback for model completion."""
@@ -271,9 +234,7 @@ def display_live_results(
         else:
             responses[model_id] = f"[red]Error: {result.error}[/red]"
 
-    # Start live display
     with Live(create_display(), refresh_per_second=10, console=console) as live:
-        # Start background thread for animation updates
         import threading
         import time
 

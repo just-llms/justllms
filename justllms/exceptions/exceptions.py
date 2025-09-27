@@ -2,7 +2,16 @@ from typing import Any, Dict, Optional
 
 
 class JustLLMsError(Exception):
-    """Base exception for all JustLLMs errors."""
+    """Base exception for all JustLLMs library errors.
+
+    Provides common error handling patterns with structured error information
+    including error codes and additional context details.
+
+    Args:
+        message: Human-readable error description.
+        code: Optional error code for programmatic error handling.
+        details: Optional dictionary with additional error context.
+    """
 
     def __init__(
         self,
@@ -17,7 +26,18 @@ class JustLLMsError(Exception):
 
 
 class ProviderError(JustLLMsError):
-    """Error from an LLM provider."""
+    """Error originating from an LLM provider API.
+
+    Represents failures in communication with or responses from LLM provider
+    APIs, including HTTP errors, API errors, and malformed responses.
+
+    Args:
+        message: Error description from provider or library.
+        provider: Name of the provider that generated the error.
+        status_code: HTTP status code if applicable.
+        response_body: Raw response body from the provider API.
+        **kwargs: Additional arguments passed to parent JustLLMsError.
+    """
 
     def __init__(
         self,
@@ -34,7 +54,18 @@ class ProviderError(JustLLMsError):
 
 
 class RouteError(JustLLMsError):
-    """Error during routing/model selection."""
+    """Error during intelligent routing or model selection process.
+
+    Raised when the routing system cannot determine an appropriate provider
+    and model combination for a request, either due to configuration issues
+    or unavailable resources.
+
+    Args:
+        message: Description of the routing failure.
+        strategy: Name of the routing strategy that failed.
+        available_providers: List of providers that were available for routing.
+        **kwargs: Additional arguments passed to parent JustLLMsError.
+    """
 
     def __init__(
         self,

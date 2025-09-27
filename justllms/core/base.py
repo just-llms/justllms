@@ -1,7 +1,33 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
+import httpx
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
+
 from justllms.core.models import Choice, Message, ModelInfo, ProviderConfig, Usage
+from justllms.exceptions import ProviderError
+
+
+def _is_retryable_http_error(exc: BaseException) -> bool:
+    """Determine if an exception is worth retrying.
+
+    Retries on:
+    - Network/connection errors (httpx.RequestError)
+    - Rate limiting (429)
+    - Server errors (500+)
+    - Request timeout (408)
+
+    Does NOT retry on:
+    - Client errors (400-499 except 429, 408)
+    """
+    if isinstance(exc, httpx.RequestError):
+        return True
+    if isinstance(exc, ProviderError):
+        status = getattr(exc, "status_code", None)
+        if status is None:
+            return False
+        return status in (429, 408) or status >= 500
+    return False
 
 
 class BaseResponse:
@@ -94,3 +120,210 @@ class BaseProvider(ABC):
         )
 
         return prompt_cost + completion_cost
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+        retry=retry_if_exception(_is_retryable_http_error),
+        reraise=True,
+    )
+    def _make_http_request(
+        self,
+        url: str,
+        payload: Dict[str, Any],
+        headers: Optional[Dict[str, str]] = None,
+        params: Optional[Dict[str, str]] = None,
+        method: str = "POST",
+    ) -> Dict[str, Any]:
+        """Execute HTTP request with automatic retry logic and error handling.
+
+        Provides consistent HTTP request handling across all providers with
+        built-in retry logic and standardized error reporting.
+
+        Args:
+            url: Target endpoint URL for the request.
+            payload: Request body data to send as JSON.
+            headers: Optional HTTP headers to include in request.
+            params: Optional query parameters for the request.
+            method: HTTP method to use ('POST' or 'GET').
+
+        Returns:
+            Dict[str, Any]: Parsed JSON response from the API.
+
+        Raises:
+            ProviderError: If request fails after retries or returns non-200 status.
+                          Includes provider name, status code, and response details.
+            ValueError: If unsupported HTTP method is specified.
+        """
+        request_headers = headers or {}
+        request_params = params or {}
+
+        with httpx.Client() as client:
+            if method.upper() == "POST":
+                response = client.post(
+                    url,
+                    json=payload,
+                    headers=request_headers,
+                    params=request_params,
+                )
+            elif method.upper() == "GET":
+                response = client.get(
+                    url,
+                    headers=request_headers,
+                    params=request_params,
+                )
+            else:
+                raise ValueError(f"Unsupported HTTP method: {method}")
+
+            if response.status_code != 200:
+                raise ProviderError(
+                    f"{self.name} API error: {response.status_code} - {response.text}",
+                    provider=self.name,
+                    status_code=response.status_code,
+                    response_body=response.text,
+                )
+
+            return response.json()  # type: ignore[no-any-return]
+
+    def _extract_raw_response(
+        self, response_data: Dict[str, Any], exclude_keys: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """Filter response data to extract only non-standard fields.
+
+        Removes standard response fields to prevent conflicts when creating
+        response objects, while preserving provider-specific metadata.
+
+        Args:
+            response_data: Raw response dictionary from provider API.
+            exclude_keys: Optional list of keys to exclude. Uses standard
+                         keys if not provided.
+
+        Returns:
+            Dict[str, Any]: Filtered response data containing only custom fields.
+        """
+        default_exclude_keys = ["id", "model", "choices", "usage", "created", "system_fingerprint"]
+        exclude_keys = default_exclude_keys if exclude_keys is None else exclude_keys
+
+        return {k: v for k, v in response_data.items() if k not in exclude_keys}
+
+    def _create_base_response(
+        self,
+        response_class: type,
+        response_data: Dict[str, Any],
+        choices: List[Choice],
+        usage: Usage,
+        model: str,
+        **kwargs: Any,
+    ) -> BaseResponse:
+        """Construct a standardized response object from provider data.
+
+        Creates response objects with consistent structure across all providers
+        while preserving provider-specific metadata and allowing customization.
+
+        Args:
+            response_class: Response class to instantiate (e.g., OpenAIResponse).
+            response_data: Raw response dictionary from provider API.
+            choices: List of parsed choice objects with messages.
+            usage: Token usage statistics for the request.
+            model: Model identifier used for the request.
+            **kwargs: Additional fields to include in the response object.
+
+        Returns:
+            BaseResponse: Instantiated response object with standard fields
+                         and provider-specific metadata.
+        """
+        raw_response = self._extract_raw_response(response_data)
+
+        return response_class(  # type: ignore[no-any-return]
+            id=response_data.get("id", ""),
+            model=model,
+            choices=choices,
+            usage=usage,
+            created=response_data.get("created"),
+            system_fingerprint=response_data.get("system_fingerprint"),
+            **raw_response,
+            **kwargs,
+        )
+
+    def _format_messages_base(self, messages: List[Message]) -> List[Dict[str, Any]]:
+        """Convert Message objects to provider-compatible format.
+
+        Provides standard message formatting that works with OpenAI-compatible APIs.
+        Override this method in provider classes for custom message formatting.
+
+        Args:
+            messages: List of Message objects to format for API request.
+
+        Returns:
+            List[Dict[str, Any]]: List of formatted message dictionaries ready
+                                 for API consumption.
+        """
+        formatted = []
+
+        for msg in messages:
+            formatted_msg: Dict[str, Any] = {
+                "role": msg.role.value,
+                "content": msg.content,
+            }
+
+            # Add optional fields if present
+            if msg.name:
+                formatted_msg["name"] = msg.name
+            if msg.function_call:
+                formatted_msg["function_call"] = msg.function_call
+            if msg.tool_calls:
+                formatted_msg["tool_calls"] = msg.tool_calls
+
+            formatted.append(formatted_msg)
+
+        return formatted
+
+    def _create_standard_choice(self, message_data: Dict[str, Any], index: int = 0) -> Choice:
+        """Create a standard Choice object from message data."""
+        from justllms.core.models import Role
+
+        message = Message(
+            role=message_data.get("role", Role.ASSISTANT),
+            content=message_data.get("content", ""),
+            name=message_data.get("name"),
+            function_call=message_data.get("function_call"),
+            tool_calls=message_data.get("tool_calls"),
+        )
+
+        return Choice(
+            index=index,
+            message=message,
+            finish_reason=message_data.get("finish_reason"),
+            logprobs=message_data.get("logprobs"),
+        )
+
+    def _create_standard_usage(self, usage_data: Dict[str, Any]) -> Usage:
+        """Create a standard Usage object from usage data."""
+        return Usage(
+            prompt_tokens=usage_data.get("prompt_tokens", 0),
+            completion_tokens=usage_data.get("completion_tokens", 0),
+            total_tokens=usage_data.get("total_tokens", 0),
+        )
+
+    @classmethod
+    def _create_model_registry(cls, models: Dict[str, Dict[str, Any]]) -> Dict[str, ModelInfo]:
+        """Helper to create a model registry from model definitions."""
+        registry = {}
+        for model_name, model_data in models.items():
+            registry[model_name] = ModelInfo(name=model_name, **model_data)
+        return registry
+
+    def _get_default_headers(self) -> Dict[str, str]:
+        """Get common default headers that most providers use."""
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": f"justllms/{self.__class__.__name__}",
+        }
+
+        # Add custom headers from config
+        headers.update(self.config.headers)
+        return headers
+
+    def _filter_kwargs(self, kwargs: Dict[str, Any], allowed_keys: List[str]) -> Dict[str, Any]:
+        """Filter kwargs to only include allowed keys with non-None values."""
+        return {k: v for k, v in kwargs.items() if k in allowed_keys and v is not None}

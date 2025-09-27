@@ -7,7 +7,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class ProviderConfig(BaseModel):
+class ConfigProviderSettings(BaseModel):
     model_config = ConfigDict(extra="allow")
     name: str
     api_key: Optional[str] = None
@@ -67,11 +67,20 @@ class Config(BaseModel):
             "google": "GOOGLE_API_KEY",
             "azure_openai": "AZURE_OPENAI_KEY",
             "deepseek": "DEEPSEEK_API_KEY",
-            "grok": "XAI_API_KEY",
+            "grok": ("XAI_API_KEY", "GROK_API_KEY"),  # Support both for backwards compatibility
         }
 
         for provider_name, env_key in provider_keys.items():
-            api_key = os.getenv(env_key)
+            if isinstance(env_key, tuple):
+                api_key = None
+                for key in env_key:
+                    api_key = os.getenv(key)
+                    if api_key:
+                        break
+            else:
+                # Type guard: env_key is a string here
+                api_key = os.getenv(env_key)  # type: ignore[call-overload]
+
             if api_key:
                 providers[provider_name] = {"api_key": api_key}
 

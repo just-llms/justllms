@@ -18,8 +18,13 @@ class Client:
         router: Optional[Router] = None,
         default_model: Optional[str] = None,
         default_provider: Optional[str] = None,
+        routing_strategy: Optional[str] = None,
     ):
         self.config = self._load_config(config)
+
+        if routing_strategy:
+            self.config.routing.strategy = routing_strategy
+
         self.providers = providers if providers is not None else {}
         self.router = router or Router(self.config.routing)
         self.default_model = default_model
@@ -31,7 +36,20 @@ class Client:
             self._initialize_providers()
 
     def _load_config(self, config: Optional[Union[str, Dict[str, Any], Config]]) -> Config:
-        """Load configuration."""
+        """Load and validate configuration from various sources.
+
+        Args:
+            config: Configuration object, dictionary, file path, or None for defaults.
+                   Can be a Config instance, dict with config values, string path to
+                   config file, or None to load from environment/defaults.
+
+        Returns:
+            Config: Validated configuration object with provider and routing settings.
+
+        Raises:
+            FileNotFoundError: If config file path is provided but file doesn't exist.
+            ValueError: If config format is invalid.
+        """
         if isinstance(config, Config):
             return config
         elif isinstance(config, dict):
@@ -45,7 +63,15 @@ class Client:
             return load_config(use_defaults=True, use_env=True)
 
     def _initialize_providers(self) -> None:
-        """Initialize providers based on configuration."""
+        """Initialize providers based on configuration settings.
+
+        Creates provider instances for all enabled providers in the configuration
+        that have valid API keys. Silently skips providers that fail to initialize
+        to allow partial functionality when some providers are misconfigured.
+
+        Raises:
+            ImportError: If required provider class cannot be imported.
+        """
         from justllms.providers import get_provider_class
 
         for provider_name, provider_config in self.config.providers.items():
@@ -56,23 +82,48 @@ class Client:
                         config = ProviderConfig(name=provider_name, **provider_config)
                         self.providers[provider_name] = provider_class(config)
                     except Exception:
-                        # Silently skip failed provider initialization
                         pass
 
     def add_provider(self, name: str, provider: BaseProvider) -> None:
-        """Add a provider to the client."""
+        """Add a provider instance to the client.
+
+        Args:
+            name: Unique identifier for the provider (e.g., 'openai', 'anthropic').
+            provider: Configured provider instance implementing BaseProvider.
+        """
         self.providers[name] = provider
 
     def get_provider(self, name: str) -> Optional[BaseProvider]:
-        """Get a provider by name."""
+        """Retrieve a provider instance by name.
+
+        Args:
+            name: Provider identifier to look up.
+
+        Returns:
+            Optional[BaseProvider]: Provider instance if found, None otherwise.
+        """
         return self.providers.get(name)
 
     def list_providers(self) -> List[str]:
-        """List available providers."""
+        """Get names of all available providers.
+
+        Returns:
+            List[str]: List of provider names that are currently initialized
+                      and available for use.
+        """
         return list(self.providers.keys())
 
     def list_models(self, provider: Optional[str] = None) -> Dict[str, Any]:
-        """List available models."""
+        """Get available models from providers.
+
+        Args:
+            provider: Optional provider name to filter models. If None, returns
+                     models from all available providers.
+
+        Returns:
+            Dict[str, Any]: Dictionary mapping provider names to their available
+                           models. Each model entry contains ModelInfo details.
+        """
         models = {}
 
         if provider:
@@ -91,7 +142,29 @@ class Client:
         provider: Optional[str] = None,
         **kwargs: Any,
     ) -> CompletionResponse:
-        """Create a completion with intelligent routing."""
+        """Create a completion using intelligent routing to select optimal provider.
+
+        Uses the configured routing strategy to automatically select the best
+        provider and model combination based on the request characteristics,
+        unless specific provider/model are requested.
+
+        Args:
+            messages: List of conversation messages to process.
+            model: Optional specific model to use. Can be model name or
+                  'provider/model' format.
+            provider: Optional specific provider to use. Overrides routing.
+            **kwargs: Additional parameters passed to the provider's complete method.
+                     Common parameters: temperature, max_tokens, top_p, etc.
+
+        Returns:
+            CompletionResponse: Response object containing the generated completion,
+                              usage statistics, and provider metadata.
+
+        Raises:
+            ValueError: If model is not specified and cannot be determined by routing.
+            ProviderError: If the specified provider is not available or if the
+                          completion request fails.
+        """
         # Use intelligent routing to select provider and model
         if not provider:
             provider, model = self.router.route(

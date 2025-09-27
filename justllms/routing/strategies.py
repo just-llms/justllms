@@ -116,6 +116,60 @@ class LatencyOptimizedStrategy(RoutingStrategy):
         self.max_latency_ms = max_latency_ms
         self.prefer_local = prefer_local
 
+    def _calculate_latency_score(
+        self, provider_name: str, model_name: str, model_info: ModelInfo
+    ) -> float:
+        """Calculate latency score for a provider/model combination.
+
+        Lower scores indicate faster models. Scoring is based on model capabilities
+        and provider-specific performance characteristics.
+
+        Args:
+            provider_name: Name of the provider.
+            model_name: Name of the model.
+            model_info: Model information with metadata.
+
+        Returns:
+            float: Latency score (lower = faster).
+        """
+        latency_score = 1.0
+
+        # Model-based scoring (based on capability/speed tradeoffs)
+        model_lower = model_name.lower()
+
+        if any(name in model_lower for name in ["mini", "nano", "haiku"]):
+            latency_score = 0.3  # Fastest
+        elif "flash-8b" in model_lower:
+            latency_score = 0.4  # Very fast
+        elif any(name in model_lower for name in ["flash", "fast", "turbo", "gpt-4o-mini"]):
+            latency_score = 0.6  # Fast
+        elif any(
+            name in model_lower
+            for name in ["small", "light", "8b", "pro", "sonnet", "gpt-4o", "gpt-4.1", "grok-3"]
+        ):
+            latency_score = 0.8  # Medium
+        elif any(name in model_lower for name in ["opus", "gpt-5", "grok-4", "o1", "o3"]):
+            latency_score = 1.0  # Slowest (most capable)
+        else:
+            # Default for unrecognized models
+            latency_score = 1.0
+
+        # Provider-specific multipliers based on observed performance
+        if provider_name == "openai":
+            latency_score *= 0.9  # Generally fast
+        elif provider_name == "google":
+            latency_score *= 0.8  # Very fast
+        elif provider_name == "anthropic":
+            latency_score *= 1.0  # Standard
+        elif provider_name == "deepseek":
+            latency_score *= 0.7  # Very fast and efficient
+        elif provider_name in ["xai", "grok"]:
+            latency_score *= 1.1  # Slightly slower but intelligent
+        elif provider_name == "azure_openai":
+            latency_score *= 0.85  # Similar to OpenAI but with Azure overhead
+
+        return latency_score
+
     def select(  # noqa: C901
         self,
         messages: List[Message],
@@ -129,39 +183,9 @@ class LatencyOptimizedStrategy(RoutingStrategy):
         for provider_name, provider in providers.items():
             models = provider.get_available_models()
 
-            for model_name, _model_info in models.items():
-                # Estimate latency (this is simplified - in practice you'd measure actual latency)
-                latency_score = 1.0
-
-                # Prefer smaller/faster models for lower latency
-                if any(name in model_name.lower() for name in ["mini", "haiku", "nano", "lite"]):
-                    latency_score = 0.3  # Fastest
-                elif "flash-8b" in model_name.lower():
-                    latency_score = 0.4  # Very fast
-                elif any(name in model_name.lower() for name in ["turbo", "flash", "gpt-4.1"]):
-                    latency_score = 0.6  # Fast
-                elif any(
-                    name in model_name.lower() for name in ["pro", "sonnet", "gpt-4o", "grok-3"]
-                ):
-                    latency_score = 0.8  # Medium
-                elif any(
-                    name in model_name.lower() for name in ["opus", "gpt-5", "grok-4", "o1", "o3"]
-                ):
-                    latency_score = 1.0  # Slowest (most capable)
-
-                # Add provider-specific latency estimates
-                if provider_name == "google":
-                    latency_score *= 0.9  # Generally fast
-                elif provider_name == "openai":
-                    latency_score *= 0.8  # Very fast
-                elif provider_name == "anthropic":
-                    latency_score *= 1.0  # Standard
-                elif provider_name == "deepseek":
-                    latency_score *= 0.7  # Very fast and efficient
-                elif provider_name == "grok":
-                    latency_score *= 1.1  # Slightly slower but intelligent
-                elif provider_name == "azure_openai":
-                    latency_score *= 0.85  # Similar to OpenAI but with Azure overhead
+            for model_name, model_info in models.items():
+                # Use the centralized latency scoring helper
+                latency_score = self._calculate_latency_score(provider_name, model_name, model_info)
 
                 candidates.append((provider_name, model_name, latency_score))
 

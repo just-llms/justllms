@@ -292,8 +292,7 @@ class AzureOpenAIProvider(BaseProvider):
             **kwargs,
         }
 
-        timeout = getattr(self.config, "timeout", 30) or 30
-        with httpx.Client(timeout=timeout) as client:
+        with httpx.Client() as client:
             response = client.post(
                 url,
                 json=payload,

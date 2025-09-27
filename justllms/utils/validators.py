@@ -8,7 +8,25 @@ from justllms.exceptions import ValidationError
 def validate_messages(  # noqa: C901
     messages: Union[List[Dict[str, Any]], List[Message]],
 ) -> List[Message]:
-    """Validate and convert messages to Message objects."""
+    """Validate and normalize message inputs for LLM requests.
+
+    Performs comprehensive validation of message structure, content, roles,
+    and conversation flow to ensure compatibility with provider APIs.
+    Converts dictionary inputs to Message objects.
+
+    Args:
+        messages: List of messages as dictionaries or Message objects.
+                 Each message must have 'role' and 'content' fields.
+
+    Returns:
+        List[Message]: Validated and normalized Message objects ready for
+                      provider consumption.
+
+    Raises:
+        ValidationError: If messages are invalid, empty, malformed, or missing
+                        required fields. Includes specific error descriptions
+                        and field references for debugging.
+    """
     if not messages:
         raise ValidationError("Messages list cannot be empty")
 
@@ -101,7 +119,21 @@ def validate_messages(  # noqa: C901
 
 
 def validate_model_name(model: str) -> str:
-    """Validate and normalize model name."""
+    """Validate and sanitize model name format.
+
+    Ensures model names conform to expected patterns and character restrictions.
+    Supports both standalone model names and provider/model format.
+
+    Args:
+        model: Model name to validate. Can be 'model-name' or 'provider/model-name'.
+
+    Returns:
+        str: Validated and normalized model name.
+
+    Raises:
+        ValidationError: If model name is invalid, empty, too long, or contains
+                        illegal characters.
+    """
     if not model:
         raise ValidationError("Model name cannot be empty")
 
