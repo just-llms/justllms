@@ -75,14 +75,22 @@ class Client:
         from justllms.providers import get_provider_class
 
         for provider_name, provider_config in self.config.providers.items():
-            if provider_config.get("enabled", True) and provider_config.get("api_key"):
-                provider_class = get_provider_class(provider_name)
-                if provider_class:
-                    try:
-                        config = ProviderConfig(name=provider_name, **provider_config)
-                        self.providers[provider_name] = provider_class(config)
-                    except Exception:
-                        pass
+            if not provider_config.get("enabled", True):
+                continue
+
+            provider_class = get_provider_class(provider_name)
+            if not provider_class:
+                continue
+
+            requires_key = getattr(provider_class, "requires_api_key", True)
+            if requires_key and not provider_config.get("api_key"):
+                continue
+
+            try:
+                config = ProviderConfig(name=provider_name, **provider_config)
+                self.providers[provider_name] = provider_class(config)
+            except Exception:
+                pass
 
     def add_provider(self, name: str, provider: BaseProvider) -> None:
         """Add a provider instance to the client.

@@ -65,6 +65,13 @@ try:
 except ImportError:
     pass
 
+try:
+    from justllms.providers.ollama import OllamaProvider
+
+    register_provider("ollama", OllamaProvider)
+except ImportError:
+    pass
+
 
 __all__ = [
     "register_provider",

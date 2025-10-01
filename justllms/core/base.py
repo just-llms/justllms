@@ -73,6 +73,9 @@ class BaseResponse:
 class BaseProvider(ABC):
     """Abstract base class for all LLM providers."""
 
+    requires_api_key: bool = True
+    """Whether the provider needs an API key to initialize."""
+
     def __init__(self, config: ProviderConfig):
         self.config = config
         self._models_cache: Optional[Dict[str, ModelInfo]] = None

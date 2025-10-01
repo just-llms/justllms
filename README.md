@@ -45,7 +45,8 @@ Connect to all major LLM providers with a single, consistent interface:
 - **Google** (Gemini 2.5, Gemini 1.5 models)  
 - **Anthropic** (Claude 4, Claude 3.5 models)
 - **Azure OpenAI** (with deployment mapping)
-- **xAI Grok**, **DeepSeek**, and more
+- **xAI Grok**, **DeepSeek**
+- **Ollama** (local Llama/Mistral/phi models hosted on your machine)
 
 ```python
 # Switch between providers seamlessly
@@ -53,7 +54,8 @@ client = JustLLM({
     "providers": {
         "openai": {"api_key": "your-key"},
         "google": {"api_key": "your-key"},
-        "anthropic": {"api_key": "your-key"}
+        "anthropic": {"api_key": "your-key"},
+        "ollama": {"base_url": "http://localhost:11434"}
     }
 })
 
@@ -64,6 +66,10 @@ response1 = client.completion.create(
     model="gpt-5"
 )
 ```
+
+Ollama runs locally and requires no API key. Set `OLLAMA_API_BASE` (defaults to
+`http://localhost:11434`) and JustLLMs automatically discovers every installed
+model via the Ollama `/api/tags` endpoint.
 
 ## **Intelligent Routing**
 **The game-changing feature that sets JustLLMs apart.** Instead of manually choosing models, let our intelligent routing engine automatically select the optimal provider and model for each request based on your priorities.
@@ -157,7 +163,7 @@ Metrics Summary:
 |---------|----------|-----------|---------|------------|
 | **Package Size** | Minimal | ~50MB | ~5MB | ~1MB |
 | **Setup Complexity** | Simple config | Complex chains | Medium | Simple |
-| **Multi-Provider** | ✅ 6+ providers | ✅ Many integrations | ✅ 100+ providers | ❌ OpenAI only |
+| **Multi-Provider** | ✅ 7+ providers | ✅ Many integrations | ✅ 100+ providers | ❌ OpenAI only |
 | **Intelligent Routing** | ✅ Cost/speed/quality/cluster | ❌ Manual only | ⚠️ Basic routing | ❌ None |
 | **Side-by-Side Comparison** | ✅ Interactive CLI tool | ❌ None | ❌ None | ❌ None |
 | **Cost Optimization** | ✅ Automatic routing | ❌ Manual optimization | ⚠️ Basic cost tracking | ❌ None |
@@ -180,7 +186,11 @@ production_config = {
             }
         },
         "anthropic": {"api_key": os.getenv("ANTHROPIC_KEY")},
-        "google": {"api_key": os.getenv("GOOGLE_KEY")}
+        "google": {"api_key": os.getenv("GOOGLE_KEY")},
+        "ollama": {
+            "base_url": os.getenv("OLLAMA_API_BASE", "http://localhost:11434"),
+            "enabled": True,
+        }
     },
     "routing": {
         "strategy": "cluster",  # Use intelligent cluster-based routing

@@ -84,6 +84,22 @@ class Config(BaseModel):
             if api_key:
                 providers[provider_name] = {"api_key": api_key}
 
+        ollama_base = os.getenv("OLLAMA_API_BASE") or os.getenv("OLLAMA_HOST")
+        ollama_enabled = os.getenv("OLLAMA_ENABLED", "").lower() in {"1", "true", "yes"}
+        if ollama_base or ollama_enabled:
+            provider_entry: Dict[str, Any] = {"enabled": True}
+            if ollama_base:
+                provider_entry["base_url"] = ollama_base
+
+            headers_json = os.getenv("OLLAMA_HEADERS_JSON")
+            if headers_json:
+                try:
+                    provider_entry["headers"] = json.loads(headers_json)
+                except json.JSONDecodeError:
+                    pass
+
+            providers["ollama"] = provider_entry
+
         # Routing strategy from environment
         routing_strategy = os.getenv("JUSTLLMS_ROUTING_STRATEGY", "quality")
 
