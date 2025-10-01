@@ -34,7 +34,7 @@ custom_style = Style(
 
 def get_all_providers() -> List[str]:
     """Get list of all supported providers."""
-    return ["openai", "anthropic", "google", "xai", "deepseek", "azure"]
+    return ["openai", "anthropic", "google", "xai", "deepseek", "azure", "ollama"]
 
 
 def select_providers_checkbox() -> List[str]:
@@ -64,6 +64,22 @@ def collect_api_keys(providers: List[str]) -> Dict[str, str]:
     console.print("\n[bold cyan]API Key Configuration:[/bold cyan]\n")
 
     for provider in providers:
+        if provider == "ollama":
+            default_base = os.environ.get("OLLAMA_API_BASE", "http://localhost:11434")
+            base_url = Prompt.ask(
+                f"Enter base URL for [bold]{provider}[/bold]",
+                default=default_base,
+            )
+            if base_url:
+                os.environ["OLLAMA_API_BASE"] = base_url
+                os.environ["OLLAMA_ENABLED"] = "1"
+                console.print(f"✓ {provider}: [green]Using base URL {base_url}[/green]")
+            else:
+                console.print(
+                    f"[yellow]⚠ {provider} will use default base URL {default_base}[/yellow]"
+                )
+            continue
+
         env_var = f"{provider.upper()}_API_KEY"
         existing_key = os.environ.get(env_var)
 
@@ -99,7 +115,17 @@ def get_all_available_models(client: Optional[JustLLM], provider: str) -> List[s
         if provider_class:
             from justllms.core.models import ProviderConfig
 
-            temp_config = ProviderConfig(name=provider, api_key="temp")
+            provider_kwargs: Dict[str, Any] = {"name": provider}
+            if getattr(provider_class, "requires_api_key", True):
+                provider_kwargs["api_key"] = "temp"
+            else:
+                env_base = os.environ.get(f"{provider.upper()}_API_BASE") or os.environ.get(
+                    f"{provider.upper()}_HOST"
+                )
+                if env_base:
+                    provider_kwargs["base_url"] = env_base
+
+            temp_config = ProviderConfig(**provider_kwargs)
             temp_provider = provider_class(temp_config)
             models = temp_provider.get_available_models()
             return list(models.keys())
@@ -115,6 +141,7 @@ def get_all_available_models(client: Optional[JustLLM], provider: str) -> List[s
         "xai": ["grok-3"],
         "grok": ["grok-3"],
         "azure_openai": ["gpt-4o"],
+        "ollama": ["llama3.1:8b"],
     }
 
     return fallback_models.get(provider, [])

@@ -163,6 +163,8 @@ class LatencyOptimizedStrategy(RoutingStrategy):
             latency_score *= 1.0  # Standard
         elif provider_name == "deepseek":
             latency_score *= 0.7  # Very fast and efficient
+        elif provider_name == "ollama":
+            latency_score *= 0.6  # Local inference, typically fastest
         elif provider_name in ["xai", "grok"]:
             latency_score *= 1.1  # Slightly slower but intelligent
         elif provider_name == "azure_openai":
@@ -224,6 +226,8 @@ class LatencyOptimizedStrategy(RoutingStrategy):
                         latency_score *= 1.0
                     elif provider_name == "deepseek":
                         latency_score *= 0.7
+                    elif provider_name == "ollama":
+                        latency_score *= 0.6
                     elif provider_name == "grok":
                         latency_score *= 1.1
                     elif provider_name == "azure_openai":
@@ -280,6 +284,7 @@ class QualityOptimizedStrategy(RoutingStrategy):
                 "o1",
                 "o4-mini",
                 "grok-4-heavy",
+                "llama3.1:70b",
             ]
         ):
             return 4
@@ -309,6 +314,8 @@ class QualityOptimizedStrategy(RoutingStrategy):
                 "claude-haiku-3.5",
                 "grok-3-mini",
                 "deepseek-chat",
+                "mistral",
+                "phi3",
             ]
         ):
             return 2
@@ -444,6 +451,7 @@ class TaskBasedStrategy(RoutingStrategy):
                 ("deepseek", "deepseek-reasoner"),  # Excellent for reasoning tasks
                 ("grok", "grok-4"),  # Latest with coding support
                 ("anthropic", "claude-sonnet-4"),  # High-performance model
+                ("ollama", "llama3.1:70b"),  # Local flagship option
                 ("google", "gemini-2.5-flash"),
                 ("openai", "gpt-4.1"),
             ],
@@ -455,6 +463,7 @@ class TaskBasedStrategy(RoutingStrategy):
                 ("grok", "grok-4"),  # Good reasoning capabilities
                 ("openai", "gpt-5"),
                 ("anthropic", "claude-sonnet-4"),
+                ("ollama", "llama3.1:70b"),
             ],
             "creative": [
                 ("anthropic", "claude-opus-4.1"),  # Most capable for creative tasks
@@ -463,6 +472,7 @@ class TaskBasedStrategy(RoutingStrategy):
                 ("google", "gemini-2.5-pro"),
                 ("openai", "gpt-5"),
                 ("google", "gemini-2.5-flash"),
+                ("ollama", "llama3.1:70b"),
             ],
             "simple": [
                 ("deepseek", "deepseek-chat"),  # Very affordable for simple tasks
@@ -471,6 +481,7 @@ class TaskBasedStrategy(RoutingStrategy):
                 ("grok", "grok-3-mini"),  # Affordable mini version
                 ("google", "gemini-1.5-flash-8b"),  # Fast and affordable
                 ("anthropic", "claude-haiku-3.5"),  # Fastest Claude
+                ("ollama", "llama3.1:8b"),  # Local lightweight choice
             ],
             "vision": [
                 ("grok", "grok-4"),  # Latest with vision capabilities
@@ -487,6 +498,7 @@ class TaskBasedStrategy(RoutingStrategy):
                 ("openai", "gpt-4.1"),  # Cost-efficient flagship
                 ("anthropic", "claude-haiku-3.5"),  # Fast and efficient
                 ("google", "gemini-1.5-flash"),
+                ("ollama", "llama3.1:8b"),
             ],
         }
 
