@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Tuple
 
 from justllms.core.base import BaseProvider
-from justllms.core.models import Message, ModelInfo
+from justllms.core.models import Message
 
 
 class RoutingStrategy(ABC):
@@ -24,568 +24,99 @@ class RoutingStrategy(ABC):
         pass
 
 
-class CostOptimizedStrategy(RoutingStrategy):
-    """Select the cheapest model that meets requirements."""
-
-    def __init__(
-        self,
-        max_cost_per_1k_tokens: Optional[float] = None,
-        min_context_length: Optional[int] = None,
-        require_vision: bool = False,
-        require_functions: bool = False,
-    ):
-        self.max_cost_per_1k_tokens = max_cost_per_1k_tokens
-        self.min_context_length = min_context_length
-        self.require_vision = require_vision
-        self.require_functions = require_functions
-
-    def select(  # noqa: C901
-        self,
-        messages: List[Message],
-        providers: Dict[str, BaseProvider],
-        constraints: Optional[Dict[str, Any]] = None,
-        **kwargs: Any,
-    ) -> Tuple[str, str]:
-        """Select the cheapest model that meets requirements."""
-        candidates = []
-
-        # Calculate total tokens needed (rough estimate)
-        total_chars = sum(
-            len(msg.content) if isinstance(msg.content, str) else 100 for msg in messages
-        )
-        estimated_tokens = total_chars // 4  # Rough estimate
-
-        for provider_name, provider in providers.items():
-            models = provider.get_available_models()
-
-            for model_name, model_info in models.items():
-                # Check constraints
-                if (
-                    self.min_context_length
-                    and model_info.max_context_length
-                    and model_info.max_context_length < self.min_context_length
-                ):
-                    continue
-
-                if self.require_vision and not model_info.supports_vision:
-                    continue
-
-                if self.require_functions and not model_info.supports_functions:
-                    continue
-
-                if estimated_tokens > (model_info.max_context_length or 0):
-                    continue
-
-                # Calculate cost - be more permissive
-                if model_info.cost_per_1k_prompt_tokens is not None:
-                    avg_cost = (
-                        (model_info.cost_per_1k_prompt_tokens or 0)
-                        + (model_info.cost_per_1k_completion_tokens or 0)
-                    ) / 2
-
-                    if self.max_cost_per_1k_tokens and avg_cost > self.max_cost_per_1k_tokens:
-                        continue
-
-                    candidates.append((provider_name, model_name, avg_cost))
-                else:
-                    # If no cost info, assume reasonable cost
-                    candidates.append((provider_name, model_name, 0.001))
-
-        if not candidates:
-            # Fallback to first available model
-            for provider_name, provider in providers.items():
-                models = provider.get_available_models()
-                if models:
-                    model_name = list(models.keys())[0]
-                    return provider_name, model_name
-
-            raise ValueError("No suitable models found")
-
-        candidates.sort(key=lambda x: x[2])
-        return candidates[0][0], candidates[0][1]
-
-
-class LatencyOptimizedStrategy(RoutingStrategy):
-    """Select the fastest model that meets requirements."""
-
-    def __init__(
-        self,
-        max_latency_ms: Optional[float] = None,
-        prefer_local: bool = False,
-    ):
-        self.max_latency_ms = max_latency_ms
-        self.prefer_local = prefer_local
-
-    def _calculate_latency_score(
-        self, provider_name: str, model_name: str, model_info: ModelInfo
-    ) -> float:
-        """Calculate latency score for a provider/model combination.
-
-        Lower scores indicate faster models. Scoring is based on model capabilities
-        and provider-specific performance characteristics.
-
-        Args:
-            provider_name: Name of the provider.
-            model_name: Name of the model.
-            model_info: Model information with metadata.
-
-        Returns:
-            float: Latency score (lower = faster).
-        """
-        latency_score = 1.0
-
-        # Model-based scoring (based on capability/speed tradeoffs)
-        model_lower = model_name.lower()
-
-        if any(name in model_lower for name in ["mini", "nano", "haiku"]):
-            latency_score = 0.3  # Fastest
-        elif "flash-8b" in model_lower:
-            latency_score = 0.4  # Very fast
-        elif any(name in model_lower for name in ["flash", "fast", "turbo", "gpt-4o-mini"]):
-            latency_score = 0.6  # Fast
-        elif any(
-            name in model_lower
-            for name in ["small", "light", "8b", "pro", "sonnet", "gpt-4o", "gpt-4.1", "grok-3"]
-        ):
-            latency_score = 0.8  # Medium
-        elif any(name in model_lower for name in ["opus", "gpt-5", "grok-4", "o1", "o3"]):
-            latency_score = 1.0  # Slowest (most capable)
-        else:
-            # Default for unrecognized models
-            latency_score = 1.0
-
-        # Provider-specific multipliers based on observed performance
-        if provider_name == "openai":
-            latency_score *= 0.9  # Generally fast
-        elif provider_name == "google":
-            latency_score *= 0.8  # Very fast
-        elif provider_name == "anthropic":
-            latency_score *= 1.0  # Standard
-        elif provider_name == "deepseek":
-            latency_score *= 0.7  # Very fast and efficient
-        elif provider_name == "ollama":
-            latency_score *= 0.6  # Local inference, typically fastest
-        elif provider_name in ["xai", "grok"]:
-            latency_score *= 1.1  # Slightly slower but intelligent
-        elif provider_name == "azure_openai":
-            latency_score *= 0.85  # Similar to OpenAI but with Azure overhead
-
-        return latency_score
-
-    def select(  # noqa: C901
-        self,
-        messages: List[Message],
-        providers: Dict[str, BaseProvider],
-        constraints: Optional[Dict[str, Any]] = None,
-        **kwargs: Any,
-    ) -> Tuple[str, str]:
-        """Select the fastest model."""
-        candidates = []
-
-        for provider_name, provider in providers.items():
-            models = provider.get_available_models()
-
-            for model_name, model_info in models.items():
-                # Use the centralized latency scoring helper
-                latency_score = self._calculate_latency_score(provider_name, model_name, model_info)
-
-                candidates.append((provider_name, model_name, latency_score))
-
-        if not candidates:
-            # No candidates found, using fallback logic
-            # Use all available models if no specific candidates
-            for provider_name, provider in providers.items():
-                models = provider.get_available_models()
-                for model_name, _model_info in models.items():
-                    latency_score = 1.0
-
-                    # Apply same scoring logic
-                    if any(
-                        name in model_name.lower() for name in ["mini", "haiku", "nano", "lite"]
-                    ):
-                        latency_score = 0.3
-                    elif "flash-8b" in model_name.lower():
-                        latency_score = 0.4
-                    elif any(name in model_name.lower() for name in ["turbo", "flash", "gpt-4.1"]):
-                        latency_score = 0.6
-                    elif any(
-                        name in model_name.lower() for name in ["pro", "sonnet", "gpt-4o", "grok-3"]
-                    ):
-                        latency_score = 0.8
-                    elif any(
-                        name in model_name.lower()
-                        for name in ["opus", "gpt-5", "grok-4", "o1", "o3"]
-                    ):
-                        latency_score = 1.0
-
-                    if provider_name == "google":
-                        latency_score *= 0.9
-                    elif provider_name == "openai":
-                        latency_score *= 0.8
-                    elif provider_name == "anthropic":
-                        latency_score *= 1.0
-                    elif provider_name == "deepseek":
-                        latency_score *= 0.7
-                    elif provider_name == "ollama":
-                        latency_score *= 0.6
-                    elif provider_name == "grok":
-                        latency_score *= 1.1
-                    elif provider_name == "azure_openai":
-                        latency_score *= 0.85
-
-                    candidates.append((provider_name, model_name, latency_score))
-
-            if not candidates:
-                raise ValueError("No suitable models found")
-
-        # Sort by latency score and return fastest
-        candidates.sort(key=lambda x: x[2])
-        # Sort by latency score and return fastest
-        return candidates[0][0], candidates[0][1]
-
-
-class QualityOptimizedStrategy(RoutingStrategy):
-    """Select the highest quality model within constraints."""
-
-    def __init__(
-        self,
-        min_quality_tier: str = "standard",  # "basic", "standard", "advanced", "flagship"
-        max_cost_per_1k_tokens: Optional[float] = None,
-    ):
-        self.min_quality_tier = min_quality_tier
-        self.max_cost_per_1k_tokens = max_cost_per_1k_tokens
-
-        self.tier_rankings = {
-            "basic": 1,
-            "standard": 2,
-            "advanced": 3,
-            "flagship": 4,
-        }
-
-    def _get_quality_tier(self, model_info: ModelInfo, model_name: str) -> int:
-        """Determine quality tier of a model."""
-        # Check tags first - flagship models get highest tier
-        if any(tag in model_info.tags for tag in ["flagship", "most-capable", "most-intelligent"]):
-            return 5
-
-        # Specific model name matching
-        model_lower = model_name.lower()
-
-        # Tier 5 - Premium/Most Capable models
-        if any(name in model_lower for name in ["gpt-5", "claude-opus-4.1", "grok-4", "o3"]):
-            return 5
-        # Tier 4 - Flagship models
-        elif any(
-            name in model_lower
-            for name in [
-                "gemini-2.5-pro",
-                "claude-sonnet-4",
-                "gpt-4.1",
-                "o1",
-                "o4-mini",
-                "grok-4-heavy",
-                "llama3.1:70b",
-            ]
-        ):
-            return 4
-        # Tier 3 - Advanced models
-        elif any(
-            name in model_lower
-            for name in [
-                "gemini-2.5-flash",
-                "gemini-1.5-pro",
-                "gpt-5-mini",
-                "gpt-5-nano",
-                "gpt-4o",
-                "grok-3",
-                "deepseek-reasoner",
-                "claude-3-5-sonnet",
-            ]
-        ):
-            return 3
-        # Tier 2 - Standard/Efficient models
-        elif any(
-            name in model_lower
-            for name in [
-                "gemini-2.5-flash-lite",
-                "gemini-1.5-flash",
-                "gpt-4o-mini",
-                "gpt-4.1-nano",
-                "claude-haiku-3.5",
-                "grok-3-mini",
-                "deepseek-chat",
-                "mistral",
-                "phi3",
-            ]
-        ):
-            return 2
-        # Tier 1 - Basic/Lightweight models
-        elif any(name in model_lower for name in ["flash-8b", "gpt-3.5", "gpt-35", "gpt-oss"]):
-            return 1
-        else:
-            return 2  # Default to standard
-
-    def select(
-        self,
-        messages: List[Message],
-        providers: Dict[str, BaseProvider],
-        constraints: Optional[Dict[str, Any]] = None,
-        **kwargs: Any,
-    ) -> Tuple[str, str]:
-        """Select the highest quality model within constraints."""
-        candidates = []
-
-        for provider_name, provider in providers.items():
-            models = provider.get_available_models()
-
-            for model_name, model_info in models.items():
-                quality_tier = self._get_quality_tier(model_info, model_name)
-
-                # Skip cost constraint for now - just focus on quality
-                # Check cost constraint (be more lenient)
-                # if self.max_cost_per_1k_tokens and model_info.cost_per_1k_prompt_tokens:
-                #     avg_cost = (
-                #         (model_info.cost_per_1k_prompt_tokens or 0) +
-                #         (model_info.cost_per_1k_completion_tokens or 0)
-                #     ) / 2
-                #
-                #     if avg_cost > self.max_cost_per_1k_tokens:
-                #         continue
-
-                candidates.append((provider_name, model_name, quality_tier))
-
-        if not candidates:
-            # No candidates found, using fallback logic
-            # Fallback to best available
-            for provider_name, provider in providers.items():
-                models = provider.get_available_models()
-                if models:
-                    # Try to pick the highest quality model name-wise
-                    best_model = None
-                    best_score = 0
-                    for model_name in models:
-                        score = self._get_quality_tier(models[model_name], model_name)
-                        if score > best_score:
-                            best_score = score
-                            best_model = model_name
-                    # Quality fallback selected
-                    return provider_name, best_model or list(models.keys())[0]
-
-            raise ValueError("No suitable models found")
-
-        # Sort by quality tier (descending) and return best
-        candidates.sort(key=lambda x: x[2], reverse=True)
-        # Debug: print candidates for quality strategy
-        # Sort by quality tier and return highest quality
-        return candidates[0][0], candidates[0][1]
-
-
-class TaskBasedStrategy(RoutingStrategy):
-    """Select model based on task type detection."""
-
-    def __init__(self) -> None:
-        self.task_patterns = {
-            "code": ["code", "function", "class", "debug", "implement", "program"],
-            "analysis": ["analyze", "explain", "understand", "compare", "evaluate"],
-            "creative": ["write", "story", "poem", "creative", "imagine"],
-            "simple": ["hello", "hi", "thanks", "yes", "no", "ok"],
-            "vision": ["image", "picture", "photo", "screenshot", "visual"],
-        }
-
-    def _detect_task_type(self, messages: List[Message]) -> str:
-        """Detect the type of task from messages."""
-        combined_text = " ".join(
-            msg.content.lower() if isinstance(msg.content, str) else "" for msg in messages
-        ).lower()
-
-        # Check for vision content
-        for msg in messages:
-            if isinstance(msg.content, list):
-                for item in msg.content:
-                    if isinstance(item, dict) and item.get("type") == "image":
-                        return "vision"
-
-        # Enhanced pattern matching with priority
-        # Check for complex analysis patterns first
-        if any(
-            pattern in combined_text
-            for pattern in [
-                "history of",
-                "explain",
-                "analyze",
-                "compare",
-                "1000 words",
-                "detailed",
-                "comprehensive",
-            ]
-        ):
-            return "analysis"
-
-        # Check for simple patterns
-        if any(pattern in combined_text for pattern in ["what is", "2+2", "simple", "quick"]):
-            return "simple"
-
-        # Check other patterns
-        for task_type, patterns in self.task_patterns.items():
-            if any(pattern in combined_text for pattern in patterns):
-                return task_type
-
-        return "general"
-
-    def select(
-        self,
-        messages: List[Message],
-        providers: Dict[str, BaseProvider],
-        constraints: Optional[Dict[str, Any]] = None,
-        **kwargs: Any,
-    ) -> Tuple[str, str]:
-        """Select model based on detected task type."""
-        task_type = self._detect_task_type(messages)
-        # Task detected and routed accordingly
-
-        # Define preferred models for each task type with latest models
-        preferences = {
-            "code": [
-                ("google", "gemini-2.5-pro"),  # Best for complex code analysis
-                ("openai", "gpt-5"),  # Latest flagship with tool chaining
-                ("deepseek", "deepseek-reasoner"),  # Excellent for reasoning tasks
-                ("grok", "grok-4"),  # Latest with coding support
-                ("anthropic", "claude-sonnet-4"),  # High-performance model
-                ("ollama", "llama3.1:70b"),  # Local flagship option
-                ("google", "gemini-2.5-flash"),
-                ("openai", "gpt-4.1"),
-            ],
-            "analysis": [
-                ("openai", "o1"),  # Specialized reasoning model
-                ("anthropic", "claude-opus-4.1"),  # Most capable for analysis
-                ("deepseek", "deepseek-reasoner"),  # Specialized for reasoning
-                ("google", "gemini-2.5-pro"),  # Best for complex analysis
-                ("grok", "grok-4"),  # Good reasoning capabilities
-                ("openai", "gpt-5"),
-                ("anthropic", "claude-sonnet-4"),
-                ("ollama", "llama3.1:70b"),
-            ],
-            "creative": [
-                ("anthropic", "claude-opus-4.1"),  # Most capable for creative tasks
-                ("grok", "grok-4"),  # Known for creative responses
-                ("anthropic", "claude-sonnet-4"),
-                ("google", "gemini-2.5-pro"),
-                ("openai", "gpt-5"),
-                ("google", "gemini-2.5-flash"),
-                ("ollama", "llama3.1:70b"),
-            ],
-            "simple": [
-                ("deepseek", "deepseek-chat"),  # Very affordable for simple tasks
-                ("google", "gemini-2.5-flash-lite"),  # Most cost-efficient
-                ("openai", "gpt-4.1-nano"),  # Cheapest and fastest
-                ("grok", "grok-3-mini"),  # Affordable mini version
-                ("google", "gemini-1.5-flash-8b"),  # Fast and affordable
-                ("anthropic", "claude-haiku-3.5"),  # Fastest Claude
-                ("ollama", "llama3.1:8b"),  # Local lightweight choice
-            ],
-            "vision": [
-                ("grok", "grok-4"),  # Latest with vision capabilities
-                ("google", "gemini-2.5-flash"),  # Latest multimodal
-                ("openai", "gpt-5"),  # Flagship with multimodal
-                ("anthropic", "claude-opus-4.1"),  # Most capable multimodal
-                ("google", "gemini-2.5-pro"),  # Pro with vision
-                ("openai", "gpt-4o"),
-            ],
-            "general": [
-                ("deepseek", "deepseek-chat"),  # Great value for general use
-                ("google", "gemini-2.5-flash"),  # Balanced latest option
-                ("grok", "grok-3"),  # Good general purpose
-                ("openai", "gpt-4.1"),  # Cost-efficient flagship
-                ("anthropic", "claude-haiku-3.5"),  # Fast and efficient
-                ("google", "gemini-1.5-flash"),
-                ("ollama", "llama3.1:8b"),
-            ],
-        }
-
-        # Try preferred models in order
-        for provider_name, model_name in preferences.get(task_type, preferences["general"]):
-            if provider_name in providers:
-                provider = providers[provider_name]
-                available_models = provider.get_available_models()
-                if model_name in available_models:
-                    return provider_name, model_name
-
-        # If no preferred model found, use first available from preferred providers
-        for provider_name, _model_name in preferences.get(task_type, preferences["general"]):
-            if provider_name in providers:
-                provider = providers[provider_name]
-                available_models = provider.get_available_models()
-                if available_models:
-                    # Pick the first available model from this provider
-                    first_model = list(available_models.keys())[0]
-                    return provider_name, first_model
-
-        # Final fallback to any available model
-        for provider_name, provider in providers.items():
-            models = provider.get_available_models()
-            if models:
-                model_name = list(models.keys())[0]
-                return provider_name, model_name
-
-        raise ValueError("No suitable models found")
-
-
 class ClusterBasedStrategy(RoutingStrategy):
-    """Intelligent cluster-based routing using pre-trained embeddings."""
+    """Intelligent cluster-based routing using pre-trained embeddings.
+
+    This strategy uses lazy loading for heavy dependencies (transformers, torch, numpy)
+    to ensure the library works with base installation. Dependencies are only loaded
+    when cluster routing is actually used.
+    """
 
     def __init__(
         self,
         artifacts_path: Optional[str] = None,
         top_k_clusters: int = 1,
-        fallback_strategy: str = "quality",
         similarity_threshold: float = 0.0,
         enable_logging: bool = False,
     ):
-        from ..embeddings import Qwen3EmbeddingService
-        from .cluster_loader import ClusterArtifactLoader
-
+        # Store config but don't load heavy deps yet
+        self.artifacts_path = artifacts_path
         self.top_k_clusters = top_k_clusters
-        self.fallback_strategy = fallback_strategy
         self.similarity_threshold = similarity_threshold
         self.enable_logging = enable_logging
 
-        # Load cluster artifacts
-        try:
-            self.cluster_loader = ClusterArtifactLoader(artifacts_path)
-            if not self.cluster_loader.validate_artifacts():
-                raise ValueError("Invalid cluster artifacts")
-        except Exception as e:
-            raise RuntimeError(f"Failed to load cluster artifacts: {e}") from e
-
-        # Initialize embedding service
-        try:
-            self.embedding_service = Qwen3EmbeddingService()
-        except Exception as e:
-            raise RuntimeError(f"Failed to initialize embedding service: {e}") from e
-
-        # Cache for provider mappings
+        # Lazy-loaded components
+        self._embedding_service: Optional[Any] = None
+        self._cluster_loader: Optional[Any] = None
         self._provider_mapping: Optional[Dict[str, Tuple[str, str]]] = None
+        self._init_attempted = False
+        self._init_failed = False
+        self._init_error: Optional[str] = None
 
-        # Initialize fallback strategy
-        self._fallback_strategy = self._create_fallback_strategy()
+    def _lazy_init(self) -> bool:
+        """Lazy initialization of cluster components.
 
-    def _create_fallback_strategy(self) -> RoutingStrategy:
-        """Create fallback strategy instance."""
-        if self.fallback_strategy == "least_cost":
-            return CostOptimizedStrategy()
-        elif self.fallback_strategy == "fastest":
-            return LatencyOptimizedStrategy()
-        elif self.fallback_strategy == "quality":
-            return QualityOptimizedStrategy()
-        elif self.fallback_strategy == "task":
-            return TaskBasedStrategy()
-        else:
-            return QualityOptimizedStrategy()
+        Returns:
+            bool: True if initialization succeeded, False otherwise.
+        """
+        if self._init_attempted:
+            return not self._init_failed
+
+        self._init_attempted = True
+
+        try:
+            # Import heavy dependencies only when needed
+            from ..embeddings import Qwen3EmbeddingService
+            from .cluster_loader import ClusterArtifactLoader
+
+            # Load cluster artifacts
+            try:
+                self._cluster_loader = ClusterArtifactLoader(self.artifacts_path)
+                if not self._cluster_loader.validate_artifacts():
+                    raise ValueError("Invalid cluster artifacts")
+            except Exception as e:
+                self._init_failed = True
+                self._init_error = f"Failed to load cluster artifacts: {e}"
+                if self.enable_logging:
+                    print(f"ClusterBasedStrategy: {self._init_error}")
+                return False
+
+            # Initialize embedding service
+            try:
+                self._embedding_service = Qwen3EmbeddingService()
+            except Exception as e:
+                self._init_failed = True
+                self._init_error = f"Failed to initialize embedding service: {e}"
+                if self.enable_logging:
+                    print(f"ClusterBasedStrategy: {self._init_error}")
+                return False
+
+            if self.enable_logging:
+                print("ClusterBasedStrategy: Successfully initialized cluster routing")
+
+            return True
+
+        except ImportError as e:
+            self._init_failed = True
+            self._init_error = (
+                f"Cluster routing requires additional dependencies. "
+                f"Install with: pip install justllms[cluster]\n"
+                f"Missing: {e.name if hasattr(e, 'name') else str(e)}"
+            )
+            if self.enable_logging:
+                print(f"ClusterBasedStrategy: {self._init_error}")
+            return False
+        except Exception as e:
+            self._init_failed = True
+            self._init_error = f"Unexpected error during initialization: {e}"
+            if self.enable_logging:
+                print(f"ClusterBasedStrategy: {self._init_error}")
+            return False
 
     def _get_provider_mapping(self) -> Dict[str, Tuple[str, str]]:
         """Get cached provider mapping."""
-        if self._provider_mapping is None:
-            self._provider_mapping = self.cluster_loader.get_model_provider_mapping()
+        if self._provider_mapping is None and self._cluster_loader is not None:
+            self._provider_mapping = self._cluster_loader.get_model_provider_mapping()
         return self._provider_mapping or {}
 
     def _extract_query_text(self, messages: List[Message]) -> str:
@@ -604,6 +135,44 @@ class ClusterBasedStrategy(RoutingStrategy):
 
         return " ".join(texts).strip()
 
+    def _fallback_to_configured_or_first_available(
+        self,
+        providers: Dict[str, BaseProvider],
+        fallback_provider: Optional[str] = None,
+        fallback_model: Optional[str] = None,
+    ) -> Tuple[str, str]:
+        """Fallback to configured fallback or first available model.
+
+        Args:
+            providers: Available providers
+            fallback_provider: Configured fallback provider from Router
+            fallback_model: Configured fallback model from Router
+
+        Returns:
+            Tuple of (provider_name, model_name)
+        """
+        # First, try configured fallback if provided
+        if fallback_provider and fallback_model and fallback_provider in providers:
+            provider = providers[fallback_provider]
+            available_models = provider.get_available_models()
+            if fallback_model in available_models:
+                if self.enable_logging:
+                    print(
+                        f"ClusterBasedStrategy: Using configured fallback {fallback_provider}/{fallback_model}"
+                    )
+                return fallback_provider, fallback_model
+
+        # Fall back to first available model
+        for provider_name, provider in providers.items():
+            models = provider.get_available_models()
+            if models:
+                model_name = list(models.keys())[0]
+                if self.enable_logging:
+                    print(f"ClusterBasedStrategy: Fallback to first available {provider_name}/{model_name}")
+                return provider_name, model_name
+
+        raise ValueError("No models available in any provider")
+
     def select(
         self,
         messages: List[Message],
@@ -611,27 +180,66 @@ class ClusterBasedStrategy(RoutingStrategy):
         constraints: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> Tuple[str, str]:
-        """Select provider and model using cluster-based routing."""
+        """Select provider and model using cluster-based routing.
+
+        Expects fallback_provider and fallback_model to be passed via kwargs
+        from the Router.
+
+        Args:
+            messages: List of messages to route
+            providers: Available providers
+            constraints: Optional routing constraints
+            **kwargs: Additional arguments including fallback_provider and fallback_model
+
+        Returns:
+            Tuple of (provider_name, model_name)
+        """
+        # Extract fallback config from kwargs (passed by Router)
+        fallback_provider = kwargs.get("fallback_provider")
+        fallback_model = kwargs.get("fallback_model")
+
+        # Try lazy initialization
+        if not self._lazy_init():
+            # Cluster routing unavailable, use fallback
+            if self.enable_logging:
+                print(
+                    f"ClusterBasedStrategy: Cluster routing unavailable. "
+                    f"Reason: {self._init_error}"
+                )
+            return self._fallback_to_configured_or_first_available(
+                providers, fallback_provider, fallback_model
+            )
+
         try:
             # Extract query text
             query_text = self._extract_query_text(messages)
             if not query_text:
                 if self.enable_logging:
                     print("ClusterBasedStrategy: No text content found, falling back")
-                return self._fallback_strategy.select(messages, providers, constraints, **kwargs)
+                return self._fallback_to_configured_or_first_available(
+                    providers, fallback_provider, fallback_model
+                )
 
             # Generate embedding
-            query_embedding = self.embedding_service.embed(query_text)
+            if self._embedding_service is None:
+                raise RuntimeError("Embedding service not initialized")
+
+            query_embedding = self._embedding_service.embed(query_text)
 
             # Find closest clusters
-            closest_clusters = self.cluster_loader.find_closest_clusters(
+            if self._cluster_loader is None:
+                raise RuntimeError("Cluster loader not initialized")
+
+            closest_clusters = self._cluster_loader.find_closest_clusters(
                 query_embedding, top_k=self.top_k_clusters
             )
 
             if not closest_clusters:
                 if self.enable_logging:
                     print("ClusterBasedStrategy: No clusters found, falling back")
-                return self._fallback_strategy.select(messages, providers, constraints, **kwargs)
+                return self._fallback_to_configured_or_first_available(
+                    providers, fallback_provider, fallback_model
+                )
 
             # Check similarity threshold
             best_cluster_id, best_similarity = closest_clusters[0]
@@ -640,7 +248,9 @@ class ClusterBasedStrategy(RoutingStrategy):
                     print(
                         f"ClusterBasedStrategy: Similarity {best_similarity:.3f} below threshold {self.similarity_threshold}, falling back"
                     )
-                return self._fallback_strategy.select(messages, providers, constraints, **kwargs)
+                return self._fallback_to_configured_or_first_available(
+                    providers, fallback_provider, fallback_model
+                )
 
             # Get provider mapping
             provider_mapping = self._get_provider_mapping()
@@ -649,7 +259,7 @@ class ClusterBasedStrategy(RoutingStrategy):
             for cluster_id, similarity in closest_clusters:
                 try:
                     # Get model ranking for this cluster
-                    ranking = self.cluster_loader.get_cluster_ranking(cluster_id)
+                    ranking = self._cluster_loader.get_cluster_ranking(cluster_id)
 
                     # Try models in order of performance
                     for model_name in ranking:
@@ -692,9 +302,13 @@ class ClusterBasedStrategy(RoutingStrategy):
             # If we get here, no suitable models found in any cluster
             if self.enable_logging:
                 print("ClusterBasedStrategy: No suitable models found in clusters, falling back")
-            return self._fallback_strategy.select(messages, providers, constraints, **kwargs)
+            return self._fallback_to_configured_or_first_available(
+                providers, fallback_provider, fallback_model
+            )
 
         except Exception as e:
             if self.enable_logging:
                 print(f"ClusterBasedStrategy: Error in cluster routing: {e}, falling back")
-            return self._fallback_strategy.select(messages, providers, constraints, **kwargs)
+            return self._fallback_to_configured_or_first_available(
+                providers, fallback_provider, fallback_model
+            )

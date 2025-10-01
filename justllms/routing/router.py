@@ -2,14 +2,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from justllms.core.base import BaseProvider
 from justllms.core.models import Message
-from justllms.routing.strategies import (
-    ClusterBasedStrategy,
-    CostOptimizedStrategy,
-    LatencyOptimizedStrategy,
-    QualityOptimizedStrategy,
-    RoutingStrategy,
-    TaskBasedStrategy,
-)
+from justllms.routing.strategies import ClusterBasedStrategy, RoutingStrategy
 
 
 class Router:
@@ -37,20 +30,16 @@ class Router:
         if isinstance(strategy, RoutingStrategy):
             self.strategy = strategy
         else:
-            self.strategy = self._create_strategy(
-                strategy or self.config.get("strategy", "least_cost")
-            )
+            self.strategy = self._create_strategy(strategy or self.config.get("strategy", "cluster"))
 
     def _create_strategy(self, strategy_name: str) -> RoutingStrategy:
         """Instantiate a routing strategy based on its name identifier.
 
         Creates and configures routing strategy instances with settings from
-        the router configuration. Falls back to cost optimization if the
-        requested strategy is not recognized.
+        the router configuration. Only cluster-based routing is supported.
 
         Args:
-            strategy_name: Name of the strategy to create ('cluster', 'least_cost',
-                          'fastest', 'quality', 'task').
+            strategy_name: Name of the strategy to create (only 'cluster' is supported).
 
         Returns:
             RoutingStrategy: Configured strategy instance ready for routing decisions.
@@ -60,20 +49,8 @@ class Router:
         if strategy_name == "cluster":
             config = strategy_configs.get("cluster", {})
             return ClusterBasedStrategy(**config)
-        elif strategy_name == "least_cost":
-            config = strategy_configs.get("least_cost", {})
-            return CostOptimizedStrategy(**config)
-        elif strategy_name == "fastest":
-            config = strategy_configs.get("fastest", {})
-            return LatencyOptimizedStrategy(**config)
-        elif strategy_name == "quality":
-            config = strategy_configs.get("quality", {})
-            return QualityOptimizedStrategy(**config)
-        elif strategy_name == "task":
-            return TaskBasedStrategy()
         else:
-            # Default to least_cost optimization
-            return CostOptimizedStrategy()
+            return ClusterBasedStrategy()
 
     def route(  # noqa: C901
         self,
@@ -119,7 +96,6 @@ class Router:
                 if provider.validate_model(model):
                     return provider_name, model
 
-            # If we get here, the model wasn't found in any provider
             raise ValueError(f"Model '{model}' not found in any available provider")
 
         # Use routing strategy
@@ -128,6 +104,8 @@ class Router:
                 messages=messages,
                 providers=providers,
                 constraints=constraints,
+                fallback_provider=self.fallback_provider,
+                fallback_model=self.fallback_model,
                 **kwargs,
             )
             return provider_name, model_name
@@ -167,6 +145,6 @@ class Router:
         """Retrieve the class name of the currently active routing strategy.
 
         Returns:
-            str: Name of the current strategy class (e.g., 'CostOptimizedStrategy').
+            str: Name of the current strategy class (e.g., 'ClusterBasedStrategy').
         """
         return self.strategy.__class__.__name__

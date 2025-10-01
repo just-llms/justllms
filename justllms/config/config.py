@@ -25,7 +25,7 @@ class RoutingConfig(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
-    strategy: str = "quality"
+    strategy: str = "cluster"
     fallback_provider: Optional[str] = None
     fallback_model: Optional[str] = None
 
@@ -99,8 +99,7 @@ class Config(BaseModel):
 
             providers["ollama"] = provider_entry
 
-        # Routing strategy from environment
-        routing_strategy = os.getenv("JUSTLLMS_ROUTING_STRATEGY", "quality")
+        routing_strategy = os.getenv("JUSTLLMS_ROUTING_STRATEGY", "cluster")
 
         return cls(providers=providers, routing=RoutingConfig(strategy=routing_strategy))
 
