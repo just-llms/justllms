@@ -41,6 +41,7 @@ demo_*.py
 debug_*.py
 simple_*.py
 comprehensive_test.py
+CLAUDE.md
 
 # Screenshots and temporary files
 *.png
