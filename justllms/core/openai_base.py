@@ -1,7 +1,10 @@
+import logging
 from typing import Any, Dict, List
 
 from justllms.core.base import BaseProvider, BaseResponse
 from justllms.core.models import Message
+
+logger = logging.getLogger(__name__)
 
 
 class BaseOpenAIChatProvider(BaseProvider):
@@ -141,12 +144,31 @@ class BaseOpenAIChatProvider(BaseProvider):
             "messages": self._format_messages_openai(messages),
         }
 
-        # Add all provided kwargs to the payload for full OpenAI compatibility
-        # This ensures we pass through all valid OpenAI parameters like:
-        # response_format, n, logit_bias, seed, logprobs, max_completion_tokens, etc.
+        supported_params = {
+            "temperature",
+            "top_p",
+            "max_tokens",
+            "stop",
+            "n",
+            "presence_penalty",
+            "frequency_penalty",
+            "tools",
+            "tool_choice",
+            "response_format",
+            "seed",
+            "user",
+        }
+
+        ignored_params = {"top_k", "generation_config"}
+
         for key, value in kwargs.items():
             if value is not None:
-                payload[key] = value
+                if key in ignored_params:
+                    logger.debug(f"Parameter '{key}' is not supported by OpenAI. Ignoring.")
+                elif key in supported_params:
+                    payload[key] = value
+                else:
+                    logger.debug(f"Unknown parameter '{key}' ignored. Not in OpenAI API spec.")
 
         # Allow provider-specific customization
         payload = self._customize_payload(payload, **kwargs)

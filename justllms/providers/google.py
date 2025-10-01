@@ -1,8 +1,11 @@
+import logging
 import time
 from typing import Any, Dict, List
 
 from justllms.core.base import BaseProvider, BaseResponse
 from justllms.core.models import Choice, Message, ModelInfo, Role, Usage
+
+logger = logging.getLogger(__name__)
 
 
 class GoogleResponse(BaseResponse):
@@ -151,27 +154,61 @@ class GoogleProvider(BaseProvider):
         return request_data
 
     def _format_generation_config(self, **kwargs: Any) -> Dict[str, Any]:
-        """Format generation configuration for Gemini."""
+        """Format generation configuration for Gemini.
+
+        Maps common parameters to Gemini's generationConfig format and merges
+        provider-specific generation_config dict.
+
+        Precedence: top-level params > generation_config dict
+        """
         config = {}
 
-        # Map common parameters to Gemini format
-        if "temperature" in kwargs:
-            config["temperature"] = kwargs["temperature"]
-        if "max_tokens" in kwargs:
-            config["maxOutputTokens"] = kwargs["max_tokens"]
-        if "top_p" in kwargs:
-            config["topP"] = kwargs["top_p"]
-        if "top_k" in kwargs:
-            config["topK"] = kwargs["top_k"]
-        if "stop" in kwargs:
+        param_mapping = {
+            "temperature": "temperature",
+            "top_p": "topP",
+            "top_k": "topK",
+            "max_tokens": "maxOutputTokens",
+            "presence_penalty": "presencePenalty",
+            "frequency_penalty": "frequencyPenalty",
+        }
+
+        for snake_case, camel_case in param_mapping.items():
+            if snake_case in kwargs and kwargs[snake_case] is not None:
+                config[camel_case] = kwargs[snake_case]
+
+        if "stop" in kwargs and kwargs["stop"] is not None:
             config["stopSequences"] = (
                 kwargs["stop"] if isinstance(kwargs["stop"], list) else [kwargs["stop"]]
+            )
+
+        if "generation_config" in kwargs and kwargs["generation_config"]:
+            gemini_config = kwargs["generation_config"]
+
+            for key in gemini_config:
+                if key in config:
+                    logger.debug(
+                        f"Parameter '{key}' specified in both top-level and generation_config. "
+                        f"Using top-level value: {config[key]}"
+                    )
+
+            for key, value in gemini_config.items():
+                if key not in config:
+                    config[key] = value
+
+        if "n" in kwargs and kwargs["n"] is not None:
+            logger.debug(
+                f"Parameter 'n' is OpenAI-specific. For Gemini, use "
+                f"generation_config={{'candidateCount': {kwargs['n']}}}. Ignoring 'n'."
             )
 
         return config
 
     def _parse_response(self, response_data: Dict[str, Any], model: str) -> GoogleResponse:
-        """Parse Gemini API response."""
+        """Parse Gemini API response.
+
+        Handles multiple candidates when candidateCount > 1 is specified.
+        Each candidate becomes a separate choice in the response.
+        """
         candidates = response_data.get("candidates", [])
 
         if not candidates:
@@ -179,29 +216,30 @@ class GoogleProvider(BaseProvider):
 
             raise ProviderError("No candidates in Gemini response")
 
-        # Get the first candidate
-        candidate = candidates[0]
-        content = candidate.get("content", {})
-        parts = content.get("parts", [])
+        choices = []
+        for idx, candidate in enumerate(candidates):
+            content = candidate.get("content", {})
+            parts = content.get("parts", [])
 
-        # Extract text from parts
-        text_content = ""
-        for part in parts:
-            if "text" in part:
-                text_content += part["text"]
+            # Extract text from parts
+            text_content = ""
+            for part in parts:
+                if "text" in part:
+                    text_content += part["text"]
 
-        # Create message
-        message = Message(
-            role=Role.ASSISTANT,
-            content=text_content,
-        )
+            # Create message
+            message = Message(
+                role=Role.ASSISTANT,
+                content=text_content,
+            )
 
-        # Create choice
-        choice = Choice(
-            index=0,
-            message=message,
-            finish_reason=candidate.get("finishReason", "stop").lower(),
-        )
+            # Create choice with correct index
+            choice = Choice(
+                index=idx,
+                message=message,
+                finish_reason=candidate.get("finishReason", "stop").lower(),
+            )
+            choices.append(choice)
 
         # Parse usage metadata
         usage_metadata = response_data.get("usageMetadata", {})
@@ -219,7 +257,7 @@ class GoogleProvider(BaseProvider):
         return self._create_base_response(  # type: ignore[return-value]
             GoogleResponse,
             response_data,
-            [choice],
+            choices,  # Pass all choices
             usage,
             model,
         )

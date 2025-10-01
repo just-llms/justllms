@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, List
 
 import httpx
@@ -6,6 +7,8 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 from justllms.core.base import BaseProvider, BaseResponse
 from justllms.core.models import Choice, Message, ModelInfo, Usage
 from justllms.exceptions import ProviderError
+
+logger = logging.getLogger(__name__)
 
 
 class AzureOpenAIResponse(BaseResponse):
@@ -283,14 +286,42 @@ class AzureOpenAIProvider(BaseProvider):
         model: str,
         **kwargs: Any,
     ) -> BaseResponse:
-        """Synchronous completion."""
+        """Synchronous completion with parameter filtering."""
         url = self._build_url(model)
 
-        # Remove model from payload since it's in the URL path
-        payload = {
-            "messages": self._format_messages(messages),
-            **kwargs,
+        supported_params = {
+            "temperature",
+            "top_p",
+            "max_tokens",
+            "stop",
+            "n",
+            "presence_penalty",
+            "frequency_penalty",
+            "tools",
+            "tool_choice",
+            "response_format",
+            "seed",
+            "user",
+            "logprobs",
+            "top_logprobs",
+            "logit_bias",
         }
+
+        ignored_params = {"top_k", "generation_config"}
+
+        payload: Dict[str, Any] = {
+            "messages": self._format_messages(messages),
+        }
+
+        for key, value in kwargs.items():
+            if value is not None:
+                if key in ignored_params:
+                    logger.debug(f"Parameter '{key}' is not supported by Azure OpenAI. Ignoring.")
+                elif key in supported_params:
+                    payload[key] = value
+                else:
+                    logger.debug(f"Unknown parameter '{key}' passed to Azure OpenAI API")
+                    payload[key] = value
 
         with httpx.Client() as client:
             response = client.post(

@@ -169,6 +169,83 @@ Metrics Summary:
 | **Cost Optimization** | ✅ Automatic routing | ❌ Manual optimization | ⚠️ Basic cost tracking | ❌ None |
 | **Production Ready** | ✅ Out of the box | ⚠️ Requires setup | ✅ Minimal setup | ⚠️ Basic features |
 
+## Provider-Specific Parameters
+
+JustLLMs supports common generation parameters across all providers, plus provider-specific configurations:
+
+### Common Parameters (All Providers)
+
+These parameters work across OpenAI, Gemini, Anthropic, and other providers:
+
+```python
+response = client.completion.create(
+    messages=[{"role": "user", "content": "Hello"}],
+    # Common parameters
+    temperature=0.7,        # 0.0-2.0: Controls randomness
+    top_p=0.9,             # 0.0-1.0: Nucleus sampling
+    top_k=40,              # Integer: Top-k sampling (Gemini only)
+    max_tokens=1024,       # Maximum tokens to generate
+    stop=["END"],          # Stop sequence(s)
+    n=1,                   # Number of completions (OpenAI only)
+    presence_penalty=0.1,  # -2.0 to 2.0: Penalize new topics
+    frequency_penalty=0.2  # -2.0 to 2.0: Penalize repetition
+)
+```
+
+### Gemini-Specific Parameters
+
+Use `generation_config` for Gemini-only features:
+
+```python
+response = client.completion.create(
+    messages=[{"role": "user", "content": "Explain quantum computing"}],
+    provider="google",
+    model="gemini-2.5-flash",
+    # Common parameters
+    temperature=0.7,
+    top_k=40,
+    max_tokens=1024,
+    # Gemini-specific configuration
+    generation_config={
+        "candidateCount": 2,                    # Generate multiple responses
+        "responseMimeType": "application/json", # JSON output
+        "responseSchema": {...},                # Structured output schema
+        "thinkingConfig": {                     # Control thinking budget
+            "thinkingBudget": 100               # 0-24000 tokens
+        }
+    }
+)
+
+# Access multiple candidates when candidateCount > 1
+print(f"Candidate 1: {response.choices[0].message.content}")
+print(f"Candidate 2: {response.choices[1].message.content}")
+```
+
+**Notes:**
+- Common parameters (`temperature`, `top_k`, etc.) should be set at the top level. The `generation_config` dict is for Gemini-exclusive features.
+- If a parameter is specified in both places, the top-level value takes precedence.
+- When `candidateCount > 1`, all candidates are returned in `response.choices[]` with proper indices.
+
+### OpenAI-Specific Parameters
+
+OpenAI parameters are passed directly:
+
+```python
+response = client.completion.create(
+    messages=[{"role": "user", "content": "Hello"}],
+    provider="openai",
+    model="gpt-4o",
+    # Common parameters
+    temperature=0.7,
+    max_tokens=100,
+    n=1,
+    presence_penalty=0.1,
+    frequency_penalty=0.2
+)
+```
+
+**Note:** `top_k` is not supported by OpenAI and will be silently ignored. Use `generation_config` only with Gemini.
+
 ## Production Configuration
 
 For production deployments:
