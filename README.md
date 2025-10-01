@@ -6,7 +6,7 @@ A production-ready Python library focused on intelligent LLM routing and multi-p
 
 ## Why JustLLMs?
 
-Managing multiple LLM providers is complex. You need to handle different APIs, optimize costs, and ensure reliability. JustLLMs solves these challenges by providing a unified interface that automatically routes requests to the best provider based on your criteria—whether that's cost, speed, or quality.
+Managing multiple LLM providers is complex. You need to handle different APIs, optimize costs, and ensure reliability. JustLLMs solves these challenges by providing a unified interface that automatically routes requests to the best provider based on your criteria—whether that's cost, speed, or quality. By default, JustLLMs uses intelligent cluster-based routing (beta) powered by machine learning to optimize for all three factors simultaneously.
 
 ## Installation
 
@@ -76,7 +76,7 @@ model via the Ollama `/api/tags` endpoint.
 
 #### Available Strategies
 
-**🆕 Cluster-Based Routing** - *AI-Powered Query Analysis*
+**🆕 Cluster-Based Routing (Beta)** - *AI-Powered Query Analysis*
 Our most advanced routing strategy uses machine learning to analyze query semantics and route to the optimal model based on similarity to training data. Achieves **+7% accuracy improvement** and **-27% cost reduction** compared to single-model approaches.
 
 ```python
@@ -93,7 +93,7 @@ client = JustLLM({
 1. **Query Analysis**: Your request is embedded using Qwen3-Embedding-0.6B
 2. **Cluster Matching**: Finds the most similar cluster from pre-trained data
 3. **Model Selection**: Routes to the best-performing model for that cluster
-4. **Fallback**: Falls back to quality-based routing if needed
+4. **Fallback**: Falls back to configured fallback provider/model or first available if cluster routing is unavailable
 
 **Result**: Up to 60% cost reduction while improving accuracy, with automatic failover to backup providers.
 
@@ -164,7 +164,7 @@ Metrics Summary:
 | **Package Size** | Minimal | ~50MB | ~5MB | ~1MB |
 | **Setup Complexity** | Simple config | Complex chains | Medium | Simple |
 | **Multi-Provider** | ✅ 7+ providers | ✅ Many integrations | ✅ 100+ providers | ❌ OpenAI only |
-| **Intelligent Routing** | ✅ Cost/speed/quality/cluster | ❌ Manual only | ⚠️ Basic routing | ❌ None |
+| **Intelligent Routing** | ✅ ML-powered cluster routing | ❌ Manual only | ⚠️ Basic routing | ❌ None |
 | **Side-by-Side Comparison** | ✅ Interactive CLI tool | ❌ None | ❌ None | ❌ None |
 | **Cost Optimization** | ✅ Automatic routing | ❌ Manual optimization | ⚠️ Basic cost tracking | ❌ None |
 | **Production Ready** | ✅ Out of the box | ⚠️ Requires setup | ✅ Minimal setup | ⚠️ Basic features |
