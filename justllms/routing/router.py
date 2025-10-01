@@ -30,7 +30,9 @@ class Router:
         if isinstance(strategy, RoutingStrategy):
             self.strategy = strategy
         else:
-            self.strategy = self._create_strategy(strategy or self.config.get("strategy", "cluster"))
+            self.strategy = self._create_strategy(
+                strategy or self.config.get("strategy", "cluster")
+            )
 
     def _create_strategy(self, strategy_name: str) -> RoutingStrategy:
         """Instantiate a routing strategy based on its name identifier.

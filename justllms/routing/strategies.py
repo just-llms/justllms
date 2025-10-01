@@ -168,7 +168,9 @@ class ClusterBasedStrategy(RoutingStrategy):
             if models:
                 model_name = list(models.keys())[0]
                 if self.enable_logging:
-                    print(f"ClusterBasedStrategy: Fallback to first available {provider_name}/{model_name}")
+                    print(
+                        f"ClusterBasedStrategy: Fallback to first available {provider_name}/{model_name}"
+                    )
                 return provider_name, model_name
 
         raise ValueError("No models available in any provider")
