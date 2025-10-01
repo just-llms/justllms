@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 from uuid import uuid4
 
 from justllms.core.base import BaseProvider, BaseResponse
@@ -21,7 +21,7 @@ class OllamaProvider(BaseProvider):
     requires_api_key = False
     _DEFAULT_BASE_URL = "http://localhost:11434"
 
-    _FALLBACK_MODELS: Dict[str, ModelInfo] = {
+    _FALLBACK_MODELS: dict[str, ModelInfo] = {
         "llama3.1:70b": ModelInfo(
             name="llama3.1:70b",
             provider="ollama",
@@ -80,7 +80,7 @@ class OllamaProvider(BaseProvider):
         """
         return "ollama"
 
-    def get_available_models(self) -> Dict[str, ModelInfo]:
+    def get_available_models(self) -> dict[str, ModelInfo]:
         """Retrieve all available Ollama models from the local instance.
 
         Queries the Ollama API to discover installed models. Falls back to a
@@ -101,7 +101,7 @@ class OllamaProvider(BaseProvider):
         self._models_cache = models
         return models.copy()
 
-    def complete(self, messages: List[Message], model: str, **kwargs: Any) -> BaseResponse:
+    def complete(self, messages: list[Message], model: str, **kwargs: Any) -> BaseResponse:
         """Execute a chat completion request using the Ollama API.
 
         Args:
@@ -142,7 +142,7 @@ class OllamaProvider(BaseProvider):
         if metadata is not None:
             payload["metadata"] = metadata
 
-        options: Dict[str, Any] = {}
+        options: dict[str, Any] = {}
         option_keys = {
             "temperature": "temperature",
             "top_p": "top_p",
@@ -194,7 +194,7 @@ class OllamaProvider(BaseProvider):
         """
         return f"{self._base_url}/api/tags"
 
-    def _fetch_installed_models(self) -> Dict[str, ModelInfo]:
+    def _fetch_installed_models(self) -> dict[str, ModelInfo]:
         """Fetch currently installed models from the Ollama instance.
 
         Queries the /api/tags endpoint to discover locally pulled models.
@@ -231,11 +231,13 @@ class OllamaProvider(BaseProvider):
         if not models and allowed_models:
             # Handles case where allowed list targets models not yet pulled
             for model_name in allowed_models:
-                models[model_name] = self._construct_model_info(model_name, overrides.get(model_name))
+                models[model_name] = self._construct_model_info(
+                    model_name, overrides.get(model_name)
+                )
 
         return models
 
-    def _build_fallback_models(self) -> Dict[str, ModelInfo]:
+    def _build_fallback_models(self) -> dict[str, ModelInfo]:
         """Build model list from hardcoded fallback models.
 
         Used when Ollama API is unavailable. Applies allowed_models filter
@@ -260,7 +262,7 @@ class OllamaProvider(BaseProvider):
 
         return {name: model for name, model in fallback.items()}
 
-    def _construct_model_info(self, name: str, override: Dict[str, Any] | None) -> ModelInfo:
+    def _construct_model_info(self, name: str, override: dict[str, Any] | None) -> ModelInfo:
         """Construct a ModelInfo object for a given model name.
 
         Args:
@@ -273,7 +275,8 @@ class OllamaProvider(BaseProvider):
         """
         override = override or {}
         base_tags = ["local", "ollama"]
-        extra_tags = override.get("tags") if isinstance(override.get("tags"), list) else []
+        tags_value = override.get("tags")
+        extra_tags = tags_value if isinstance(tags_value, list) else []
         tags = base_tags + [tag for tag in extra_tags if tag not in base_tags]
 
         return ModelInfo(
@@ -301,7 +304,7 @@ class OllamaProvider(BaseProvider):
             return {str(model_name) for model_name in allowed}
         return None
 
-    def _get_model_overrides(self) -> Dict[str, Dict[str, Any]]:
+    def _get_model_overrides(self) -> dict[str, dict[str, Any]]:
         """Get model-specific configuration overrides.
 
         Returns:
@@ -313,7 +316,7 @@ class OllamaProvider(BaseProvider):
             return overrides
         return {}
 
-    def _parse_response(self, response_data: Dict[str, Any], model: str) -> BaseResponse:
+    def _parse_response(self, response_data: dict[str, Any], model: str) -> BaseResponse:
         """Parse the Ollama API response into a standardized BaseResponse.
 
         Args:
@@ -382,7 +385,7 @@ class OllamaProvider(BaseProvider):
         except ValueError:
             return None
 
-    def _get_request_headers(self) -> Dict[str, str]:
+    def _get_request_headers(self) -> dict[str, str]:
         """Get HTTP headers for Ollama API requests.
 
         Returns:

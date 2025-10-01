@@ -73,9 +73,7 @@ def collect_api_keys(providers: List[str]) -> Dict[str, str]:
             if base_url:
                 os.environ["OLLAMA_API_BASE"] = base_url
                 os.environ["OLLAMA_ENABLED"] = "1"
-                console.print(
-                    f"✓ {provider}: [green]Using base URL {base_url}[/green]"
-                )
+                console.print(f"✓ {provider}: [green]Using base URL {base_url}[/green]")
             else:
                 console.print(
                     f"[yellow]⚠ {provider} will use default base URL {default_base}[/yellow]"

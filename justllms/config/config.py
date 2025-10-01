@@ -1,3 +1,4 @@
+import contextlib
 import json
 import os
 from pathlib import Path
@@ -93,10 +94,8 @@ class Config(BaseModel):
 
             headers_json = os.getenv("OLLAMA_HEADERS_JSON")
             if headers_json:
-                try:
+                with contextlib.suppress(json.JSONDecodeError):
                     provider_entry["headers"] = json.loads(headers_json)
-                except json.JSONDecodeError:
-                    pass
 
             providers["ollama"] = provider_entry
 
