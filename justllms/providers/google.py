@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from justllms.core.base import BaseProvider, BaseResponse
 from justllms.core.models import Choice, Message, ModelInfo, Role, Usage
@@ -278,9 +278,17 @@ class GoogleProvider(BaseProvider):
         self,
         messages: List[Message],
         model: str,
+        timeout: Optional[float] = None,
         **kwargs: Any,
     ) -> BaseResponse:
-        """Synchronous completion."""
+        """Synchronous completion.
+
+        Args:
+            messages: List of messages for the completion.
+            model: Model identifier to use.
+            timeout: Optional timeout in seconds. If None, no timeout is enforced.
+            **kwargs: Additional provider-specific parameters.
+        """
         url = self._get_api_endpoint(model)
 
         # Format request
@@ -300,6 +308,7 @@ class GoogleProvider(BaseProvider):
             payload=request_data,
             headers=self._get_headers(),
             params=self._get_params(),
+            timeout=timeout,
         )
 
         return self._parse_response(response_data, model)

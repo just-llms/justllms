@@ -1,5 +1,5 @@
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -184,9 +184,17 @@ class GrokProvider(BaseProvider):
         self,
         messages: List[Message],
         model: str,
+        timeout: Optional[float] = None,
         **kwargs: Any,
     ) -> BaseResponse:
-        """Synchronous completion."""
+        """Synchronous completion.
+
+        Args:
+            messages: List of messages for the completion.
+            model: Model identifier to use.
+            timeout: Optional timeout in seconds. If None, no timeout is enforced.
+            **kwargs: Additional provider-specific parameters.
+        """
         url = self._get_api_endpoint()
 
         # Format request
@@ -209,7 +217,9 @@ class GrokProvider(BaseProvider):
             },
         }
 
-        with httpx.Client() as client:
+        timeout_config = timeout if timeout is not None else None
+
+        with httpx.Client(timeout=timeout_config) as client:
             response = client.post(
                 url,
                 json=request_data,

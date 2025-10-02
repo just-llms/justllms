@@ -159,9 +159,17 @@ class AnthropicProvider(BaseProvider):
         self,
         messages: List[Message],
         model: str,
+        timeout: Optional[float] = None,
         **kwargs: Any,
     ) -> BaseResponse:
-        """Synchronous completion."""
+        """Synchronous completion.
+
+        Args:
+            messages: List of messages for the completion.
+            model: Model identifier to use.
+            timeout: Optional timeout in seconds. If None, no timeout is enforced.
+            **kwargs: Additional provider-specific parameters.
+        """
         url = f"{self.config.api_base or 'https://api.anthropic.com'}/v1/messages"
 
         system_message, formatted_messages = self._format_messages(messages)
@@ -189,6 +197,7 @@ class AnthropicProvider(BaseProvider):
             url=url,
             payload=payload,
             headers=self._get_headers(),
+            timeout=timeout,
         )
 
         return self._parse_response(response_data, model)
