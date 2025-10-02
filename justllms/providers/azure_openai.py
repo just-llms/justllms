@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -284,9 +284,17 @@ class AzureOpenAIProvider(BaseProvider):
         self,
         messages: List[Message],
         model: str,
+        timeout: Optional[float] = None,
         **kwargs: Any,
     ) -> BaseResponse:
-        """Synchronous completion with parameter filtering."""
+        """Synchronous completion with parameter filtering.
+
+        Args:
+            messages: List of messages for the completion.
+            model: Model identifier to use.
+            timeout: Optional timeout in seconds. If None, no timeout is enforced.
+            **kwargs: Additional provider-specific parameters.
+        """
         url = self._build_url(model)
 
         supported_params = {
@@ -307,7 +315,7 @@ class AzureOpenAIProvider(BaseProvider):
             "logit_bias",
         }
 
-        ignored_params = {"top_k", "generation_config"}
+        ignored_params = {"top_k", "generation_config", "timeout"}
 
         payload: Dict[str, Any] = {
             "messages": self._format_messages(messages),
@@ -323,7 +331,9 @@ class AzureOpenAIProvider(BaseProvider):
                     logger.debug(f"Unknown parameter '{key}' passed to Azure OpenAI API")
                     payload[key] = value
 
-        with httpx.Client() as client:
+        timeout_config = timeout if timeout is not None else None
+
+        with httpx.Client(timeout=timeout_config) as client:
             response = client.post(
                 url,
                 json=payload,

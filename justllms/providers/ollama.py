@@ -101,12 +101,15 @@ class OllamaProvider(BaseProvider):
         self._models_cache = models
         return models.copy()
 
-    def complete(self, messages: list[Message], model: str, **kwargs: Any) -> BaseResponse:
+    def complete(
+        self, messages: list[Message], model: str, timeout: Any = None, **kwargs: Any
+    ) -> BaseResponse:
         """Execute a chat completion request using the Ollama API.
 
         Args:
             messages: List of conversation messages to send to the model.
             model: Name of the Ollama model to use (e.g., 'llama3.1:8b').
+            timeout: Optional timeout in seconds. If None, no timeout is enforced.
             **kwargs: Additional parameters including:
                 - temperature: Sampling temperature (0.0-2.0)
                 - top_p: Nucleus sampling parameter
@@ -172,6 +175,7 @@ class OllamaProvider(BaseProvider):
             url=self._chat_endpoint,
             payload=payload,
             headers=self._get_request_headers(),
+            timeout=timeout,
         )
 
         return self._parse_response(response_data, model)

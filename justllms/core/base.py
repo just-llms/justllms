@@ -91,9 +91,17 @@ class BaseProvider(ABC):
         self,
         messages: List[Message],
         model: str,
+        timeout: Optional[float] = None,
         **kwargs: Any,
     ) -> BaseResponse:
-        """Sync completion method."""
+        """Sync completion method.
+
+        Args:
+            messages: List of messages for the completion.
+            model: Model identifier to use.
+            timeout: Optional timeout in seconds. If None, no timeout is enforced.
+            **kwargs: Additional provider-specific parameters.
+        """
         pass
 
     @abstractmethod
@@ -137,6 +145,7 @@ class BaseProvider(ABC):
         headers: Optional[Dict[str, str]] = None,
         params: Optional[Dict[str, str]] = None,
         method: str = "POST",
+        timeout: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Execute HTTP request with automatic retry logic and error handling.
 
@@ -149,6 +158,7 @@ class BaseProvider(ABC):
             headers: Optional HTTP headers to include in request.
             params: Optional query parameters for the request.
             method: HTTP method to use ('POST' or 'GET').
+            timeout: Optional timeout in seconds. If None, no timeout is enforced (waits indefinitely).
 
         Returns:
             Dict[str, Any]: Parsed JSON response from the API.
@@ -161,7 +171,8 @@ class BaseProvider(ABC):
         request_headers = headers or {}
         request_params = params or {}
 
-        with httpx.Client() as client:
+        timeout_config = timeout if timeout is not None else None
+        with httpx.Client(timeout=timeout_config) as client:
             if method.upper() == "POST":
                 response = client.post(
                     url,

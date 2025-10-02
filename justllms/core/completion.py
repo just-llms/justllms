@@ -98,6 +98,7 @@ class Completion:
         response_format: Optional[Dict[str, Any]] = None,
         seed: Optional[int] = None,
         user: Optional[str] = None,
+        timeout: Optional[float] = None,
         **kwargs: Any,
     ) -> CompletionResponse:
         """Create a completion with intelligent routing.
@@ -130,6 +131,7 @@ class Completion:
                 response_format: Response format specification (OpenAI).
                 seed: Random seed for deterministic outputs (OpenAI).
                 user: End-user identifier.
+                timeout: Request timeout in seconds. If None, no timeout is enforced.
 
         Returns:
             CompletionResponse: The model's response.
@@ -178,6 +180,7 @@ class Completion:
             "response_format": response_format,
             "seed": seed,
             "user": user,
+            "timeout": timeout,
             **kwargs,
         }
 

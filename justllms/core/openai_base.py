@@ -117,6 +117,7 @@ class BaseOpenAIChatProvider(BaseProvider):
         self,
         messages: List[Message],
         model: str,
+        timeout: Any = None,
         **kwargs: Any,
     ) -> BaseResponse:
         """Execute OpenAI-compatible chat completion request.
@@ -127,6 +128,7 @@ class BaseOpenAIChatProvider(BaseProvider):
         Args:
             messages: Conversation messages to process.
             model: Model identifier for the request.
+            timeout: Optional timeout in seconds. If None, no timeout is enforced.
             **kwargs: Additional parameters (temperature, max_tokens, etc.).
 
         Returns:
@@ -159,7 +161,7 @@ class BaseOpenAIChatProvider(BaseProvider):
             "user",
         }
 
-        ignored_params = {"top_k", "generation_config"}
+        ignored_params = {"top_k", "generation_config", "timeout"}
 
         for key, value in kwargs.items():
             if value is not None:
@@ -178,10 +180,8 @@ class BaseOpenAIChatProvider(BaseProvider):
             url=url,
             payload=payload,
             headers=self._get_request_headers(),
+            timeout=timeout,
         )
-
-        # Parse using standard OpenAI response format
-        # Try to find the corresponding Response class in the same module
         try:
             import importlib
 
