@@ -101,7 +101,9 @@ class OllamaProvider(BaseProvider):
         self._models_cache = models
         return models.copy()
 
-    def complete(self, messages: list[Message], model: str, timeout: Any = None, **kwargs: Any) -> BaseResponse:
+    def complete(
+        self, messages: list[Message], model: str, timeout: Any = None, **kwargs: Any
+    ) -> BaseResponse:
         """Execute a chat completion request using the Ollama API.
 
         Args:
