@@ -61,7 +61,7 @@ jobs:
           password: ${{ secrets.TEST_PYPI_API_TOKEN }}
 
       - name: Wait for TestPyPI propagation
-        run: sleep 120
+        run: sleep 180
 
   verify-testpypi:
     name: Verify TestPyPI Installation
@@ -169,7 +169,7 @@ jobs:
     
     steps:
       - name: Wait for PyPI availability
-        run: sleep 30
+        run: sleep 180
       
       - name: Extract version
         id: version
