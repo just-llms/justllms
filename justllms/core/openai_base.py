@@ -2,8 +2,6 @@ import json
 import logging
 from typing import Any, Dict, Iterator, List, Optional
 
-import httpx
-
 from justllms.core.base import BaseProvider, BaseResponse
 from justllms.core.models import Message
 from justllms.core.streaming import StreamChunk, SyncStreamResponse
@@ -197,22 +195,16 @@ class BaseOpenAIChatProvider(BaseProvider):
         Raises:
             ProviderError: If the streaming request fails.
         """
-        try:
-            with httpx.Client(timeout=timeout) as client, client.stream(
-                "POST", url, json=payload, headers=headers
-            ) as response:
-                response.raise_for_status()
+        from justllms.core.streaming import parse_sse_stream
 
-                for line in response.iter_lines():
-                    chunk = self._parse_sse_line(line)
-                    if chunk is not None:
-                        yield chunk
-                    elif line.strip() == "data: [DONE]":
-                        break
-        except (httpx.HTTPError, httpx.RequestError) as e:
-            from justllms.exceptions import ProviderError
-
-            raise ProviderError(f"Streaming request failed: {str(e)}") from e
+        return parse_sse_stream(
+            url=url,
+            payload=payload,
+            headers=headers,
+            parse_chunk_fn=self._parse_sse_line,
+            timeout=timeout,
+            error_prefix="Streaming request",
+        )
 
     def _parse_openai_response(
         self, response_data: Dict[str, Any], model: str, response_class: type

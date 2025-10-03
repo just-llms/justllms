@@ -75,7 +75,7 @@ class CompletionResponse(BaseResponse):
 
 
 class Completion:
-    """Simplified completion interface focused on intelligent routing."""
+    """Simplified completion interface with automatic fallbacks."""
 
     def __init__(self, client: "Client"):
         self.client = client
@@ -135,6 +135,7 @@ class Completion:
     def create(
         self,
         messages: Union[List[Dict[str, Any]], List[Message]],
+        *,
         model: Optional[str] = None,
         provider: Optional[str] = None,
         stream: bool = False,
@@ -155,11 +156,11 @@ class Completion:
         timeout: Optional[float] = None,
         **kwargs: Any,
     ) -> "Union[CompletionResponse, SyncStreamResponse, AsyncStreamResponse, FakeStreamResponse]":
-        """Create a completion with intelligent routing.
+        """Create a completion with automatic fallbacks.
 
         Args:
             messages: List of messages in the conversation.
-            model: Specific model to use (optional, will be routed automatically if not provided).
+            model: Specific model to use (optional, uses fallback or first available if not provided).
             provider: Specific provider to use (optional).
             stream: If True, returns streaming response instead of CompletionResponse.
 
@@ -240,7 +241,7 @@ class Completion:
             **kwargs,
         }
 
-        # Filter out None values, but keep model=None for routing and stream=False
+        # Filter out None values, but keep model=None for fallback selection and stream=False
         params = {k: v for k, v in params.items() if v is not None or k in ("model", "stream")}
 
         return self.client._create_completion(**params)

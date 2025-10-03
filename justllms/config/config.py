@@ -21,17 +21,16 @@ class ConfigProviderSettings(BaseModel):
 
 
 class RoutingConfig(BaseModel):
-    """Configuration for routing strategy."""
+    """Configuration for provider and model fallbacks."""
 
     model_config = ConfigDict(extra="allow")
 
-    strategy: str = "cluster"
     fallback_provider: Optional[str] = None
     fallback_model: Optional[str] = None
 
 
 class Config(BaseModel):
-    """Simplified configuration class focused on routing."""
+    """Configuration class for multi-provider LLM client."""
 
     model_config = ConfigDict(extra="allow")
 
@@ -66,7 +65,7 @@ class Config(BaseModel):
             "openai": "OPENAI_API_KEY",
             "anthropic": "ANTHROPIC_API_KEY",
             "google": "GOOGLE_API_KEY",
-            "azure_openai": "AZURE_OPENAI_KEY",
+            "azure_openai": "AZURE_OPENAI_API_KEY",
             "deepseek": "DEEPSEEK_API_KEY",
             "grok": ("XAI_API_KEY", "GROK_API_KEY"),  # Support both for backwards compatibility
         }
@@ -99,9 +98,7 @@ class Config(BaseModel):
 
             providers["ollama"] = provider_entry
 
-        routing_strategy = os.getenv("JUSTLLMS_ROUTING_STRATEGY", "cluster")
-
-        return cls(providers=providers, routing=RoutingConfig(strategy=routing_strategy))
+        return cls(providers=providers, routing=RoutingConfig())
 
 
 def load_config(

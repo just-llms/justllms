@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 class Client:
-    """Simplified client focused on intelligent routing."""
+    """Multi-provider LLM client with automatic fallbacks."""
 
     def __init__(
         self,
@@ -21,12 +21,8 @@ class Client:
         router: Optional[Router] = None,
         default_model: Optional[str] = None,
         default_provider: Optional[str] = None,
-        routing_strategy: Optional[str] = None,
     ):
         self.config = self._load_config(config)
-
-        if routing_strategy:
-            self.config.routing.strategy = routing_strategy
 
         self.providers = providers if providers is not None else {}
         self.router = router or Router(self.config.routing)
@@ -47,7 +43,7 @@ class Client:
                    config file, or None to load from environment/defaults.
 
         Returns:
-            Config: Validated configuration object with provider and routing settings.
+            Config: Validated configuration object with provider settings and fallbacks.
 
         Raises:
             FileNotFoundError: If config file path is provided but file doesn't exist.
@@ -219,17 +215,16 @@ class Client:
         stream: bool = False,
         **kwargs: Any,
     ) -> "CompletionResponse | SyncStreamResponse | AsyncStreamResponse | FakeStreamResponse":
-        """Create a completion using intelligent routing to select optimal provider.
+        """Create a completion with automatic fallback support.
 
-        Uses the configured routing strategy to automatically select the best
-        provider and model combination based on the request characteristics,
-        unless specific provider/model are requested.
+        Uses configured fallback provider/model or first available provider
+        if no specific model is requested.
 
         Args:
             messages: List of conversation messages to process.
             model: Optional specific model to use. Can be model name or
                   'provider/model' format.
-            provider: Optional specific provider to use. Overrides routing.
+            provider: Optional specific provider to use. Overrides fallback selection.
             stream: If True, returns streaming response instead of CompletionResponse.
             **kwargs: Additional parameters passed to the provider's complete method.
                      Common parameters: temperature, max_tokens, top_p, etc.
@@ -238,7 +233,7 @@ class Client:
             CompletionResponse or StreamResponse depending on stream parameter.
 
         Raises:
-            ValueError: If model is not specified and cannot be determined by routing.
+            ValueError: If model is not specified and no fallback is configured.
             ProviderError: If the specified provider is not available or if the
                           completion request fails.
         """

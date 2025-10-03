@@ -1,12 +1,59 @@
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, AsyncIterator, Iterator, List, Optional
+from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Optional
+
+import httpx
 
 from justllms.core.models import Choice, Message, Role, Usage
 
 if TYPE_CHECKING:
     from justllms.core.base import BaseProvider
     from justllms.core.completion import CompletionResponse
+
+
+def parse_sse_stream(
+    url: str,
+    payload: Dict[str, Any],
+    headers: Dict[str, str],
+    parse_chunk_fn: Callable[[str], Optional["StreamChunk"]],
+    timeout: Optional[float] = None,
+    error_prefix: str = "Streaming request",
+) -> Iterator["StreamChunk"]:
+    """Parse Server-Sent Events (SSE) stream from an HTTP endpoint.
+
+    This is a shared helper for streaming responses that follow the SSE protocol.
+    Both OpenAI-compatible and Azure OpenAI providers use this format.
+
+    Args:
+        url: API endpoint URL.
+        payload: Request payload (should have stream=True).
+        headers: Request headers including authorization.
+        parse_chunk_fn: Callback to parse SSE line into StreamChunk.
+        timeout: Optional timeout in seconds.
+        error_prefix: Prefix for error messages (e.g., "OpenAI streaming request").
+
+    Yields:
+        StreamChunk objects parsed from the SSE stream.
+
+    Raises:
+        ProviderError: If the streaming request fails.
+    """
+    from justllms.exceptions import ProviderError
+
+    try:
+        with httpx.Client(timeout=timeout) as client, client.stream(
+            "POST", url, json=payload, headers=headers
+        ) as response:
+            response.raise_for_status()
+
+            for line in response.iter_lines():
+                chunk = parse_chunk_fn(line)
+                if chunk is not None:
+                    yield chunk
+                elif line.strip() == "data: [DONE]":
+                    break
+    except (httpx.HTTPError, httpx.RequestError) as e:
+        raise ProviderError(f"{error_prefix} failed: {str(e)}") from e
 
 
 class StreamChunk:

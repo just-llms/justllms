@@ -34,7 +34,7 @@ custom_style = Style(
 
 def get_all_providers() -> List[str]:
     """Get list of all supported providers."""
-    return ["openai", "anthropic", "google", "xai", "deepseek", "azure", "ollama"]
+    return ["openai", "anthropic", "google", "xai", "deepseek", "azure_openai", "ollama"]
 
 
 def select_providers_checkbox() -> List[str]:

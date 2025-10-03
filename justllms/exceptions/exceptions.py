@@ -53,32 +53,6 @@ class ProviderError(JustLLMsError):
         self.response_body = response_body
 
 
-class RouteError(JustLLMsError):
-    """Error during intelligent routing or model selection process.
-
-    Raised when the routing system cannot determine an appropriate provider
-    and model combination for a request, either due to configuration issues
-    or unavailable resources.
-
-    Args:
-        message: Description of the routing failure.
-        strategy: Name of the routing strategy that failed.
-        available_providers: List of providers that were available for routing.
-        **kwargs: Additional arguments passed to parent JustLLMsError.
-    """
-
-    def __init__(
-        self,
-        message: str,
-        strategy: Optional[str] = None,
-        available_providers: Optional[list] = None,
-        **kwargs: Any,
-    ):
-        super().__init__(message, **kwargs)
-        self.strategy = strategy
-        self.available_providers = available_providers
-
-
 class ValidationError(JustLLMsError):
     """Error during input validation."""
 

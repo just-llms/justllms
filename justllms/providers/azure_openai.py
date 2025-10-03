@@ -1,11 +1,11 @@
 import json
 import logging
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, Dict, List, Optional
 
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from justllms.core.base import BaseProvider, BaseResponse
+from justllms.core.base import DEFAULT_TIMEOUT, BaseProvider, BaseResponse
 from justllms.core.models import Choice, Message, ModelInfo, Usage
 from justllms.core.streaming import StreamChunk, SyncStreamResponse
 from justllms.exceptions import ProviderError
@@ -460,25 +460,22 @@ class AzureOpenAIProvider(BaseProvider):
                 elif key in supported_params:
                     payload[key] = value
 
-        # Create streaming generator using shared SSE parsing
-        def generate_chunks() -> Iterator[StreamChunk]:
-            try:
-                with httpx.Client(timeout=timeout) as client, client.stream(
-                    "POST", url, json=payload, headers=self._get_headers()
-                ) as response:
-                    response.raise_for_status()
+        # Use shared SSE parsing helper
+        from justllms.core.streaming import parse_sse_stream
 
-                    for line in response.iter_lines():
-                        chunk = self._parse_sse_line(line)
-                        if chunk is not None:
-                            yield chunk
-                        elif line.strip() == "data: [DONE]":
-                            break
-            except (httpx.HTTPError, httpx.RequestError) as e:
-                raise ProviderError(f"Azure OpenAI streaming request failed: {str(e)}") from e
+        timeout_config = timeout if timeout is not None else DEFAULT_TIMEOUT
+
+        raw_stream = parse_sse_stream(
+            url=url,
+            payload=payload,
+            headers=self._get_headers(),
+            parse_chunk_fn=self._parse_sse_line,
+            timeout=timeout_config,
+            error_prefix="Azure OpenAI streaming request",
+        )
 
         return SyncStreamResponse(
-            provider=self, model=model, messages=messages, raw_stream=generate_chunks()
+            provider=self, model=model, messages=messages, raw_stream=raw_stream
         )
 
     def supports_streaming(self) -> bool:

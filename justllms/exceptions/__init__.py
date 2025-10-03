@@ -4,7 +4,6 @@ from justllms.exceptions.exceptions import (
     JustLLMsError,
     ProviderError,
     RateLimitError,
-    RouteError,
     TimeoutError,
     ValidationError,
 )
@@ -12,7 +11,6 @@ from justllms.exceptions.exceptions import (
 __all__ = [
     "JustLLMsError",
     "ProviderError",
-    "RouteError",
     "ValidationError",
     "RateLimitError",
     "TimeoutError",

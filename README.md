@@ -1,12 +1,12 @@
 # JustLLMs
 
-A production-ready Python library focused on intelligent LLM routing and multi-provider management.
+A production-ready Python library for multi-provider LLM management with a unified API.
 
 [![PyPI version](https://badge.fury.io/py/justllms.svg)](https://pypi.org/project/justllms/) [![Downloads](https://pepy.tech/badge/justllms)](https://pepy.tech/project/justllms)
 
 ## Why JustLLMs?
 
-Managing multiple LLM providers is complex. You need to handle different APIs, optimize costs, and ensure reliability. JustLLMs solves these challenges by providing a unified interface that automatically routes requests to the best provider based on your criteria—whether that's cost, speed, or quality. By default, JustLLMs uses intelligent cluster-based routing (beta) powered by machine learning to optimize for all three factors simultaneously.
+Managing multiple LLM providers is complex. You need to handle different APIs, manage authentication, and ensure reliability. JustLLMs solves these challenges by providing a unified interface across all major providers with automatic fallbacks and consistent error handling.
 
 ## Installation
 
@@ -30,7 +30,7 @@ client = JustLLM({
     }
 })
 
-# Simple completion - automatically routes to best provider
+# Simple completion - uses configured fallback or first available provider
 response = client.completion.create(
     messages=[{"role": "user", "content": "Explain quantum computing briefly"}]
 )
@@ -59,11 +59,10 @@ client = JustLLM({
     }
 })
 
-# Same interface, different providers automatically chosen
+# Explicitly specify provider and model
 response1 = client.completion.create(
     messages=[{"role": "user", "content": "Explain AI"}],
-    provider="openai",  # Force specific provider
-    model="gpt-5"
+    model="openai/gpt-4o"  # Format: "provider/model"
 )
 ```
 
@@ -71,31 +70,26 @@ Ollama runs locally and requires no API key. Set `OLLAMA_API_BASE` (defaults to
 `http://localhost:11434`) and JustLLMs automatically discovers every installed
 model via the Ollama `/api/tags` endpoint.
 
-## **Intelligent Routing**
-**The game-changing feature that sets JustLLMs apart.** Instead of manually choosing models, let our intelligent routing engine automatically select the optimal provider and model for each request based on your priorities.
-
-#### Available Strategies
-
-**🆕 Cluster-Based Routing (Beta)** - *AI-Powered Query Analysis*
-Our most advanced routing strategy uses machine learning to analyze query semantics and route to the optimal model based on similarity to training data. Achieves **+7% accuracy improvement** and **-27% cost reduction** compared to single-model approaches.
+### Automatic Fallbacks
+Configure fallback providers and models for reliability:
 
 ```python
-# Cluster-based routing (recommended for production)
 client = JustLLM({
-    "providers": {...},
-    "routing": {"strategy": "cluster"}
+    "providers": {
+        "openai": {"api_key": "your-key"},
+        "anthropic": {"api_key": "your-key"}
+    },
+    "routing": {
+        "fallback_provider": "anthropic",
+        "fallback_model": "claude-3-5-sonnet-20241022"
+    }
 })
+
+# If no model specified, uses fallback
+response = client.completion.create(
+    messages=[{"role": "user", "content": "Hello"}]
+)
 ```
-
-*Based on research from [Beyond GPT-5: Making LLMs Cheaper and Better via Performance–Efficiency Optimized Routing](https://arxiv.org/pdf/2508.12631) - AvengersPro framework*
-
-#### How Cluster Routing Works
-1. **Query Analysis**: Your request is embedded using Qwen3-Embedding-0.6B
-2. **Cluster Matching**: Finds the most similar cluster from pre-trained data
-3. **Model Selection**: Routes to the best-performing model for that cluster
-4. **Fallback**: Falls back to configured fallback provider/model or first available if cluster routing is unavailable
-
-**Result**: Up to 60% cost reduction while improving accuracy, with automatic failover to backup providers.
 
 ## Side-by-Side Model Comparison
 
@@ -164,9 +158,9 @@ Metrics Summary:
 | **Package Size** | Minimal | ~50MB | ~5MB | ~1MB |
 | **Setup Complexity** | Simple config | Complex chains | Medium | Simple |
 | **Multi-Provider** | ✅ 7+ providers | ✅ Many integrations | ✅ 100+ providers | ❌ OpenAI only |
-| **Intelligent Routing** | ✅ ML-powered cluster routing | ❌ Manual only | ⚠️ Basic routing | ❌ None |
+| **Unified API** | ✅ Single interface | ⚠️ Different patterns | ⚠️ Provider-specific | ❌ OpenAI only |
 | **Side-by-Side Comparison** | ✅ Interactive CLI tool | ❌ None | ❌ None | ❌ None |
-| **Cost Optimization** | ✅ Automatic routing | ❌ Manual optimization | ⚠️ Basic cost tracking | ❌ None |
+| **Automatic Fallbacks** | ✅ Built-in | ❌ Manual | ⚠️ Basic | ❌ None |
 | **Production Ready** | ✅ Out of the box | ⚠️ Requires setup | ✅ Minimal setup | ⚠️ Basic features |
 
 ## Provider-Specific Parameters
@@ -254,7 +248,7 @@ For production deployments:
 production_config = {
     "providers": {
         "azure_openai": {
-            "api_key": os.getenv("AZURE_OPENAI_KEY"),
+            "api_key": os.getenv("AZURE_OPENAI_API_KEY"),
             "endpoint": os.getenv("AZURE_OPENAI_ENDPOINT"),
             "resource_name": "my-enterprise-resource",
             "deployment_mapping": {
@@ -270,7 +264,6 @@ production_config = {
         }
     },
     "routing": {
-        "strategy": "cluster",  # Use intelligent cluster-based routing
         "fallback_provider": "azure_openai",
         "fallback_model": "gpt-3.5-turbo"
     }
