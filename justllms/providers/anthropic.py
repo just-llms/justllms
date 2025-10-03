@@ -108,11 +108,11 @@ class AnthropicProvider(BaseProvider):
         formatted_messages = []
 
         for msg in messages:
-            if msg.role == "system":
+            if msg.role == Role.SYSTEM:
                 system_message = msg.content if isinstance(msg.content, str) else str(msg.content)
             else:
                 formatted_msg = {
-                    "role": "user" if msg.role == "user" else "assistant",
+                    "role": "user" if msg.role == Role.USER else "assistant",
                     "content": msg.content,
                 }
                 formatted_messages.append(formatted_msg)

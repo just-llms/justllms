@@ -1,9 +1,13 @@
+import json
 import logging
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterator, List, Optional
+
+import httpx
 
 from justllms.core.base import BaseProvider, BaseResponse
 from justllms.core.models import Choice, Message, ModelInfo, Role, Usage
+from justllms.core.streaming import StreamChunk, SyncStreamResponse
 
 logger = logging.getLogger(__name__)
 
@@ -100,10 +104,16 @@ class GoogleProvider(BaseProvider):
     def get_available_models(self) -> Dict[str, ModelInfo]:
         return self.MODELS.copy()
 
-    def _get_api_endpoint(self, model: str) -> str:
-        """Get the API endpoint for a model."""
+    def _get_api_endpoint(self, model: str, streaming: bool = False) -> str:
+        """Get the API endpoint for a model.
+
+        Args:
+            model: Model identifier.
+            streaming: If True, return streaming endpoint.
+        """
         base_url = self.config.api_base or "https://generativelanguage.googleapis.com"
-        return f"{base_url}/v1beta/models/{model}:generateContent"
+        endpoint_type = "streamGenerateContent" if streaming else "generateContent"
+        return f"{base_url}/v1beta/models/{model}:{endpoint_type}"
 
     def _format_messages(self, messages: List[Message]) -> Dict[str, Any]:
         """Format messages for Gemini API."""
@@ -113,11 +123,11 @@ class GoogleProvider(BaseProvider):
         contents = []
 
         for msg in messages:
-            if msg.role == "system":
+            if msg.role == Role.SYSTEM:
                 system_instruction = msg.content
             else:
                 # Gemini uses "user" and "model" (not "assistant")
-                role = "user" if msg.role == "user" else "model"
+                role = "user" if msg.role == Role.USER else "model"
 
                 # Handle content format
                 if isinstance(msg.content, str):
@@ -312,3 +322,165 @@ class GoogleProvider(BaseProvider):
         )
 
         return self._parse_response(response_data, model)
+
+    def _parse_sse_chunk(self, line: str) -> Optional[StreamChunk]:
+        """Parse a single SSE line from Gemini streaming response.
+
+        Args:
+            line: Raw SSE line to parse.
+
+        Returns:
+            StreamChunk if line contains valid data, None otherwise.
+        """
+        line = line.strip()
+        if not line:
+            return None
+
+        # Gemini SSE format: "data: {...}"
+        if not line.startswith("data: "):
+            return None
+
+        data = line[6:]  # Remove "data: " prefix
+
+        # Ignore [DONE] marker (if sent by API)
+        if data == "[DONE]":
+            return None
+
+        try:
+            chunk_data = json.loads(data)
+            candidates = chunk_data.get("candidates", [])
+
+            if not candidates:
+                return None
+
+            candidate = candidates[0]
+            content = candidate.get("content", {})
+            parts = content.get("parts", [])
+
+            # Extract text from parts
+            text_content = ""
+            for part in parts:
+                if "text" in part:
+                    text_content += part["text"]
+
+            finish_reason = candidate.get("finishReason")
+
+            # Get usage metadata if available (typically only in final chunk)
+            usage_metadata = chunk_data.get("usageMetadata")
+            usage = None
+            if usage_metadata:
+                usage = Usage(
+                    prompt_tokens=usage_metadata.get("promptTokenCount", 0),
+                    completion_tokens=usage_metadata.get("candidatesTokenCount", 0),
+                    total_tokens=usage_metadata.get("totalTokenCount", 0),
+                )
+
+            if text_content or finish_reason:
+                return StreamChunk(
+                    content=text_content if text_content else None,
+                    finish_reason=finish_reason.lower() if finish_reason else None,
+                    usage=usage,
+                    raw=chunk_data,
+                )
+        except json.JSONDecodeError:
+            logger.warning(f"Failed to parse Gemini SSE chunk: {data}")
+
+        return None
+
+    def _stream_gemini_response(
+        self,
+        url: str,
+        payload: Dict[str, Any],
+        params: Dict[str, str],
+        timeout: Optional[float] = None,
+    ) -> Iterator[StreamChunk]:
+        """Stream response from Gemini API.
+
+        Args:
+            url: API endpoint URL.
+            payload: Request payload.
+            params: Query parameters (includes API key).
+            timeout: Optional timeout in seconds.
+
+        Yields:
+            StreamChunk objects from the response.
+
+        Raises:
+            ProviderError: If the streaming request fails.
+        """
+        from justllms.exceptions import ProviderError
+
+        # Add SSE parameter for streaming
+        stream_params = {**params, "alt": "sse"}
+
+        try:
+            with httpx.Client(timeout=timeout) as client, client.stream(
+                "POST",
+                url,
+                json=payload,
+                headers=self._get_headers(),
+                params=stream_params,
+            ) as response:
+                response.raise_for_status()
+
+                for line in response.iter_lines():
+                    chunk = self._parse_sse_chunk(line)
+                    if chunk is not None:
+                        yield chunk
+        except (httpx.HTTPError, httpx.RequestError) as e:
+            raise ProviderError(f"Google streaming request failed: {str(e)}") from e
+
+    def stream(
+        self,
+        messages: List[Message],
+        model: str,
+        timeout: Optional[float] = None,
+        **kwargs: Any,
+    ) -> SyncStreamResponse:
+        """Stream completion using Server-Sent Events.
+
+        Args:
+            messages: List of messages for the completion.
+            model: Model identifier to use.
+            timeout: Optional timeout in seconds.
+            **kwargs: Additional provider-specific parameters.
+
+        Returns:
+            SyncStreamResponse: Streaming response iterator.
+        """
+        url = self._get_api_endpoint(model, streaming=True)
+
+        # Format request
+        request_data = self._format_messages(messages)
+
+        # Add generation config
+        generation_config = self._format_generation_config(**kwargs)
+        if generation_config:
+            request_data["generationConfig"] = generation_config
+
+        # Add safety settings if provided
+        if "safety_settings" in kwargs:
+            request_data["safetySettings"] = kwargs["safety_settings"]
+
+        # Use streaming helper
+        stream_iter = self._stream_gemini_response(
+            url=url,
+            payload=request_data,
+            params=self._get_params(),
+            timeout=timeout,
+        )
+
+        return SyncStreamResponse(
+            provider=self, model=model, messages=messages, raw_stream=stream_iter
+        )
+
+    def supports_streaming(self) -> bool:
+        """Google Gemini supports streaming."""
+        return True
+
+    def supports_streaming_for_model(self, model: str) -> bool:
+        """Check if model supports streaming.
+
+        All Gemini models support streaming.
+        """
+        return model in self.get_available_models()

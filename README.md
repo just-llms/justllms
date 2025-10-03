@@ -14,8 +14,6 @@ Managing multiple LLM providers is complex. You need to handle different APIs, m
 pip install justllms
 ```
 
-**Package size**: ~113KB | **Lines of code**: ~4.3K | **Dependencies**: Production-focused
-
 ## Quick Start
 
 ```python
@@ -42,7 +40,7 @@ print(response.content)
 ### Multi-Provider Support
 Connect to all major LLM providers with a single, consistent interface:
 - **OpenAI** (GPT-5, GPT-4, etc.)
-- **Google** (Gemini 2.5, Gemini 1.5 models)  
+- **Google** (Gemini 2.5, etc)
 - **Anthropic** (Claude 4, Claude 3.5 models)
 - **Azure OpenAI** (with deployment mapping)
 - **xAI Grok**, **DeepSeek**
@@ -149,6 +147,35 @@ Metrics Summary:
 | google/gemini-2.5-pro   | ✓ Success |       8.50 |    868 |   0.0003  |
 ```
 
+### Streaming Support
+Stream responses in real-time for interactive applications with a **provider-agnostic API** - no need to learn different SDKs or streaming implementations. The same code works across OpenAI, Google Gemini, and Azure OpenAI:
+
+```python
+# Same streaming code works for ANY supported provider!
+response = client.completion.create(
+    messages=[{"role": "user", "content": "Write a story about AI"}],
+    provider="google",  # or "openai", "azure_openai"
+    model="gemini-2.5-flash",
+    stream=True
+)
+
+# Identical iteration pattern across all providers
+for chunk in response:
+    if chunk.content:
+        print(chunk.content, end="", flush=True)
+
+# Get final response with usage stats and cost estimation
+final = response.get_final_response()
+print(f"\n\nTokens used: {final.usage.total_tokens}")
+print(f"Cost: ${final.usage.estimated_cost:.6f}")
+```
+
+**No SDK hassle:**
+- ❌ Don't learn OpenAI's `stream=True` SSE format
+- ❌ Don't learn Gemini's `generate_content_stream()` method
+- ❌ Don't learn Ollama's newline-delimited JSON streaming
+- ❌ Don't handle different chunk formats per provider
+- ✅ **One API, all providers** - just set `stream=True`
 
 
 ## 🏆 Comparison with Alternatives

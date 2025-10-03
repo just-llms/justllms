@@ -6,7 +6,7 @@ from justllms.utils.validators import validate_messages
 
 if TYPE_CHECKING:
     from justllms.core.client import Client
-    from justllms.core.streaming import AsyncStreamResponse, FakeStreamResponse, SyncStreamResponse
+    from justllms.core.streaming import AsyncStreamResponse, SyncStreamResponse
 
 
 class CompletionResponse(BaseResponse):
@@ -130,7 +130,7 @@ class Completion:
         user: Optional[str] = None,
         timeout: Optional[float] = None,
         **kwargs: Any,
-    ) -> "Union[SyncStreamResponse, AsyncStreamResponse, FakeStreamResponse]": ...
+    ) -> "Union[SyncStreamResponse, AsyncStreamResponse]": ...
 
     def create(
         self,
@@ -155,7 +155,7 @@ class Completion:
         user: Optional[str] = None,
         timeout: Optional[float] = None,
         **kwargs: Any,
-    ) -> "Union[CompletionResponse, SyncStreamResponse, AsyncStreamResponse, FakeStreamResponse]":
+    ) -> "Union[CompletionResponse, SyncStreamResponse, AsyncStreamResponse]":
         """Create a completion with automatic fallbacks.
 
         Args:
