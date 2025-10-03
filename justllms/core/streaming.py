@@ -312,5 +312,3 @@ class AsyncStreamResponse:
         if not self.accumulator.completed:
             await self.drain()
         return self.accumulator.to_completion_response()
-
-

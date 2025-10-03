@@ -180,7 +180,6 @@ class Client:
             **response.raw_response,
         )
 
-
     def _create_completion(
         self,
         messages: List[Message],
@@ -231,9 +230,7 @@ class Client:
             if stream:
                 if not provider_instance.supports_streaming_for_model(selected_model):
                     streaming_providers = [
-                        name
-                        for name, prov in self.providers.items()
-                        if prov.supports_streaming()
+                        name for name, prov in self.providers.items() if prov.supports_streaming()
                     ]
                     streaming_hint = (
                         f" Try using one of these providers: {', '.join(streaming_providers)}"
