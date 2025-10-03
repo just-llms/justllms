@@ -1,4 +1,3 @@
-import re
 from typing import Any, Dict, List, Union
 
 from justllms.core.models import Message, Role
@@ -116,63 +115,3 @@ def validate_messages(  # noqa: C901
         pass
 
     return validated_messages
-
-
-def validate_model_name(model: str) -> str:
-    """Validate and sanitize model name format.
-
-    Ensures model names conform to expected patterns and character restrictions.
-    Supports both standalone model names and provider/model format.
-
-    Args:
-        model: Model name to validate. Can be 'model-name' or 'provider/model-name'.
-
-    Returns:
-        str: Validated and normalized model name.
-
-    Raises:
-        ValidationError: If model name is invalid, empty, too long, or contains
-                        illegal characters.
-    """
-    if not model:
-        raise ValidationError("Model name cannot be empty")
-
-    if not isinstance(model, str):
-        raise ValidationError(f"Model name must be a string, got {type(model)}")
-
-    model = model.strip()
-
-    # Check for common issues
-    if len(model) > 100:
-        raise ValidationError("Model name is too long (max 100 characters)")
-
-    # Allow provider/model format
-    if "/" in model:
-        parts = model.split("/", 1)
-        if len(parts) != 2 or not parts[0] or not parts[1]:
-            raise ValidationError("Model name with provider must be in format 'provider/model'")
-
-        provider, model_name = parts
-
-        # Validate provider name
-        if not re.match(r"^[a-zA-Z0-9_-]+$", provider):
-            raise ValidationError(
-                f"Invalid provider name '{provider}'. "
-                "Must contain only letters, numbers, hyphens, and underscores"
-            )
-
-        # Validate model name
-        if not re.match(r"^[a-zA-Z0-9_.-]+$", model_name):
-            raise ValidationError(
-                f"Invalid model name '{model_name}'. "
-                "Must contain only letters, numbers, hyphens, periods, and underscores"
-            )
-    else:
-        # Validate standalone model name
-        if not re.match(r"^[a-zA-Z0-9_.-]+$", model):
-            raise ValidationError(
-                f"Invalid model name '{model}'. "
-                "Must contain only letters, numbers, hyphens, periods, and underscores"
-            )
-
-    return model

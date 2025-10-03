@@ -419,14 +419,6 @@ class BaseProvider(ABC):
             total_tokens=usage_data.get("total_tokens", 0),
         )
 
-    @classmethod
-    def _create_model_registry(cls, models: Dict[str, Dict[str, Any]]) -> Dict[str, ModelInfo]:
-        """Helper to create a model registry from model definitions."""
-        registry = {}
-        for model_name, model_data in models.items():
-            registry[model_name] = ModelInfo(name=model_name, **model_data)
-        return registry
-
     def _get_default_headers(self) -> Dict[str, str]:
         """Get common default headers that most providers use."""
         headers = {
@@ -437,7 +429,3 @@ class BaseProvider(ABC):
         # Add custom headers from config
         headers.update(self.config.headers)
         return headers
-
-    def _filter_kwargs(self, kwargs: Dict[str, Any], allowed_keys: List[str]) -> Dict[str, Any]:
-        """Filter kwargs to only include allowed keys with non-None values."""
-        return {k: v for k, v in kwargs.items() if k in allowed_keys and v is not None}

@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from justllms.core.base import BaseProvider, BaseResponse
+from justllms.core.base import DEFAULT_TIMEOUT, BaseProvider, BaseResponse
 from justllms.core.models import Choice, Message, ModelInfo, Usage
 from justllms.exceptions import ProviderError
 
@@ -216,8 +216,6 @@ class GrokProvider(BaseProvider):
                 and v is not None
             },
         }
-
-        from justllms.core.base import DEFAULT_TIMEOUT
 
         timeout_config = timeout if timeout is not None else DEFAULT_TIMEOUT
 
