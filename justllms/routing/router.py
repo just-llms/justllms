@@ -2,6 +2,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from justllms.core.base import BaseProvider
 from justllms.core.models import Message
+from justllms.exceptions import ProviderError
 
 
 class Router:
@@ -134,9 +135,9 @@ class Router:
         }
 
         if not streaming_providers:
-            raise ValueError(
-                "No streaming-capable providers available. "
-                "Install openai or anthropic package for streaming support."
+            raise ProviderError(
+                "No streaming-capable providers configured. "
+                "Enable openai, azure_openai, google, or ollama providers, or set stream=False."
             )
 
         # If specific model requested, validate streaming support
@@ -153,7 +154,10 @@ class Router:
             # Validate model supports streaming
             provider = streaming_providers[provider_name]
             if not provider.supports_streaming_for_model(model_name):
-                raise ValueError(f"Model {model_name} doesn't support streaming on {provider_name}")
+                raise ProviderError(
+                    f"Model '{model_name}' does not support streaming on provider '{provider_name}'. "
+                    f"Use stream=False or choose a different model."
+                )
 
             return provider_name, model_name
 
@@ -170,6 +174,9 @@ class Router:
                 if provider.supports_streaming_for_model(available_model):
                     return provider_name, available_model
 
-            raise ValueError(f"Model {model_name} doesn't support streaming on {provider_name}")
+            raise ProviderError(
+                f"Model '{model_name}' does not support streaming on provider '{provider_name}'. "
+                f"Use stream=False or choose a different model."
+            )
 
         return provider_name, model_name

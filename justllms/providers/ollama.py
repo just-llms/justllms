@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime
-from typing import Any
+from typing import Any, Iterator
 from uuid import uuid4
+
+import httpx
 
 from justllms.core.base import BaseProvider, BaseResponse
 from justllms.core.models import Message, ModelInfo
+from justllms.core.streaming import StreamChunk, SyncStreamResponse
 from justllms.exceptions import ProviderError
 
 
@@ -397,3 +401,183 @@ class OllamaProvider(BaseProvider):
             headers from configuration.
         """
         return self._get_default_headers()
+
+    def _parse_json_chunk(self, line: str) -> StreamChunk | None:
+        """Parse a single JSON line from Ollama streaming response.
+
+        Ollama uses newline-delimited JSON format (not SSE).
+
+        Args:
+            line: Raw JSON line to parse.
+
+        Returns:
+            StreamChunk if line contains valid data, None otherwise.
+        """
+        line = line.strip()
+        if not line:
+            return None
+
+        try:
+            chunk_data = json.loads(line)
+
+            # Ollama response format: {"message": {"role": "assistant", "content": "..."}, "done": false}
+            message = chunk_data.get("message", {})
+            content = message.get("content", "")
+            done = chunk_data.get("done", False)
+
+            # Build usage from final chunk
+            usage = None
+            if done:
+                from justllms.core.models import Usage
+
+                prompt_tokens = chunk_data.get("prompt_eval_count", 0)
+                completion_tokens = chunk_data.get("eval_count", 0)
+                usage = Usage(
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
+                    total_tokens=prompt_tokens + completion_tokens,
+                )
+
+            # Return chunk if we have content or it's the final chunk
+            if content or done:
+                return StreamChunk(
+                    content=content if content else None,
+                    finish_reason="stop" if done else None,
+                    usage=usage,
+                    raw=chunk_data,
+                )
+        except json.JSONDecodeError:
+            # Silently skip malformed JSON
+            pass
+
+        return None
+
+    def _stream_ollama_response(
+        self,
+        url: str,
+        payload: dict[str, Any],
+        headers: dict[str, str],
+        timeout: float | None = None,
+    ) -> Iterator[StreamChunk]:
+        """Stream response from Ollama API.
+
+        Ollama uses newline-delimited JSON instead of SSE.
+
+        Args:
+            url: API endpoint URL.
+            payload: Request payload (with stream=True).
+            headers: Request headers.
+            timeout: Optional timeout in seconds.
+
+        Yields:
+            StreamChunk objects from the response.
+
+        Raises:
+            ProviderError: If the streaming request fails.
+        """
+        try:
+            with httpx.Client(timeout=timeout) as client, client.stream(
+                "POST",
+                url,
+                json=payload,
+                headers=headers,
+            ) as response:
+                response.raise_for_status()
+
+                # Ollama streams newline-delimited JSON
+                for line in response.iter_lines():
+                    chunk = self._parse_json_chunk(line)
+                    if chunk is not None:
+                        yield chunk
+        except (httpx.HTTPError, httpx.RequestError) as e:
+            raise ProviderError(f"Ollama streaming request failed: {str(e)}") from e
+
+    def stream(
+        self,
+        messages: list[Message],
+        model: str,
+        timeout: float | None = None,
+        **kwargs: Any,
+    ) -> SyncStreamResponse:
+        """Stream completion using Ollama's newline-delimited JSON format.
+
+        Args:
+            messages: List of messages for the completion.
+            model: Model identifier to use.
+            timeout: Optional timeout in seconds.
+            **kwargs: Additional provider-specific parameters.
+
+        Returns:
+            SyncStreamResponse: Streaming response iterator.
+        """
+        # Build payload similar to complete() but with stream=True
+        payload = {
+            "model": model,
+            "messages": self._format_messages_base(messages),
+            "stream": True,  # Enable streaming
+        }
+
+        # Add stop sequences
+        stop_sequences = kwargs.pop("stop", None)
+        if stop_sequences is not None:
+            payload["stop"] = stop_sequences
+
+        # Add keep_alive
+        keep_alive = kwargs.pop("keep_alive", None) or getattr(self.config, "keep_alive", None)
+        if keep_alive is not None:
+            payload["keep_alive"] = keep_alive
+
+        # Add metadata
+        metadata = kwargs.pop("metadata", None) or getattr(self.config, "metadata", None)
+        if metadata is not None:
+            payload["metadata"] = metadata
+
+        # Build options dict
+        options: dict[str, Any] = {}
+        option_keys = {
+            "temperature": "temperature",
+            "top_p": "top_p",
+            "top_k": "top_k",
+            "presence_penalty": "presence_penalty",
+            "frequency_penalty": "frequency_penalty",
+            "repeat_penalty": "repeat_penalty",
+            "seed": "seed",
+        }
+        for kwarg, option_name in option_keys.items():
+            value = kwargs.pop(kwarg, None)
+            if value is not None:
+                options[option_name] = value
+
+        max_tokens = kwargs.pop("max_tokens", None)
+        if max_tokens is not None:
+            options["num_predict"] = max_tokens
+
+        extra_options = kwargs.pop("options", None)
+        if isinstance(extra_options, dict):
+            options.update(extra_options)
+
+        if options:
+            payload["options"] = options
+
+        # Use streaming helper
+        stream_iter = self._stream_ollama_response(
+            url=self._chat_endpoint,
+            payload=payload,
+            headers=self._get_request_headers(),
+            timeout=timeout,
+        )
+
+        return SyncStreamResponse(
+            provider=self, model=model, messages=messages, raw_stream=stream_iter
+        )
+
+    def supports_streaming(self) -> bool:
+        """Ollama supports streaming."""
+        return True
+
+    def supports_streaming_for_model(self, model: str) -> bool:
+        """Check if model supports streaming.
+
+        All Ollama models support streaming.
+        """
+        return model in self.get_available_models()

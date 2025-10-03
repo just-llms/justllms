@@ -8,7 +8,7 @@ from justllms.exceptions import ProviderError
 from justllms.routing import Router
 
 if TYPE_CHECKING:
-    from justllms.core.streaming import AsyncStreamResponse, FakeStreamResponse, SyncStreamResponse
+    from justllms.core.streaming import AsyncStreamResponse, SyncStreamResponse
 
 
 class Client:
@@ -180,32 +180,6 @@ class Client:
             **response.raw_response,
         )
 
-    def _create_fake_stream(
-        self,
-        provider_instance: BaseProvider,
-        messages: List[Message],
-        model: str,
-        provider: str,
-        **kwargs: Any,
-    ) -> "FakeStreamResponse":
-        """Create fake streaming response from non-streaming completion.
-
-        Args:
-            provider_instance: Provider to use for completion.
-            messages: Conversation messages.
-            model: Model identifier.
-            provider: Provider name for response metadata.
-            **kwargs: Additional parameters for completion.
-
-        Returns:
-            FakeStreamResponse wrapping the completion.
-        """
-        from justllms.core.streaming import FakeStreamResponse
-
-        response = provider_instance.complete(messages=messages, model=model, **kwargs)
-        self._estimate_and_set_cost(response, provider_instance, model)
-        completion = self._wrap_completion_response(response, provider)
-        return FakeStreamResponse.from_completion(completion)
 
     def _create_completion(
         self,
@@ -214,7 +188,7 @@ class Client:
         provider: Optional[str] = None,
         stream: bool = False,
         **kwargs: Any,
-    ) -> "CompletionResponse | SyncStreamResponse | AsyncStreamResponse | FakeStreamResponse":
+    ) -> "CompletionResponse | SyncStreamResponse | AsyncStreamResponse":
         """Create a completion with automatic fallback support.
 
         Uses configured fallback provider/model or first available provider
@@ -235,7 +209,8 @@ class Client:
         Raises:
             ValueError: If model is not specified and no fallback is configured.
             ProviderError: If the specified provider is not available or if the
-                          completion request fails.
+                          completion request fails, or if streaming is requested
+                          but the provider doesn't support it.
         """
         if provider:
             if provider not in self.providers:
@@ -254,11 +229,20 @@ class Client:
                     raise ValueError(f"No models available for provider {provider}")
 
             if stream:
-                # Check if provider supports streaming
-                if not provider_instance.supports_streaming():
-                    # Fallback: fake streaming
-                    return self._create_fake_stream(
-                        provider_instance, messages, selected_model, provider, **kwargs
+                if not provider_instance.supports_streaming_for_model(selected_model):
+                    streaming_providers = [
+                        name
+                        for name, prov in self.providers.items()
+                        if prov.supports_streaming()
+                    ]
+                    streaming_hint = (
+                        f" Try using one of these providers: {', '.join(streaming_providers)}"
+                        if streaming_providers
+                        else ""
+                    )
+                    raise ProviderError(
+                        f"Provider '{provider}' does not support streaming for model '{selected_model}'. "
+                        f"Use stream=False or switch to a streaming-capable provider.{streaming_hint}"
                     )
 
                 # Stream with specified provider
@@ -271,22 +255,10 @@ class Client:
                 self._estimate_and_set_cost(response, provider_instance, selected_model)
                 return self._wrap_completion_response(response, provider)
 
-        # Route-based selection
         if stream:
-            try:
-                # Try streaming route
-                provider_name, selected_model = self.router.route_streaming(
-                    messages=messages, providers=self.providers, model=model, **kwargs
-                )
-            except ValueError:
-                # No streaming providers - fall back to fake streaming
-                provider_name, selected_model = self.router.route(
-                    messages=messages, model=model, providers=self.providers, **kwargs
-                )
-                provider_instance = self.providers[provider_name]
-                return self._create_fake_stream(
-                    provider_instance, messages, selected_model, provider_name, **kwargs
-                )
+            provider_name, selected_model = self.router.route_streaming(
+                messages=messages, providers=self.providers, model=model, **kwargs
+            )
 
             # Stream with routed provider
             provider_instance = self.providers[provider_name]
