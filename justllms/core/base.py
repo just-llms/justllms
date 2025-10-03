@@ -1,11 +1,16 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 import httpx
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from justllms.core.models import Choice, Message, ModelInfo, ProviderConfig, Usage
 from justllms.exceptions import ProviderError
+
+if TYPE_CHECKING:
+    from justllms.core.streaming import AsyncStreamResponse, SyncStreamResponse
+
+DEFAULT_TIMEOUT = 300.0
 
 
 def _is_retryable_http_error(exc: BaseException) -> bool:
@@ -99,7 +104,7 @@ class BaseProvider(ABC):
         Args:
             messages: List of messages for the completion.
             model: Model identifier to use.
-            timeout: Optional timeout in seconds. If None, no timeout is enforced.
+            timeout: Optional timeout in seconds. Defaults to 300 seconds if not specified.
             **kwargs: Additional provider-specific parameters.
         """
         pass
@@ -132,6 +137,101 @@ class BaseProvider(ABC):
 
         return prompt_cost + completion_cost
 
+    def stream(
+        self,
+        messages: List[Message],
+        model: str,
+        timeout: Optional[float] = None,
+        **kwargs: Any,
+    ) -> "SyncStreamResponse | AsyncStreamResponse":
+        """Stream completion - same parameters as complete().
+
+        Default implementation raises NotImplementedError.
+        Providers that support streaming should override this method.
+
+        Args:
+            messages: List of messages for the completion.
+            model: Model identifier to use.
+            timeout: Optional timeout in seconds. Defaults to 300 seconds if not specified.
+            **kwargs: Additional provider-specific parameters.
+
+        Returns:
+            SyncStreamResponse or AsyncStreamResponse.
+
+        Raises:
+            NotImplementedError: If provider doesn't support streaming.
+        """
+        raise NotImplementedError(
+            f"{self.name} provider doesn't support streaming. "
+            f"Use complete() instead or switch to a streaming-capable provider."
+        )
+
+    def supports_streaming(self) -> bool:
+        """Check if this provider supports streaming.
+
+        Returns:
+            True if streaming is supported, False otherwise.
+        """
+        return False
+
+    def supports_streaming_for_model(self, model: str) -> bool:
+        """Check if specific model supports streaming.
+
+        Args:
+            model: Model identifier to check.
+
+        Returns:
+            True if model supports streaming, False otherwise.
+        """
+        return False
+
+    def count_tokens(self, text: Union[str, List[Dict[str, Any]]], model: str) -> int:
+        """Count tokens in text or multimodal content.
+
+        Uses tiktoken for accurate counting when available, falls back to
+        character-based estimation. Providers can override for more accurate counting.
+
+        Args:
+            text: Text string or list of content items (for multimodal) to count tokens for.
+            model: Model identifier for model-specific counting.
+
+        Returns:
+            Token count (accurate for OpenAI models, estimated for others).
+        """
+        from justllms.utils.token_counter import count_tokens
+
+        # Handle multimodal content (list of dicts)
+        if isinstance(text, list):
+            # Extract text content from multimodal items
+            total = 0
+            for item in text:
+                if isinstance(item, dict) and item.get("type") == "text":
+                    total += count_tokens(item.get("text", ""), model)
+                elif isinstance(item, dict) and item.get("type") == "image":
+                    total += 85  # Rough estimate for images
+            return total
+
+        return count_tokens(text, model)
+
+    def count_message_tokens(self, messages: List[Message], model: str) -> int:
+        """Count tokens in messages.
+
+        Uses tiktoken for accurate counting when available, including message
+        overhead and formatting tokens. Falls back to character-based estimation.
+
+        Args:
+            messages: List of messages to count tokens for.
+            model: Model identifier for model-specific counting.
+
+        Returns:
+            Token count (accurate for OpenAI models, estimated for others).
+        """
+        from justllms.utils.token_counter import count_tokens
+
+        # Format messages to dict format expected by TokenCounter
+        formatted = self._format_messages_base(messages)
+        return count_tokens(formatted, model)
+
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=4, max=10),
@@ -158,7 +258,7 @@ class BaseProvider(ABC):
             headers: Optional HTTP headers to include in request.
             params: Optional query parameters for the request.
             method: HTTP method to use ('POST' or 'GET').
-            timeout: Optional timeout in seconds. If None, no timeout is enforced (waits indefinitely).
+            timeout: Optional timeout in seconds. Defaults to 300 seconds if not specified.
 
         Returns:
             Dict[str, Any]: Parsed JSON response from the API.
@@ -171,7 +271,7 @@ class BaseProvider(ABC):
         request_headers = headers or {}
         request_params = params or {}
 
-        timeout_config = timeout if timeout is not None else None
+        timeout_config = timeout if timeout is not None else DEFAULT_TIMEOUT
         with httpx.Client(timeout=timeout_config) as client:
             if method.upper() == "POST":
                 response = client.post(
