@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union, overload
 
 from justllms.core.base import BaseResponse
 from justllms.core.models import Choice, Message, Usage
@@ -6,6 +6,7 @@ from justllms.utils.validators import validate_messages
 
 if TYPE_CHECKING:
     from justllms.core.client import Client
+    from justllms.core.streaming import AsyncStreamResponse, FakeStreamResponse, SyncStreamResponse
 
 
 class CompletionResponse(BaseResponse):
@@ -79,9 +80,12 @@ class Completion:
     def __init__(self, client: "Client"):
         self.client = client
 
+    @overload
     def create(
         self,
         messages: Union[List[Dict[str, Any]], List[Message]],
+        *,
+        stream: Literal[False] = False,
         model: Optional[str] = None,
         provider: Optional[str] = None,
         temperature: Optional[float] = None,
@@ -100,13 +104,64 @@ class Completion:
         user: Optional[str] = None,
         timeout: Optional[float] = None,
         **kwargs: Any,
-    ) -> CompletionResponse:
+    ) -> CompletionResponse: ...
+
+    @overload
+    def create(
+        self,
+        messages: Union[List[Dict[str, Any]], List[Message]],
+        *,
+        stream: Literal[True],
+        model: Optional[str] = None,
+        provider: Optional[str] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
+        top_k: Optional[int] = None,
+        max_tokens: Optional[int] = None,
+        stop: Optional[Union[str, List[str]]] = None,
+        n: Optional[int] = None,
+        presence_penalty: Optional[float] = None,
+        frequency_penalty: Optional[float] = None,
+        generation_config: Optional[Dict[str, Any]] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
+        tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
+        response_format: Optional[Dict[str, Any]] = None,
+        seed: Optional[int] = None,
+        user: Optional[str] = None,
+        timeout: Optional[float] = None,
+        **kwargs: Any,
+    ) -> "Union[SyncStreamResponse, AsyncStreamResponse, FakeStreamResponse]": ...
+
+    def create(
+        self,
+        messages: Union[List[Dict[str, Any]], List[Message]],
+        model: Optional[str] = None,
+        provider: Optional[str] = None,
+        stream: bool = False,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
+        top_k: Optional[int] = None,
+        max_tokens: Optional[int] = None,
+        stop: Optional[Union[str, List[str]]] = None,
+        n: Optional[int] = None,
+        presence_penalty: Optional[float] = None,
+        frequency_penalty: Optional[float] = None,
+        generation_config: Optional[Dict[str, Any]] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
+        tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
+        response_format: Optional[Dict[str, Any]] = None,
+        seed: Optional[int] = None,
+        user: Optional[str] = None,
+        timeout: Optional[float] = None,
+        **kwargs: Any,
+    ) -> "Union[CompletionResponse, SyncStreamResponse, AsyncStreamResponse, FakeStreamResponse]":
         """Create a completion with intelligent routing.
 
         Args:
             messages: List of messages in the conversation.
             model: Specific model to use (optional, will be routed automatically if not provided).
             provider: Specific provider to use (optional).
+            stream: If True, returns streaming response instead of CompletionResponse.
 
             Common generation parameters (normalized across providers):
                 temperature: Sampling temperature (0.0-2.0). Controls randomness.
@@ -166,6 +221,7 @@ class Completion:
             "messages": formatted_messages,
             "model": model,
             "provider": provider,
+            "stream": stream,
             "temperature": temperature,
             "top_p": top_p,
             "top_k": top_k,
@@ -184,7 +240,7 @@ class Completion:
             **kwargs,
         }
 
-        # Filter out None values, but keep model=None for routing
-        params = {k: v for k, v in params.items() if v is not None or k == "model"}
+        # Filter out None values, but keep model=None for routing and stream=False
+        params = {k: v for k, v in params.items() if v is not None or k in ("model", "stream")}
 
         return self.client._create_completion(**params)

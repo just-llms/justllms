@@ -150,3 +150,74 @@ class Router:
             str: Name of the current strategy class (e.g., 'ClusterBasedStrategy').
         """
         return self.strategy.__class__.__name__
+
+    def route_streaming(
+        self,
+        messages: List[Message],
+        providers: Dict[str, BaseProvider],
+        model: Optional[str] = None,
+        constraints: Optional[Dict[str, Any]] = None,
+        **kwargs: Any,
+    ) -> Tuple[str, str]:
+        """Route for streaming requests.
+
+        Filters providers to only those supporting streaming before routing.
+
+        Args:
+            messages: The messages to process.
+            providers: Available providers.
+            model: Optional specific model requested.
+            constraints: Additional constraints for routing.
+            **kwargs: Additional parameters.
+
+        Returns:
+            Tuple of (provider_name, model_name).
+
+        Raises:
+            ValueError: If no streaming-capable providers available.
+        """
+        # Filter to streaming-capable providers
+        streaming_providers = {
+            name: provider for name, provider in providers.items() if provider.supports_streaming()
+        }
+
+        if not streaming_providers:
+            raise ValueError(
+                "No streaming-capable providers available. "
+                "Install openai or anthropic package for streaming support."
+            )
+
+        # If specific model requested, validate streaming support
+        if model:
+            # Use normal route logic first
+            provider_name, model_name = self.route(
+                messages,
+                model=model,
+                providers=streaming_providers,
+                constraints=constraints,
+                **kwargs,
+            )
+
+            # Validate model supports streaming
+            provider = streaming_providers[provider_name]
+            if not provider.supports_streaming_for_model(model_name):
+                raise ValueError(f"Model {model_name} doesn't support streaming on {provider_name}")
+
+            return provider_name, model_name
+
+        # Route among streaming providers
+        provider_name, model_name = self.route(
+            messages, providers=streaming_providers, constraints=constraints, **kwargs
+        )
+
+        # Double-check model supports streaming
+        provider = streaming_providers[provider_name]
+        if not provider.supports_streaming_for_model(model_name):
+            # Try to find another model from this provider that supports streaming
+            for available_model in provider.get_available_models():
+                if provider.supports_streaming_for_model(available_model):
+                    return provider_name, available_model
+
+            raise ValueError(f"Model {model_name} doesn't support streaming on {provider_name}")
+
+        return provider_name, model_name

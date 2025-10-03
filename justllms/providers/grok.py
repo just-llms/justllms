@@ -217,7 +217,9 @@ class GrokProvider(BaseProvider):
             },
         }
 
-        timeout_config = timeout if timeout is not None else None
+        from justllms.core.base import DEFAULT_TIMEOUT
+
+        timeout_config = timeout if timeout is not None else DEFAULT_TIMEOUT
 
         with httpx.Client(timeout=timeout_config) as client:
             response = client.post(

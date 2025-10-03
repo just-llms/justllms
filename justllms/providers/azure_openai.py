@@ -1,11 +1,13 @@
+import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from justllms.core.base import BaseProvider, BaseResponse
 from justllms.core.models import Choice, Message, ModelInfo, Usage
+from justllms.core.streaming import StreamChunk, SyncStreamResponse
 from justllms.exceptions import ProviderError
 
 logger = logging.getLogger(__name__)
@@ -162,6 +164,9 @@ class AzureOpenAIProvider(BaseProvider):
         self.api_version = getattr(config, "api_version", "2024-02-15-preview")
         self.deployment_mapping = getattr(config, "deployment_mapping", {})
 
+        # Support for a single default deployment name
+        self.default_deployment = getattr(config, "deployment", None)
+
     def get_available_models(self) -> Dict[str, ModelInfo]:
         return self.MODELS.copy()
 
@@ -176,10 +181,20 @@ class AzureOpenAIProvider(BaseProvider):
         return headers
 
     def _get_deployment_name(self, model: str) -> str:
-        """Get Azure deployment name for a model."""
-        # Check if user provided custom deployment mapping
+        """Get Azure deployment name for a model.
+
+        Priority:
+        1. Custom deployment_mapping for the specific model
+        2. Default deployment (if configured)
+        3. Model name fallback with standard conversions
+        """
+        # Check if user provided custom deployment mapping for this specific model
         if self.deployment_mapping and model in self.deployment_mapping:
             return str(self.deployment_mapping[model])
+
+        # If a default deployment is configured, use it for all models
+        if self.default_deployment:
+            return str(self.default_deployment)
 
         # Default: use model name as deployment name
         # Azure often uses different naming (e.g., gpt-35-turbo instead of gpt-3.5-turbo)
@@ -331,7 +346,9 @@ class AzureOpenAIProvider(BaseProvider):
                     logger.debug(f"Unknown parameter '{key}' passed to Azure OpenAI API")
                     payload[key] = value
 
-        timeout_config = timeout if timeout is not None else None
+        from justllms.core.base import DEFAULT_TIMEOUT
+
+        timeout_config = timeout if timeout is not None else DEFAULT_TIMEOUT
 
         with httpx.Client(timeout=timeout_config) as client:
             response = client.post(
@@ -346,3 +363,128 @@ class AzureOpenAIProvider(BaseProvider):
                 )
 
             return self._parse_response(response.json())
+
+    def _parse_sse_line(self, line: str) -> Optional[StreamChunk]:
+        """Parse a single SSE line into a StreamChunk.
+
+        Uses OpenAI-compatible SSE format parsing.
+
+        Args:
+            line: Raw SSE line to parse.
+
+        Returns:
+            StreamChunk if line contains valid data, None otherwise.
+        """
+        line = line.strip()
+        if not line:
+            return None
+
+        if not line.startswith("data: "):
+            return None
+
+        data = line[6:]  # Remove "data: " prefix
+
+        if data == "[DONE]":
+            return None  # Signal end of stream
+
+        try:
+            chunk_data = json.loads(data)
+            choices = chunk_data.get("choices", [])
+
+            if choices:
+                delta = choices[0].get("delta", {})
+                content = delta.get("content")
+                finish_reason = choices[0].get("finish_reason")
+
+                if content or finish_reason:
+                    return StreamChunk(
+                        content=content,
+                        finish_reason=finish_reason,
+                        raw=chunk_data,
+                    )
+        except json.JSONDecodeError:
+            logger.warning(f"Failed to parse SSE chunk: {data}")
+
+        return None
+
+    def stream(
+        self,
+        messages: List[Message],
+        model: str,
+        timeout: Optional[float] = None,
+        **kwargs: Any,
+    ) -> SyncStreamResponse:
+        """Stream completion using Server-Sent Events.
+
+        Args:
+            messages: Conversation messages to process.
+            model: Model identifier for the request.
+            timeout: Optional timeout in seconds.
+            **kwargs: Additional parameters.
+
+        Returns:
+            SyncStreamResponse: Streaming response iterator.
+        """
+        url = self._build_url(model)
+
+        # Build payload with streaming enabled
+        payload: Dict[str, Any] = {
+            "messages": self._format_messages(messages),
+            "stream": True,
+        }
+
+        supported_params = {
+            "temperature",
+            "top_p",
+            "max_tokens",
+            "stop",
+            "n",
+            "presence_penalty",
+            "frequency_penalty",
+            "tools",
+            "tool_choice",
+            "response_format",
+            "seed",
+            "user",
+            "logprobs",
+            "top_logprobs",
+            "logit_bias",
+        }
+
+        ignored_params = {"top_k", "generation_config", "timeout"}
+
+        for key, value in kwargs.items():
+            if value is not None:
+                if key in ignored_params:
+                    logger.debug(f"Parameter '{key}' is not supported. Ignoring.")
+                elif key in supported_params:
+                    payload[key] = value
+
+        # Create streaming generator using shared SSE parsing
+        def generate_chunks() -> Iterator[StreamChunk]:
+            try:
+                with httpx.Client(timeout=timeout) as client, client.stream(
+                    "POST", url, json=payload, headers=self._get_headers()
+                ) as response:
+                    response.raise_for_status()
+
+                    for line in response.iter_lines():
+                        chunk = self._parse_sse_line(line)
+                        if chunk is not None:
+                            yield chunk
+                        elif line.strip() == "data: [DONE]":
+                            break
+            except (httpx.HTTPError, httpx.RequestError) as e:
+                raise ProviderError(f"Azure OpenAI streaming request failed: {str(e)}") from e
+
+        return SyncStreamResponse(
+            provider=self, model=model, messages=messages, raw_stream=generate_chunks()
+        )
+
+    def supports_streaming(self) -> bool:
+        """Azure OpenAI supports streaming."""
+        return True
+
+    def supports_streaming_for_model(self, model: str) -> bool:
+        """Check if model supports streaming."""
+        return model in self.get_available_models()
