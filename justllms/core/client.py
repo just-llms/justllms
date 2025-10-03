@@ -270,7 +270,9 @@ class Client:
                 return provider_instance.stream(messages=messages, model=selected_model, **kwargs)
             else:
                 # Non-streaming with specified provider
-                response = provider_instance.complete(messages=messages, model=selected_model, **kwargs)
+                response = provider_instance.complete(
+                    messages=messages, model=selected_model, **kwargs
+                )
                 self._estimate_and_set_cost(response, provider_instance, selected_model)
                 return self._wrap_completion_response(response, provider)
 

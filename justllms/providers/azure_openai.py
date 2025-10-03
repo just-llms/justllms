@@ -194,7 +194,7 @@ class AzureOpenAIProvider(BaseProvider):
 
         # If a default deployment is configured, use it for all models
         if self.default_deployment:
-            return self.default_deployment
+            return str(self.default_deployment)
 
         # Default: use model name as deployment name
         # Azure often uses different naming (e.g., gpt-35-turbo instead of gpt-3.5-turbo)
@@ -463,16 +463,17 @@ class AzureOpenAIProvider(BaseProvider):
         # Create streaming generator using shared SSE parsing
         def generate_chunks() -> Iterator[StreamChunk]:
             try:
-                with httpx.Client(timeout=timeout) as client:
-                    with client.stream("POST", url, json=payload, headers=self._get_headers()) as response:
-                        response.raise_for_status()
+                with httpx.Client(timeout=timeout) as client, client.stream(
+                    "POST", url, json=payload, headers=self._get_headers()
+                ) as response:
+                    response.raise_for_status()
 
-                        for line in response.iter_lines():
-                            chunk = self._parse_sse_line(line)
-                            if chunk is not None:
-                                yield chunk
-                            elif line.strip() == "data: [DONE]":
-                                break
+                    for line in response.iter_lines():
+                        chunk = self._parse_sse_line(line)
+                        if chunk is not None:
+                            yield chunk
+                        elif line.strip() == "data: [DONE]":
+                            break
             except (httpx.HTTPError, httpx.RequestError) as e:
                 raise ProviderError(f"Azure OpenAI streaming request failed: {str(e)}") from e
 

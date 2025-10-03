@@ -198,16 +198,17 @@ class BaseOpenAIChatProvider(BaseProvider):
             ProviderError: If the streaming request fails.
         """
         try:
-            with httpx.Client(timeout=timeout) as client:
-                with client.stream("POST", url, json=payload, headers=headers) as response:
-                    response.raise_for_status()
+            with httpx.Client(timeout=timeout) as client, client.stream(
+                "POST", url, json=payload, headers=headers
+            ) as response:
+                response.raise_for_status()
 
-                    for line in response.iter_lines():
-                        chunk = self._parse_sse_line(line)
-                        if chunk is not None:
-                            yield chunk
-                        elif line.strip() == "data: [DONE]":
-                            break
+                for line in response.iter_lines():
+                    chunk = self._parse_sse_line(line)
+                    if chunk is not None:
+                        yield chunk
+                    elif line.strip() == "data: [DONE]":
+                        break
         except (httpx.HTTPError, httpx.RequestError) as e:
             from justllms.exceptions import ProviderError
 

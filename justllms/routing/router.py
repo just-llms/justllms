@@ -191,7 +191,11 @@ class Router:
         if model:
             # Use normal route logic first
             provider_name, model_name = self.route(
-                messages, model=model, providers=streaming_providers, constraints=constraints, **kwargs
+                messages,
+                model=model,
+                providers=streaming_providers,
+                constraints=constraints,
+                **kwargs,
             )
 
             # Validate model supports streaming
