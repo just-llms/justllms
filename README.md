@@ -2,8 +2,10 @@
 
 A production-ready Python library for multi-provider LLM management with a unified API.
 
-[![PyPI version](https://badge.fury.io/py/justllms.svg)](https://pypi.org/project/justllms/) [![Downloads](https://pepy.tech/badge/justllms)](https://pepy.tech/project/justllms)
-
+[![CI](https://github.com/just-llms/justllms/actions/workflows/ci.yml/badge.svg)](https://github.com/just-llms/justllms/actions/workflows/ci.yml)
+[![PyPI version](https://badge.fury.io/py/justllms.svg)](https://pypi.org/project/justllms/)
+[![Downloads](https://pepy.tech/badge/justllms)](https://pepy.tech/project/justllms)
+[![GitHub issues](https://img.shields.io/github/issues/just-llms/justllms.svg)](https://github.com/just-llms/justllms/issues)
 ## Why JustLLMs?
 
 Managing multiple LLM providers is complex. You need to handle different APIs, manage authentication, and ensure reliability. JustLLMs solves these challenges by providing a unified interface across all major providers with automatic fallbacks and consistent error handling.
