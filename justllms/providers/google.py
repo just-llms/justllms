@@ -8,6 +8,7 @@ import httpx
 from justllms.core.base import BaseProvider, BaseResponse
 from justllms.core.models import Choice, Message, ModelInfo, Role, Usage
 from justllms.core.streaming import StreamChunk, SyncStreamResponse
+from justllms.tools.adapters.base import BaseToolAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,12 @@ class GoogleResponse(BaseResponse):
 
 class GoogleProvider(BaseProvider):
     """Google Gemini provider implementation."""
+
+    supports_tools = True
+    """Gemini supports function calling."""
+
+    supports_native_tools = True
+    """Gemini supports native tools like Google Search and Code Execution."""
 
     MODELS = {
         "gemini-2.5-pro": ModelInfo(
@@ -133,10 +140,14 @@ class GoogleProvider(BaseProvider):
                 if isinstance(msg.content, str):
                     parts = [{"text": msg.content}]
                 else:
-                    # Handle multimodal content
+                    # Handle multimodal content and tool calling parts
                     parts = []
                     for item in msg.content:
-                        if item.get("type") == "text":
+                        # Check if it's already a properly formatted part (functionCall, functionResponse)
+                        if "functionCall" in item or "functionResponse" in item:
+                            # Pass through tool calling parts as-is
+                            parts.append(item)
+                        elif item.get("type") == "text":
                             parts.append({"text": item.get("text", "")})
                         elif item.get("type") == "image":
                             # Handle image data
@@ -323,6 +334,77 @@ class GoogleProvider(BaseProvider):
 
         return self._parse_response(response_data, model)
 
+    def complete_with_tools(
+        self,
+        messages: List[Message],
+        tools: Optional[List[Dict[str, Any]]] = None,
+        model: str = "",
+        tool_choice: Optional[Any] = None,
+        timeout: Optional[float] = None,
+        **kwargs: Any,
+    ) -> BaseResponse:
+        """Complete with tool support, including native Google tools.
+
+        Args:
+            messages: List of messages for the completion.
+            tools: Formatted tool definitions (already formatted by adapter).
+            model: Model identifier to use.
+            tool_choice: Tool selection configuration (already formatted).
+            timeout: Optional timeout in seconds.
+            **kwargs: Additional provider-specific parameters.
+
+        Returns:
+            BaseResponse with tool call information.
+        """
+        url = self._get_api_endpoint(model)
+
+        # Format request
+        request_data = self._format_messages(messages)
+
+        # Add generation config
+        generation_config = self._format_generation_config(**kwargs)
+        if generation_config:
+            request_data["generationConfig"] = generation_config
+
+        # Add tools - already in Gemini format from adapter
+        if tools is not None and tools:
+            request_data["tools"] = tools
+
+        # Add tool choice configuration
+        # Only add toolConfig if we have ONLY user-defined functions (no native tools)
+        # Native tools (google_search, code_execution) don't support toolConfig
+        # Mixed (native + user) also doesn't support toolConfig per Gemini live-tools docs
+        if tool_choice and tools:
+            # Check if there are any native tools
+            has_native_tools = any(
+                "google_search" in tool_entry or "code_execution" in tool_entry
+                for tool_entry in tools
+            )
+
+            # Check if there are user functions
+            has_function_declarations = any(
+                "functionDeclarations" in tool_entry or "function_declarations" in tool_entry
+                for tool_entry in tools
+            )
+
+            # Only send toolConfig for user-only functions (no native tools)
+            if has_function_declarations and not has_native_tools:
+                request_data["toolConfig"] = tool_choice
+
+        # Add safety settings if provided
+        if "safety_settings" in kwargs:
+            request_data["safetySettings"] = kwargs["safety_settings"]
+
+        response_data = self._make_http_request(
+            url=url,
+            payload=request_data,
+            headers=self._get_headers(),
+            params=self._get_params(),
+            timeout=timeout,
+        )
+
+        return self._parse_response(response_data, model)
+
     def _parse_sse_chunk(self, line: str) -> Optional[StreamChunk]:
         """Parse a single SSE line from Gemini streaming response.
 
@@ -484,3 +566,9 @@ class GoogleProvider(BaseProvider):
         All Gemini models support streaming.
         """
         return model in self.get_available_models()
+
+    def get_tool_adapter(self) -> Optional[BaseToolAdapter]:
+        """Return the Google tool adapter."""
+        from justllms.tools.adapters.google import GoogleToolAdapter
+
+        return GoogleToolAdapter()

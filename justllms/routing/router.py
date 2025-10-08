@@ -180,3 +180,57 @@ class Router:
             )
 
         return provider_name, model_name
+
+    def route_with_tools(
+        self,
+        messages: List[Message],
+        providers: Dict[str, BaseProvider],
+        model: Optional[str] = None,
+        constraints: Optional[Dict[str, Any]] = None,
+        **kwargs: Any,
+    ) -> Tuple[str, str]:
+        """Select provider and model for tool calling requests.
+
+        Filters providers to only those supporting tools before selection.
+
+        Args:
+            messages: The messages to process.
+            providers: Available providers.
+            model: Optional specific model requested.
+            constraints: Additional constraints for routing.
+            **kwargs: Additional parameters.
+
+        Returns:
+            Tuple of (provider_name, model_name).
+
+        Raises:
+            ValueError: If no tool-capable providers available.
+        """
+        # Filter to tool-capable providers
+        tool_providers = {
+            name: provider for name, provider in providers.items() if provider.supports_tools
+        }
+
+        if not tool_providers:
+            raise ProviderError(
+                "No tool-capable providers configured. "
+                "Enable openai, anthropic, google, or azure_openai providers."
+            )
+
+        # If specific model requested, route to it
+        if model:
+            provider_name, model_name = self.route(
+                messages,
+                model=model,
+                providers=tool_providers,
+                constraints=constraints,
+                **kwargs,
+            )
+            return provider_name, model_name
+
+        # Route among tool-capable providers
+        provider_name, model_name = self.route(
+            messages, providers=tool_providers, constraints=constraints, **kwargs
+        )
+
+        return provider_name, model_name

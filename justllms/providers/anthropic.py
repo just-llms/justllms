@@ -2,6 +2,7 @@ from typing import Any, Dict, List, Optional
 
 from justllms.core.base import BaseProvider, BaseResponse
 from justllms.core.models import Choice, Message, ModelInfo, Role, Usage
+from justllms.tools.adapters.base import BaseToolAdapter
 
 
 class AnthropicResponse(BaseResponse):
@@ -12,6 +13,9 @@ class AnthropicResponse(BaseResponse):
 
 class AnthropicProvider(BaseProvider):
     """Anthropic provider implementation."""
+
+    supports_tools = True
+    """Anthropic Claude supports tool use."""
 
     MODELS = {
         "claude-opus-4.1": ModelInfo(
@@ -201,3 +205,9 @@ class AnthropicProvider(BaseProvider):
         )
 
         return self._parse_response(response_data, model)
+
+    def get_tool_adapter(self) -> Optional[BaseToolAdapter]:
+        """Return the Anthropic tool adapter."""
+        from justllms.tools.adapters.anthropic import AnthropicToolAdapter
+
+        return AnthropicToolAdapter()

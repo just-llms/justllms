@@ -28,6 +28,15 @@ class RoutingConfig(BaseModel):
     fallback_provider: Optional[str] = None
     fallback_model: Optional[str] = None
 
+    """max execution time per tool"""
+    tool_timeout: float = 120.0
+
+    """max number of tool execution rounds"""
+    max_tool_iterations: int = 10
+
+    """whether to automatically execute tools by default"""
+    execute_tools_by_default: bool = True
+
 
 class Config(BaseModel):
     """Configuration class for multi-provider LLM client."""

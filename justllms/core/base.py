@@ -9,6 +9,7 @@ from justllms.exceptions import ProviderError
 
 if TYPE_CHECKING:
     from justllms.core.streaming import AsyncStreamResponse, SyncStreamResponse
+    from justllms.tools.adapters.base import BaseToolAdapter
 
 DEFAULT_TIMEOUT = 300.0
 
@@ -80,6 +81,12 @@ class BaseProvider(ABC):
 
     requires_api_key: bool = True
     """Whether the provider needs an API key to initialize."""
+
+    supports_tools: bool = False
+    """Whether this provider supports tool/function calling."""
+
+    supports_native_tools: bool = False
+    """Whether this provider has native built-in tools."""
 
     def __init__(self, config: ProviderConfig):
         self.config = config
@@ -388,6 +395,9 @@ class BaseProvider(ABC):
             if msg.tool_calls:
                 formatted_msg["tool_calls"] = msg.tool_calls
 
+            if hasattr(msg, "tool_call_id") and msg.tool_call_id:
+                formatted_msg["tool_call_id"] = msg.tool_call_id
+
             formatted.append(formatted_msg)
 
         return formatted
@@ -429,3 +439,52 @@ class BaseProvider(ABC):
         # Add custom headers from config
         headers.update(self.config.headers)
         return headers
+
+    def complete_with_tools(
+        self,
+        messages: List[Message],
+        tools: Optional[List[Dict[str, Any]]] = None,
+        model: str = "",
+        tool_choice: Optional[Any] = None,
+        timeout: Optional[float] = None,
+        **kwargs: Any,
+    ) -> BaseResponse:
+        """Complete with tool/function calling support.
+
+        Default implementation delegates to complete() with tools in kwargs.
+        Providers that support tools should override this method.
+
+        Args:
+            messages: List of messages for the completion.
+            tools: List of tool definitions in provider format.
+            model: Model identifier to use.
+            tool_choice: Tool selection strategy.
+            timeout: Optional timeout in seconds.
+            **kwargs: Additional provider-specific parameters.
+
+        Returns:
+            BaseResponse with potential tool calls.
+        """
+        if tools:
+            kwargs["tools"] = tools
+        if tool_choice is not None:
+            kwargs["tool_choice"] = tool_choice
+
+        return self.complete(messages, model, timeout=timeout, **kwargs)
+
+    def get_tool_adapter(self) -> Optional["BaseToolAdapter"]:
+        """Get the tool adapter for this provider.
+
+        Returns:
+            Tool adapter instance or None if tools not supported.
+
+        Raises:
+            NotImplementedError: If provider supports tools but hasn't
+                                implemented this method.
+        """
+        if not self.supports_tools:
+            return None
+
+        raise NotImplementedError(
+            f"{self.name} provider supports tools but hasn't implemented get_tool_adapter()"
+        )

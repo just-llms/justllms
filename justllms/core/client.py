@@ -29,6 +29,10 @@ class Client:
         self.default_model = default_model
         self.default_provider = default_provider
 
+        from justllms.tools.registry import ToolRegistry
+
+        self.tool_registry = ToolRegistry()
+
         self.completion = Completion(self)
 
         if providers is None:
@@ -119,6 +123,23 @@ class Client:
                       and available for use.
         """
         return list(self.providers.keys())
+
+    def register_tools(self, tools: List[Any]) -> None:
+        """Register tools for use with completions.
+
+        Args:
+            tools: List of Tool instances to register.
+        """
+        from justllms.tools.models import Tool
+
+        for tool in tools:
+            if isinstance(tool, Tool):
+                self.tool_registry.register(tool)
+            elif hasattr(tool, "tool"):
+                # It's a decorated function
+                self.tool_registry.register(tool.tool)
+            else:
+                raise ValueError(f"Invalid tool type: {type(tool)}")
 
     def list_models(self, provider: Optional[str] = None) -> Dict[str, Any]:
         """Get available models from providers.
@@ -211,6 +232,52 @@ class Client:
                           completion request fails, or if streaming is requested
                           but the provider doesn't support it.
         """
+        # Check if tools are provided
+        tools = kwargs.pop("tools", None)
+        if tools and not stream:
+            # Route to tool-enabled completion
+            # Determine provider/model for tools
+            if not provider:
+                provider_name, selected_model = self.router.route_with_tools(
+                    messages=messages, providers=self.providers, model=model, **kwargs
+                )
+            else:
+                provider_name = provider
+                if provider not in self.providers:
+                    raise ProviderError(f"Provider '{provider}' not found")
+
+                provider_instance = self.providers[provider]
+                models = provider_instance.get_available_models()
+                _model: Optional[str] = (
+                    model if model else (list(models.keys())[0] if models else None)
+                )
+
+                if not _model:
+                    raise ValueError(f"No models available for provider {provider}")
+
+                selected_model = _model
+
+            # Extract tool execution params
+            tool_choice = kwargs.pop("tool_choice", "auto")
+            execute_tools = kwargs.pop(
+                "execute_tools", self.config.routing.execute_tools_by_default
+            )
+            max_iterations = kwargs.pop("max_iterations", self.config.routing.max_tool_iterations)
+            timeout = kwargs.pop("timeout", None)
+
+            # Call tool-enabled completion
+            return self.completion._create_with_tools(
+                messages=messages,
+                tools=tools,
+                provider=provider_name,
+                model=selected_model,
+                tool_choice=tool_choice,
+                execute_tools=execute_tools,
+                max_iterations=max_iterations,
+                timeout=timeout,
+                **kwargs,
+            )
+
         if provider:
             if provider not in self.providers:
                 raise ProviderError(f"Provider '{provider}' not found")
@@ -218,8 +285,9 @@ class Client:
             provider_instance = self.providers[provider]
 
             # Determine model to use
-            selected_model = model
-            if not selected_model:
+            if model:
+                selected_model = model
+            else:
                 # Try to get default model from provider
                 models = provider_instance.get_available_models()
                 if models:
