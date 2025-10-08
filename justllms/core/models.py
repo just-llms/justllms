@@ -24,6 +24,7 @@ class Message(BaseModel):
     name: Optional[str] = None
     function_call: Optional[Dict[str, Any]] = None
     tool_calls: Optional[List[Dict[str, Any]]] = None
+    tool_call_id: Optional[str] = None  # Required for OpenAI/Azure tool results
 
 
 class Usage(BaseModel):
@@ -83,6 +84,10 @@ class ProviderConfig(BaseModel):
     rate_limit: Optional[int] = None
     headers: Dict[str, str] = Field(default_factory=dict)
     deployment_mapping: Dict[str, str] = Field(default_factory=dict)
+
+    # Tool-related configuration
+    native_tools: Optional[Dict[str, Any]] = None
+    """Configuration for provider-native tools (e.g., Google Search for Gemini)."""
 
     def model_post_init(self, __context: Any) -> None:
         """Handle alternative field names and normalize configuration."""

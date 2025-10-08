@@ -9,6 +9,7 @@ from justllms.core.base import DEFAULT_TIMEOUT, BaseProvider, BaseResponse
 from justllms.core.models import Choice, Message, ModelInfo, Usage
 from justllms.core.streaming import StreamChunk, SyncStreamResponse
 from justllms.exceptions import ProviderError
+from justllms.tools.adapters.base import BaseToolAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,9 @@ class AzureOpenAIResponse(BaseResponse):
 
 class AzureOpenAIProvider(BaseProvider):
     """Azure OpenAI provider implementation."""
+
+    supports_tools = True
+    """Azure OpenAI supports function calling (same as OpenAI)."""
 
     # Azure OpenAI models with deployment name mapping
     MODELS = {
@@ -485,3 +489,9 @@ class AzureOpenAIProvider(BaseProvider):
     def supports_streaming_for_model(self, model: str) -> bool:
         """Check if model supports streaming."""
         return model in self.get_available_models()
+
+    def get_tool_adapter(self) -> Optional[BaseToolAdapter]:
+        """Return the Azure tool adapter."""
+        from justllms.tools.adapters.azure import AzureToolAdapter
+
+        return AzureToolAdapter()

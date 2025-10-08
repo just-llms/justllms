@@ -1,8 +1,9 @@
-from typing import Dict
+from typing import Dict, Optional
 
 from justllms.core.base import BaseResponse
 from justllms.core.models import ModelInfo
 from justllms.core.openai_base import BaseOpenAIChatProvider
+from justllms.tools.adapters.base import BaseToolAdapter
 
 
 class OpenAIResponse(BaseResponse):
@@ -13,6 +14,9 @@ class OpenAIResponse(BaseResponse):
 
 class OpenAIProvider(BaseOpenAIChatProvider):
     """Simplified OpenAI provider implementation."""
+
+    supports_tools = True
+    """OpenAI supports function calling."""
 
     MODELS = {
         "gpt-5": ModelInfo(
@@ -143,3 +147,9 @@ class OpenAIProvider(BaseOpenAIChatProvider):
 
         headers.update(self.config.headers)
         return headers
+
+    def get_tool_adapter(self) -> Optional[BaseToolAdapter]:
+        """Return the OpenAI tool adapter."""
+        from justllms.tools.adapters.openai import OpenAIToolAdapter
+
+        return OpenAIToolAdapter()
