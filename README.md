@@ -8,7 +8,12 @@ A production-ready Python library for multi-provider LLM management with a unifi
 [![GitHub issues](https://img.shields.io/github/issues/just-llms/justllms.svg)](https://github.com/just-llms/justllms/issues)
 ## Why JustLLMs?
 
-Managing multiple LLM providers is complex. You need to handle different APIs, manage authentication, and ensure reliability. JustLLMs solves these challenges by providing a unified interface across all major providers with automatic fallbacks and consistent error handling.
+Managing multiple LLM providers is complex. You need to handle different APIs, manage authentication, implement tool calling differently for each provider, and ensure reliability. JustLLMs solves these challenges by providing:
+
+- **Unified Interface**: One API for all providers (OpenAI, Anthropic, Google, Azure, xAI, DeepSeek, Ollama)
+- **Provider-Agnostic Tool Calling**: Define tools once, use them with any provider
+- **Automatic Fallbacks**: Built-in reliability with configurable fallback providers
+- **Side-by-Side Comparison**: Interactive CLI to compare multiple models simultaneously
 
 ## Installation
 
@@ -69,6 +74,39 @@ response1 = client.completion.create(
 Ollama runs locally and requires no API key. Set `OLLAMA_API_BASE` (defaults to
 `http://localhost:11434`) and JustLLMs automatically discovers every installed
 model via the Ollama `/api/tags` endpoint.
+
+### Provider-Agnostic Tool Calling
+
+Define tools once, use them with any provider - no need to learn different tool calling APIs:
+
+```python
+from justllms import JustLLM, tool
+
+@tool
+def get_weather(location: str) -> dict:
+    """Get weather for a location."""
+    return {"temperature": 22, "condition": "sunny"}
+
+# Works with OpenAI, Anthropic, Google - same code!
+response = client.completion.create(
+    messages=[{"role": "user", "content": "What's the weather in Paris?"}],
+    tools=[get_weather],
+    provider="openai",  # or "anthropic", "google"
+    execute_tools=True
+)
+```
+
+Native tools support:
+```python
+from justllms import GoogleSearch, GoogleCodeExecution
+
+# Server-side Google Search and Python execution
+response = client.completion.create(
+    messages=[{"role": "user", "content": "Latest AI news and calculate 2^10"}],
+    tools=[GoogleSearch(), GoogleCodeExecution()],
+    provider="google"
+)
+```
 
 ### Automatic Fallbacks
 Configure fallback providers and models for reliability:
@@ -179,6 +217,112 @@ print(f"Cost: ${final.usage.estimated_cost:.6f}")
 - ❌ Don't handle different chunk formats per provider
 - ✅ **One API, all providers** - just set `stream=True`
 
+## Tool Calling (Function Calling)
+
+JustLLMs provides a **provider-agnostic tool calling API** that works seamlessly across OpenAI, Anthropic, and Google Gemini. Define tools once, use them everywhere.
+
+### Basic Tool Calling
+
+Define tools using the `@tool` decorator:
+
+```python
+from justllms import JustLLM, tool
+
+# Define a tool with the @tool decorator
+@tool
+def get_weather(location: str, unit: str = "celsius") -> dict:
+    """Get the current weather for a location.
+
+    Args:
+        location: The city and state, e.g., "San Francisco, CA"
+        unit: Temperature unit (celsius or fahrenheit)
+
+    Returns:
+        Weather information including temperature and conditions
+    """
+    # Your implementation here
+    return {
+        "location": location,
+        "temperature": 22,
+        "unit": unit,
+        "condition": "sunny"
+    }
+
+# Use the tool with any provider
+client = JustLLM()
+
+response = client.completion.create(
+    messages=[{"role": "user", "content": "What's the weather in Paris?"}],
+    tools=[get_weather],
+    provider="openai",  # or "anthropic", "google"
+    execute_tools=True  # Automatically execute tools
+)
+
+print(response.content)
+# "The weather in Paris is currently 22°C and sunny."
+```
+
+### Provider-Agnostic Support
+
+**The same tool code works across all providers** - no need to adapt your tools for different APIs:
+
+```python
+# Works with OpenAI
+response = client.completion.create(
+    messages=[{"role": "user", "content": "What's the weather in London?"}],
+    tools=[get_weather],
+    provider="openai",
+    execute_tools=True
+)
+
+# Same code works with Anthropic Claude
+response = client.completion.create(
+    messages=[{"role": "user", "content": "What's the weather in London?"}],
+    tools=[get_weather],
+    provider="anthropic",
+    execute_tools=True
+)
+
+# Same code works with Google Gemini
+response = client.completion.create(
+    messages=[{"role": "user", "content": "What's the weather in London?"}],
+    tools=[get_weather],
+    provider="google",
+    execute_tools=True
+)
+```
+
+### Multi-Tool Support
+
+Define and use multiple tools together:
+
+```python
+@tool
+def get_weather(location: str) -> dict:
+    """Get weather for a location."""
+    return {"temperature": 22, "condition": "sunny"}
+
+@tool
+def get_time(timezone: str) -> str:
+    """Get current time in a timezone."""
+    return "2024-01-15 14:30:00"
+
+@tool
+def calculate(expression: str) -> float:
+    """Evaluate a mathematical expression."""
+    return eval(expression)  # Note: Use safely in production
+
+# Use all tools together
+response = client.completion.create(
+    messages=[{
+        "role": "user",
+        "content": "What's the weather in Paris, the time in EST, and what's 15 * 23?"
+    }],
+    tools=[get_weather, get_time, calculate],
+    execute_tools=True
+)
+```
+
 
 ## 🏆 Comparison with Alternatives
 
@@ -188,117 +332,11 @@ print(f"Cost: ${final.usage.estimated_cost:.6f}")
 | **Setup Complexity** | Simple config | Complex chains | Medium | Simple |
 | **Multi-Provider** | ✅ 7+ providers | ✅ Many integrations | ✅ 100+ providers | ❌ OpenAI only |
 | **Unified API** | ✅ Single interface | ⚠️ Different patterns | ⚠️ Provider-specific | ❌ OpenAI only |
+| **Tool Calling** | ✅ Provider-agnostic | ⚠️ Manual handling | ⚠️ Provider-specific | ⚠️ OpenAI only |
+| **Native Tools** | ✅ Google Search/Code | ❌ None | ❌ None | ❌ None |
 | **Side-by-Side Comparison** | ✅ Interactive CLI tool | ❌ None | ❌ None | ❌ None |
 | **Automatic Fallbacks** | ✅ Built-in | ❌ Manual | ⚠️ Basic | ❌ None |
 | **Production Ready** | ✅ Out of the box | ⚠️ Requires setup | ✅ Minimal setup | ⚠️ Basic features |
 
-## Provider-Specific Parameters
-
-JustLLMs supports common generation parameters across all providers, plus provider-specific configurations:
-
-### Common Parameters (All Providers)
-
-These parameters work across OpenAI, Gemini, Anthropic, and other providers:
-
-```python
-response = client.completion.create(
-    messages=[{"role": "user", "content": "Hello"}],
-    # Common parameters
-    temperature=0.7,        # 0.0-2.0: Controls randomness
-    top_p=0.9,             # 0.0-1.0: Nucleus sampling
-    top_k=40,              # Integer: Top-k sampling (Gemini only)
-    max_tokens=1024,       # Maximum tokens to generate
-    stop=["END"],          # Stop sequence(s)
-    n=1,                   # Number of completions (OpenAI only)
-    presence_penalty=0.1,  # -2.0 to 2.0: Penalize new topics
-    frequency_penalty=0.2  # -2.0 to 2.0: Penalize repetition
-)
-```
-
-### Gemini-Specific Parameters
-
-Use `generation_config` for Gemini-only features:
-
-```python
-response = client.completion.create(
-    messages=[{"role": "user", "content": "Explain quantum computing"}],
-    provider="google",
-    model="gemini-2.5-flash",
-    # Common parameters
-    temperature=0.7,
-    top_k=40,
-    max_tokens=1024,
-    # Gemini-specific configuration
-    generation_config={
-        "candidateCount": 2,                    # Generate multiple responses
-        "responseMimeType": "application/json", # JSON output
-        "responseSchema": {...},                # Structured output schema
-        "thinkingConfig": {                     # Control thinking budget
-            "thinkingBudget": 100               # 0-24000 tokens
-        }
-    }
-)
-
-# Access multiple candidates when candidateCount > 1
-print(f"Candidate 1: {response.choices[0].message.content}")
-print(f"Candidate 2: {response.choices[1].message.content}")
-```
-
-**Notes:**
-- Common parameters (`temperature`, `top_k`, etc.) should be set at the top level. The `generation_config` dict is for Gemini-exclusive features.
-- If a parameter is specified in both places, the top-level value takes precedence.
-- When `candidateCount > 1`, all candidates are returned in `response.choices[]` with proper indices.
-
-### OpenAI-Specific Parameters
-
-OpenAI parameters are passed directly:
-
-```python
-response = client.completion.create(
-    messages=[{"role": "user", "content": "Hello"}],
-    provider="openai",
-    model="gpt-4o",
-    # Common parameters
-    temperature=0.7,
-    max_tokens=100,
-    n=1,
-    presence_penalty=0.1,
-    frequency_penalty=0.2
-)
-```
-
-**Note:** `top_k` is not supported by OpenAI and will be silently ignored. Use `generation_config` only with Gemini.
-
-## Production Configuration
-
-For production deployments:
-
-```python
-production_config = {
-    "providers": {
-        "azure_openai": {
-            "api_key": os.getenv("AZURE_OPENAI_API_KEY"),
-            "endpoint": os.getenv("AZURE_OPENAI_ENDPOINT"),
-            "resource_name": "my-enterprise-resource",
-            "deployment_mapping": {
-                "gpt-4": "my-gpt4-deployment",
-                "gpt-3.5-turbo": "my-gpt35-deployment"
-            }
-        },
-        "anthropic": {"api_key": os.getenv("ANTHROPIC_KEY")},
-        "google": {"api_key": os.getenv("GOOGLE_KEY")},
-        "ollama": {
-            "base_url": os.getenv("OLLAMA_API_BASE", "http://localhost:11434"),
-            "enabled": True,
-        }
-    },
-    "routing": {
-        "fallback_provider": "azure_openai",
-        "fallback_model": "gpt-3.5-turbo"
-    }
-}
-
-client = JustLLM(production_config)
-```
 
 [![Star History Chart](https://api.star-history.com/svg?repos=just-llms/justllms&type=Date)](https://www.star-history.com/#just-llms/justllms&Date)
