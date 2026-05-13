@@ -340,3 +340,7 @@ response = client.completion.create(
 
 
 [![Star History Chart](https://api.star-history.com/svg?repos=just-llms/justllms&type=Date)](https://www.star-history.com/#just-llms/justllms&Date)
+
+## License
+
+This project is released under the [MIT License](LICENSE).
