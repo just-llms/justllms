@@ -137,7 +137,7 @@ def get_all_available_models(client: Optional[JustLLM], provider: str) -> List[s
         "openai": ["gpt-5.5", "gpt-5.4-mini"],
         "anthropic": ["claude-opus-4-7", "claude-sonnet-4-6"],
         "google": ["gemini-3.5-flash", "gemini-2.5-flash"],
-        "deepseek": ["deepseek-chat"],
+        "deepseek": ["deepseek-v4-flash", "deepseek-v4-pro"],
         "xai": ["grok-3"],
         "grok": ["grok-3"],
         "azure_openai": ["gpt-5.4", "gpt-4o"],

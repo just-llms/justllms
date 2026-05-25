@@ -32,6 +32,9 @@ class TokenCounter:
         "claude-sonnet-4-6": "cl100k_base",
         "claude-haiku-4-5": "cl100k_base",
         "claude-opus-4-6": "cl100k_base",
+        "deepseek": "cl100k_base",
+        "deepseek-v4-flash": "cl100k_base",
+        "deepseek-v4-pro": "cl100k_base",
         "gemini": "cl100k_base",  # Approximation
     }
 

@@ -50,7 +50,7 @@ Connect to all major LLM providers with a single, consistent interface:
 - **Google** (Gemini 3.5, 3.1, 2.5, etc.)
 - **Anthropic** (Claude Opus 4.7, Sonnet 4.6, Haiku 4.5, legacy Claude 4/3.5)
 - **Azure OpenAI** (with deployment mapping)
-- **xAI Grok**, **DeepSeek**
+- **xAI Grok**, **DeepSeek** (V4 Flash, V4 Pro)
 - **Ollama** (local Llama/Mistral/phi models hosted on your machine)
 
 ```python
