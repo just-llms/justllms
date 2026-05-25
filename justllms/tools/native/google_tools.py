@@ -85,7 +85,7 @@ class GoogleSearch(GoogleNativeTool):
         response = client.completion.create(
             messages=[{"role": "user", "content": "What's the weather in SF?"}],
             provider="google",
-            model="gemini-2.0-flash-exp",
+            model="gemini-3.5-flash",
         )
         ```
 
@@ -162,7 +162,7 @@ class GoogleCodeExecution(GoogleNativeTool):
         response = client.completion.create(
             messages=[{"role": "user", "content": "Calculate fibonacci(20)"}],
             provider="google",
-            model="gemini-2.0-flash-exp",
+            model="gemini-3.5-flash",
         )
         ```
 

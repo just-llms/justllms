@@ -136,7 +136,7 @@ def get_all_available_models(client: Optional[JustLLM], provider: str) -> List[s
     fallback_models = {
         "openai": ["gpt-4o", "gpt-4o-mini"],
         "anthropic": ["claude-3-5-sonnet-20241022"],
-        "google": ["gemini-1.5-flash"],
+        "google": ["gemini-3.5-flash", "gemini-2.5-flash"],
         "deepseek": ["deepseek-chat"],
         "xai": ["grok-3"],
         "grok": ["grok-3"],
