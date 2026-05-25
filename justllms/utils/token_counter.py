@@ -28,6 +28,10 @@ class TokenCounter:
         "gpt-3.5-turbo": "cl100k_base",
         "text-embedding-ada-002": "cl100k_base",
         "claude": "cl100k_base",  # Approximation
+        "claude-opus-4-7": "cl100k_base",
+        "claude-sonnet-4-6": "cl100k_base",
+        "claude-haiku-4-5": "cl100k_base",
+        "claude-opus-4-6": "cl100k_base",
         "gemini": "cl100k_base",  # Approximation
     }
 

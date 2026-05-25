@@ -48,7 +48,7 @@ print(response.content)
 Connect to all major LLM providers with a single, consistent interface:
 - **OpenAI** (GPT-5.5, GPT-5.4, GPT-5, GPT-4, etc.)
 - **Google** (Gemini 3.5, 3.1, 2.5, etc.)
-- **Anthropic** (Claude 4, Claude 3.5 models)
+- **Anthropic** (Claude Opus 4.7, Sonnet 4.6, Haiku 4.5, legacy Claude 4/3.5)
 - **Azure OpenAI** (with deployment mapping)
 - **xAI Grok**, **DeepSeek**
 - **Ollama** (local Llama/Mistral/phi models hosted on your machine)
