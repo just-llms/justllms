@@ -240,7 +240,11 @@ class SyncStreamResponse:
 
 
 class AsyncStreamResponse:
-    """Asynchronous streaming response."""
+    """Asynchronous streaming response (reserved for future use).
+
+    JustLLMs providers currently return :class:`SyncStreamResponse` only.
+    This class is kept for future async streaming support.
+    """
 
     def __init__(
         self,

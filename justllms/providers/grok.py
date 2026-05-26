@@ -1,10 +1,7 @@
 import time
 from typing import Any, Dict, List, Optional
 
-import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential
-
-from justllms.core.base import DEFAULT_TIMEOUT, BaseProvider, BaseResponse
+from justllms.core.base import BaseProvider, BaseResponse
 from justllms.core.models import Choice, Message, ModelInfo, Usage
 from justllms.exceptions import ProviderError
 
@@ -135,7 +132,7 @@ class GrokProvider(BaseProvider):
         choices_data = response_data.get("choices", [])
 
         if not choices_data:
-            raise ProviderError("No choices in Grok response")
+            raise ProviderError("No choices in Grok response", provider=self.name)
 
         # Parse choices
         choices = []
@@ -176,10 +173,6 @@ class GrokProvider(BaseProvider):
             **raw_response,
         )
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-    )
     def complete(
         self,
         messages: List[Message],
@@ -197,7 +190,6 @@ class GrokProvider(BaseProvider):
         """
         url = self._get_api_endpoint()
 
-        # Format request
         request_data = {
             "model": model,
             "messages": self._format_messages(messages),
@@ -217,16 +209,11 @@ class GrokProvider(BaseProvider):
             },
         }
 
-        timeout_config = timeout if timeout is not None else DEFAULT_TIMEOUT
+        response_data = self._make_http_request(
+            url=url,
+            payload=request_data,
+            headers=self._get_headers(),
+            timeout=timeout,
+        )
 
-        with httpx.Client(timeout=timeout_config) as client:
-            response = client.post(
-                url,
-                json=request_data,
-                headers=self._get_headers(),
-            )
-
-            if response.status_code != 200:
-                raise ProviderError(f"Grok API error: {response.status_code} - {response.text}")
-
-            return self._parse_response(response.json(), model)
+        return self._parse_response(response_data, model)

@@ -35,7 +35,7 @@ class RoutingConfig(BaseModel):
     max_tool_iterations: int = 10
 
     """whether to automatically execute tools by default"""
-    execute_tools_by_default: bool = True
+    execute_tools_by_default: bool = False
 
 
 class Config(BaseModel):

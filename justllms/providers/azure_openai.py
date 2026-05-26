@@ -2,13 +2,9 @@ import json
 import logging
 from typing import Any, Dict, List, Optional
 
-import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential
-
 from justllms.core.base import DEFAULT_TIMEOUT, BaseProvider, BaseResponse
 from justllms.core.models import Choice, Message, ModelInfo, Usage
 from justllms.core.streaming import StreamChunk, SyncStreamResponse
-from justllms.exceptions import ProviderError
 from justllms.tools.adapters.base import BaseToolAdapter
 
 logger = logging.getLogger(__name__)
@@ -355,10 +351,6 @@ class AzureOpenAIProvider(BaseProvider):
             **raw_response,
         )
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-    )
     def complete(
         self,
         messages: List[Message],
@@ -410,23 +402,14 @@ class AzureOpenAIProvider(BaseProvider):
                     logger.debug(f"Unknown parameter '{key}' passed to Azure OpenAI API")
                     payload[key] = value
 
-        from justllms.core.base import DEFAULT_TIMEOUT
+        response_data = self._make_http_request(
+            url=url,
+            payload=payload,
+            headers=self._get_headers(),
+            timeout=timeout,
+        )
 
-        timeout_config = timeout if timeout is not None else DEFAULT_TIMEOUT
-
-        with httpx.Client(timeout=timeout_config) as client:
-            response = client.post(
-                url,
-                json=payload,
-                headers=self._get_headers(),
-            )
-
-            if response.status_code != 200:
-                raise ProviderError(
-                    f"Azure OpenAI API error: {response.status_code} - {response.text}"
-                )
-
-            return self._parse_response(response.json())
+        return self._parse_response(response_data)
 
     def _parse_sse_line(self, line: str) -> Optional[StreamChunk]:
         """Parse a single SSE line into a StreamChunk.

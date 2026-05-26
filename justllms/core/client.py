@@ -12,7 +12,7 @@ from justllms.routing import Router
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from justllms.core.streaming import AsyncStreamResponse, SyncStreamResponse
+    from justllms.core.streaming import SyncStreamResponse
 
 
 class Client:
@@ -234,7 +234,7 @@ class Client:
         provider: Optional[str] = None,
         stream: bool = False,
         **kwargs: Any,
-    ) -> "CompletionResponse | SyncStreamResponse | AsyncStreamResponse":
+    ) -> "CompletionResponse | SyncStreamResponse":
         """Create a completion with automatic fallback support.
 
         Uses configured fallback provider/model or first available provider

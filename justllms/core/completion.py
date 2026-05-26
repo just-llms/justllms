@@ -6,7 +6,7 @@ from justllms.utils.validators import validate_messages
 
 if TYPE_CHECKING:
     from justllms.core.client import Client
-    from justllms.core.streaming import AsyncStreamResponse, SyncStreamResponse
+    from justllms.core.streaming import SyncStreamResponse
 
 
 class CompletionResponse(BaseResponse):
@@ -133,7 +133,7 @@ class Completion:
         user: Optional[str] = None,
         timeout: Optional[float] = None,
         **kwargs: Any,
-    ) -> "Union[SyncStreamResponse, AsyncStreamResponse]": ...
+    ) -> SyncStreamResponse: ...
 
     def create(
         self,
@@ -158,7 +158,7 @@ class Completion:
         user: Optional[str] = None,
         timeout: Optional[float] = None,
         **kwargs: Any,
-    ) -> "Union[CompletionResponse, SyncStreamResponse, AsyncStreamResponse]":
+    ) -> "Union[CompletionResponse, SyncStreamResponse]":
         """Create a completion with automatic fallbacks.
 
         Args:
@@ -256,7 +256,7 @@ class Completion:
         provider: str,
         model: str,
         tool_choice: Optional[Union[str, Dict[str, Any]]] = "auto",
-        execute_tools: bool = True,
+        execute_tools: bool = False,
         max_iterations: int = 10,
         timeout: Optional[float] = None,
         **kwargs: Any,
@@ -277,7 +277,9 @@ class Completion:
             provider: Provider name to use.
             model: Model name to use.
             tool_choice: Tool selection strategy.
-            execute_tools: Whether to automatically execute tools.
+            execute_tools: Whether to automatically execute tools. Defaults to False;
+                          set to True or configure routing.execute_tools_by_default
+                          to enable automatic execution.
             max_iterations: Maximum number of execution rounds.
             timeout: Optional timeout for LLM requests.
             **kwargs: Additional provider-specific parameters.

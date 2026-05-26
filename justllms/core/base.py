@@ -8,7 +8,7 @@ from justllms.core.models import Choice, Message, ModelInfo, ProviderConfig, Usa
 from justllms.exceptions import ProviderError
 
 if TYPE_CHECKING:
-    from justllms.core.streaming import AsyncStreamResponse, SyncStreamResponse
+    from justllms.core.streaming import SyncStreamResponse
     from justllms.tools.adapters.base import BaseToolAdapter
 
 DEFAULT_TIMEOUT = 300.0
@@ -150,7 +150,7 @@ class BaseProvider(ABC):
         model: str,
         timeout: Optional[float] = None,
         **kwargs: Any,
-    ) -> "SyncStreamResponse | AsyncStreamResponse":
+    ) -> SyncStreamResponse:
         """Stream completion - same parameters as complete().
 
         Default implementation raises NotImplementedError.
@@ -163,7 +163,7 @@ class BaseProvider(ABC):
             **kwargs: Additional provider-specific parameters.
 
         Returns:
-            SyncStreamResponse or AsyncStreamResponse.
+            SyncStreamResponse.
 
         Raises:
             NotImplementedError: If provider doesn't support streaming.
