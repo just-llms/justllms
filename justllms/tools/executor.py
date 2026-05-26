@@ -1,11 +1,28 @@
 import json
+import logging
+import multiprocessing as mp
+import pickle
 import threading
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from justllms.core.base import BaseResponse
 from justllms.tools.models import Tool, ToolCall, ToolExecutionEntry, ToolResult, ToolResultStatus
 from justllms.tools.utils import validate_tool_arguments
+
+logger = logging.getLogger(__name__)
+
+
+def _run_tool_worker(
+    result_queue: "mp.Queue[Tuple[str, Any]]",
+    func: Callable[..., Any],
+    kwargs: Dict[str, Any],
+) -> None:
+    """Run a tool callable in an isolated process and return the outcome."""
+    try:
+        result_queue.put(("success", func(**kwargs)))
+    except Exception as exc:
+        result_queue.put(("error", str(exc)))
 
 
 class ToolExecutor:
@@ -19,6 +36,11 @@ class ToolExecutor:
         tools: Dictionary mapping tool names to Tool instances.
         timeout: Maximum execution time per tool in seconds.
         execute_in_parallel: Always False (no parallel execution).
+
+    Note:
+        Timeouts terminate picklable tools in a subprocess. Non-picklable
+        callables fall back to a daemon thread where timeout only stops
+        waiting and cannot guarantee cancellation.
     """
 
     def __init__(
@@ -74,52 +96,154 @@ class ToolExecutor:
             )
 
         # Execute with timeout
-        result_container: Dict[str, Any] = {}
-
-        def execute_tool() -> None:
-            """Execute tool in separate thread for timeout control."""
-            try:
-                result_container["result"] = tool.callable(**validated_args)
-                result_container["success"] = True
-            except Exception as e:
-                result_container["error"] = str(e)
-                result_container["success"] = False
-
-        # Run with timeout
-        thread = threading.Thread(target=execute_tool, daemon=True)
-        thread.start()
-        thread.join(timeout=self.timeout)
-
+        result, error, timed_out = self._execute_callable_with_timeout(
+            tool.callable, validated_args, tool_name=tool_call.name
+        )
         execution_time_ms = (time.time() - start_time) * 1000
 
-        # Check timeout
-        if thread.is_alive():
+        if timed_out:
             return ToolResult(
                 tool_call_id=tool_call.id,
                 result=None,
-                error=f"Tool execution timed out after {self.timeout}s",
+                error=error,
                 execution_time_ms=execution_time_ms,
                 status=ToolResultStatus.TIMEOUT,
             )
 
-        # Check for errors
-        if not result_container.get("success", False):
+        if error is not None:
             return ToolResult(
                 tool_call_id=tool_call.id,
                 result=None,
-                error=result_container.get("error", "Unknown error"),
+                error=error,
                 execution_time_ms=execution_time_ms,
                 status=ToolResultStatus.ERROR,
             )
 
-        # Success
         return ToolResult(
             tool_call_id=tool_call.id,
-            result=result_container.get("result"),
+            result=result,
             error=None,
             execution_time_ms=execution_time_ms,
             status=ToolResultStatus.SUCCESS,
         )
+
+    def _execute_callable_with_timeout(
+        self,
+        callable_fn: Callable[..., Any],
+        validated_args: Dict[str, Any],
+        tool_name: str,
+    ) -> Tuple[Any, Optional[str], bool]:
+        """Execute a callable with timeout enforcement.
+
+        Returns:
+            Tuple of (result, error_message, timed_out).
+        """
+        try:
+            pickle.dumps(callable_fn)
+        except (pickle.PicklingError, TypeError):
+            logger.debug(
+                "Tool '%s' is not picklable; using thread-based timeout fallback",
+                tool_name,
+            )
+            return self._execute_in_thread(callable_fn, validated_args, tool_name)
+
+        return self._execute_in_process(callable_fn, validated_args, tool_name)
+
+    def _execute_in_process(
+        self,
+        callable_fn: Callable[..., Any],
+        validated_args: Dict[str, Any],
+        tool_name: str,
+    ) -> Tuple[Any, Optional[str], bool]:
+        """Execute a picklable callable in a subprocess that can be terminated."""
+        ctx = mp.get_context("spawn")
+        result_queue: "mp.Queue[Tuple[str, Any]]" = ctx.Queue()
+        process = ctx.Process(
+            target=_run_tool_worker,
+            args=(result_queue, callable_fn, validated_args),
+        )
+        process.start()
+        process.join(timeout=self.timeout)
+
+        if process.is_alive():
+            self._terminate_process(process)
+            logger.warning(
+                "Tool '%s' exceeded timeout of %ss and was terminated",
+                tool_name,
+                self.timeout,
+            )
+            return (
+                None,
+                f"Tool execution timed out after {self.timeout}s",
+                True,
+            )
+
+        if not result_queue.empty():
+            status, payload = result_queue.get_nowait()
+            if status == "success":
+                return payload, None, False
+            return None, payload, False
+
+        exit_code = process.exitcode
+        return (
+            None,
+            f"Tool process exited without returning a result (exit code: {exit_code})",
+            False,
+        )
+
+    def _execute_in_thread(
+        self,
+        callable_fn: Callable[..., Any],
+        validated_args: Dict[str, Any],
+        tool_name: str,
+    ) -> Tuple[Any, Optional[str], bool]:
+        """Best-effort timeout for callables that cannot run in a subprocess."""
+        result_container: Dict[str, Any] = {}
+
+        def execute_tool() -> None:
+            try:
+                result_container["result"] = callable_fn(**validated_args)
+                result_container["success"] = True
+            except Exception as exc:
+                result_container["error"] = str(exc)
+                result_container["success"] = False
+
+        thread = threading.Thread(target=execute_tool, daemon=True)
+        thread.start()
+        thread.join(timeout=self.timeout)
+
+        if thread.is_alive():
+            logger.warning(
+                "Tool '%s' exceeded timeout of %ss; execution may continue in background "
+                "because the callable is not picklable for process termination",
+                tool_name,
+                self.timeout,
+            )
+            return (
+                None,
+                (
+                    f"Tool execution timed out after {self.timeout}s "
+                    "(best-effort; execution may continue in background)"
+                ),
+                True,
+            )
+
+        if not result_container.get("success", False):
+            return None, result_container.get("error", "Unknown error"), False
+
+        return result_container.get("result"), None, False
+
+    @staticmethod
+    def _terminate_process(process: mp.Process) -> None:
+        """Terminate a subprocess, escalating to kill if needed."""
+        if not process.is_alive():
+            return
+
+        process.terminate()
+        process.join(timeout=1)
+        if process.is_alive():
+            process.kill()
+            process.join()
 
     def _extract_tool_calls(self, response: BaseResponse) -> List[ToolCall]:
         """Extract tool calls from a response.

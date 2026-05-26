@@ -1,11 +1,15 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+
+import logging
 
 from justllms.config import Config
 from justllms.core.base import BaseProvider, BaseResponse
 from justllms.core.completion import Completion, CompletionResponse
 from justllms.core.models import Message, ProviderConfig
-from justllms.exceptions import ProviderError
+from justllms.exceptions import ConfigurationError, ProviderError
 from justllms.routing import Router
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from justllms.core.streaming import AsyncStreamResponse, SyncStreamResponse
@@ -69,13 +73,17 @@ class Client:
         """Initialize providers based on configuration settings.
 
         Creates provider instances for all enabled providers in the configuration
-        that have valid API keys. Silently skips providers that fail to initialize
-        to allow partial functionality when some providers are misconfigured.
+        that have valid API keys (or do not require one). Logs warnings for
+        misconfigured providers and raises if every eligible provider fails.
 
         Raises:
+            ConfigurationError: If all eligible providers fail to initialize.
             ImportError: If required provider class cannot be imported.
         """
         from justllms.providers import get_provider_class
+
+        init_failures: List[Tuple[str, Exception]] = []
+        attempted_providers: List[str] = []
 
         for provider_name, provider_config in self.config.providers.items():
             if not provider_config.get("enabled", True):
@@ -83,17 +91,35 @@ class Client:
 
             provider_class = get_provider_class(provider_name)
             if not provider_class:
+                logger.warning("Unknown provider '%s' in config, skipping", provider_name)
                 continue
 
             requires_key = getattr(provider_class, "requires_api_key", True)
             if requires_key and not provider_config.get("api_key"):
                 continue
 
+            attempted_providers.append(provider_name)
+
             try:
                 config = ProviderConfig(name=provider_name, **provider_config)
                 self.providers[provider_name] = provider_class(config)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning(
+                    "Failed to initialize provider '%s': %s",
+                    provider_name,
+                    exc,
+                    exc_info=logger.isEnabledFor(logging.DEBUG),
+                )
+                init_failures.append((provider_name, exc))
+
+        if attempted_providers and not self.providers:
+            failure_details = "; ".join(
+                f"{name}: {error}" for name, error in init_failures
+            )
+            raise ConfigurationError(
+                "Failed to initialize any configured providers. "
+                f"{failure_details or 'No failure details available.'}"
+            )
 
     def add_provider(self, name: str, provider: BaseProvider) -> None:
         """Add a provider instance to the client.
@@ -227,14 +253,20 @@ class Client:
             CompletionResponse or StreamResponse depending on stream parameter.
 
         Raises:
-            ValueError: If model is not specified and no fallback is configured.
+            ValueError: If model is not specified and no fallback is configured,
+                       or if tools are requested together with stream=True.
             ProviderError: If the specified provider is not available or if the
                           completion request fails, or if streaming is requested
                           but the provider doesn't support it.
         """
         # Check if tools are provided
         tools = kwargs.pop("tools", None)
-        if tools and not stream:
+        if tools and stream:
+            raise ValueError(
+                "Tool calling is not supported with stream=True. "
+                "Use stream=False to enable tool execution, or omit tools for streaming."
+            )
+        if tools:
             # Route to tool-enabled completion
             # Determine provider/model for tools
             if not provider:
