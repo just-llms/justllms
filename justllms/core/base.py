@@ -150,7 +150,7 @@ class BaseProvider(ABC):
         model: str,
         timeout: Optional[float] = None,
         **kwargs: Any,
-    ) -> SyncStreamResponse:
+    ) -> "SyncStreamResponse":
         """Stream completion - same parameters as complete().
 
         Default implementation raises NotImplementedError.
