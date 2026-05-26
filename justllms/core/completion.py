@@ -133,7 +133,7 @@ class Completion:
         user: Optional[str] = None,
         timeout: Optional[float] = None,
         **kwargs: Any,
-    ) -> SyncStreamResponse: ...
+    ) -> "SyncStreamResponse": ...
 
     def create(
         self,
