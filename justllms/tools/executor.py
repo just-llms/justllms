@@ -4,6 +4,7 @@ import multiprocessing as mp
 import pickle
 import threading
 import time
+from multiprocessing.process import BaseProcess
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from justllms.core.base import BaseResponse
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def _run_tool_worker(
-    result_queue: "mp.Queue[Tuple[str, Any]]",
+    result_queue: mp.Queue[Tuple[str, Any]],
     func: Callable[..., Any],
     kwargs: Dict[str, Any],
 ) -> None:
@@ -157,7 +158,7 @@ class ToolExecutor:
     ) -> Tuple[Any, Optional[str], bool]:
         """Execute a picklable callable in a subprocess that can be terminated."""
         ctx = mp.get_context("spawn")
-        result_queue: "mp.Queue[Tuple[str, Any]]" = ctx.Queue()
+        result_queue: mp.Queue[Tuple[str, Any]] = ctx.Queue()
         process = ctx.Process(
             target=_run_tool_worker,
             args=(result_queue, callable_fn, validated_args),
@@ -234,7 +235,7 @@ class ToolExecutor:
         return result_container.get("result"), None, False
 
     @staticmethod
-    def _terminate_process(process: mp.Process) -> None:
+    def _terminate_process(process: BaseProcess) -> None:
         """Terminate a subprocess, escalating to kill if needed."""
         if not process.is_alive():
             return

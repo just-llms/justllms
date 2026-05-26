@@ -1,6 +1,5 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
-
 import logging
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 from justllms.config import Config
 from justllms.core.base import BaseProvider, BaseResponse
@@ -113,9 +112,7 @@ class Client:
                 init_failures.append((provider_name, exc))
 
         if attempted_providers and not self.providers:
-            failure_details = "; ".join(
-                f"{name}: {error}" for name, error in init_failures
-            )
+            failure_details = "; ".join(f"{name}: {error}" for name, error in init_failures)
             raise ConfigurationError(
                 "Failed to initialize any configured providers. "
                 f"{failure_details or 'No failure details available.'}"
