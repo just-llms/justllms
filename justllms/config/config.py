@@ -62,6 +62,13 @@ class Config(BaseModel):
             else:
                 raise ValueError(f"Unsupported configuration file format: {path.suffix}")
 
+        if data is None:
+            data = {}
+        elif not isinstance(data, dict):
+            raise ValueError(
+                f"Configuration file must contain a mapping at the top level, got {type(data).__name__}"
+            )
+
         return cls(**data)
 
     @classmethod
