@@ -42,7 +42,7 @@ def validate_messages(  # noqa: C901
             if "role" not in msg:
                 raise ValidationError(f"Message {i} missing required field 'role'")
 
-            if "content" not in msg:
+            if "content" not in msg and not msg.get("tool_calls"):
                 raise ValidationError(f"Message {i} missing required field 'content'")
 
             # Validate role
@@ -60,11 +60,15 @@ def validate_messages(  # noqa: C901
                 raise ValidationError(f"Message {i} role must be a string or Role enum")
 
             # Validate content
-            content = msg["content"]
+            content = msg.get("content", "")
+            if content is None:
+                content = ""
+
             if not isinstance(content, (str, list)):
                 raise ValidationError(f"Message {i} content must be a string or list")
 
-            if isinstance(content, str) and not content.strip():
+            # Assistant tool-call turns use empty content (OpenAI/Anthropic convention)
+            if isinstance(content, str) and not content.strip() and not msg.get("tool_calls"):
                 raise ValidationError(f"Message {i} content cannot be empty")
 
             if isinstance(content, list):
@@ -97,7 +101,8 @@ def validate_messages(  # noqa: C901
 
             # Create Message object
             try:
-                validated_messages.append(Message(**msg))
+                message_data = {**msg, "content": content}
+                validated_messages.append(Message(**message_data))
             except Exception as e:
                 raise ValidationError(f"Message {i} validation failed: {str(e)}") from e
         else:
