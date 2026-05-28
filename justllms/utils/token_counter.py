@@ -61,10 +61,10 @@ class TokenCounter:
         if model in self.MODEL_ENCODINGS:
             encoding_name = self.MODEL_ENCODINGS[model]
         else:
-            # Check prefixes
-            for model_prefix, enc_name in self.MODEL_ENCODINGS.items():
+            # Longest prefix first so e.g. gpt-4o matches before gpt-4
+            for model_prefix in sorted(self.MODEL_ENCODINGS, key=len, reverse=True):
                 if model.startswith(model_prefix):
-                    encoding_name = enc_name
+                    encoding_name = self.MODEL_ENCODINGS[model_prefix]
                     break
 
         if not encoding_name:
