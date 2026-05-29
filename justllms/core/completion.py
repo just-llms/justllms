@@ -442,6 +442,7 @@ class Completion:
                     provider=provider,
                 )
                 final_response.tool_execution_history = execution_history
+                final_response.tools_used = list({tc.name for tc in tool_calls})
                 final_response.tool_execution_cost = executor.calculate_total_cost(
                     execution_history
                 )
