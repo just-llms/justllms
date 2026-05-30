@@ -485,10 +485,16 @@ class GoogleProvider(BaseProvider):
         # Native tools (google_search, code_execution) don't support toolConfig
         # Mixed (native + user) also doesn't support toolConfig per Gemini live-tools docs
         if tool_choice and tools:
-            # Check if there are any native tools
+            # Native tools use camelCase in the REST API (googleSearch, codeExecution)
+            _native_tool_keys = (
+                "googleSearch",
+                "google_search",
+                "googleSearchRetrieval",
+                "codeExecution",
+                "code_execution",
+            )
             has_native_tools = any(
-                "google_search" in tool_entry or "code_execution" in tool_entry
-                for tool_entry in tools
+                any(key in tool_entry for key in _native_tool_keys) for tool_entry in tools
             )
 
             # Check if there are user functions
