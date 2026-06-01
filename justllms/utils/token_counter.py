@@ -49,10 +49,19 @@ class TokenCounter:
     def __init__(self) -> None:
         self._encodings: Dict[str, Any] = {}
 
+    @staticmethod
+    def _normalize_model_name(model: str) -> str:
+        """Strip provider prefix from model IDs like openai/gpt-4o."""
+        if "/" in model:
+            return model.split("/", 1)[1]
+        return model
+
     def _get_encoding(self, model: str) -> Optional[Any]:
         """Get the encoding for a model."""
         if not HAS_TIKTOKEN:
             return None
+
+        model = self._normalize_model_name(model)
 
         # Find the encoding name for the model
         encoding_name = None
@@ -61,10 +70,10 @@ class TokenCounter:
         if model in self.MODEL_ENCODINGS:
             encoding_name = self.MODEL_ENCODINGS[model]
         else:
-            # Check prefixes
-            for model_prefix, enc_name in self.MODEL_ENCODINGS.items():
+            # Longest prefix first so e.g. gpt-4o matches before gpt-4
+            for model_prefix in sorted(self.MODEL_ENCODINGS, key=len, reverse=True):
                 if model.startswith(model_prefix):
-                    encoding_name = enc_name
+                    encoding_name = self.MODEL_ENCODINGS[model_prefix]
                     break
 
         if not encoding_name:
