@@ -67,8 +67,15 @@ def validate_messages(  # noqa: C901
             if not isinstance(content, (str, list)):
                 raise ValidationError(f"Message {i} content must be a string or list")
 
-            # Assistant tool-call turns use empty content (OpenAI/Anthropic convention)
-            if isinstance(content, str) and not content.strip() and not msg.get("tool_calls"):
+            # Assistant tool-call and tool result turns may use empty content
+            role_value = role.value if isinstance(role, Role) else str(role).lower()
+            if (
+                isinstance(content, str)
+                and not content.strip()
+                and not msg.get("tool_calls")
+                and role_value != Role.TOOL.value
+                and not msg.get("tool_call_id")
+            ):
                 raise ValidationError(f"Message {i} content cannot be empty")
 
             if isinstance(content, list):
