@@ -37,6 +37,7 @@ venv/
 *.csv
 *.pdf
 test_*.py
+!tests/test_*.py
 demo_*.py
 debug_*.py
 simple_*.py
