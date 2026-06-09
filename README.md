@@ -253,6 +253,59 @@ except BudgetExceededError as e:
 
 Note: budget checks are *pre-flight* — each request is checked against usage accumulated so far, so the request that crosses a limit completes normally and the next one is blocked. Limits are cumulative for the client's lifetime (or since `reset_usage()`).
 
+### Response Caching
+Cache identical completion requests to cut latency and cost. Responses are cached on an exact match of provider, model, messages, and generation parameters (temperature, max_tokens, etc.). Caching is opt-in via config:
+
+```python
+client = JustLLM({
+    "providers": {"openai": {"api_key": "your-key"}},
+    "cache": {
+        "enabled": True,
+        "backend": "memory",   # "memory" (default) or "disk"
+        "ttl": 3600,           # seconds; None = entries never expire
+        "max_size": 1000       # memory backend: LRU-evicted beyond this
+    }
+})
+
+response = client.completion.create(
+    messages=[{"role": "user", "content": "Hello"}],
+    model="gpt-4o-mini"
+)
+
+# Identical request -> served from cache, no API call
+cached_response = client.completion.create(
+    messages=[{"role": "user", "content": "Hello"}],
+    model="gpt-4o-mini"
+)
+assert cached_response.cached  # True; usage and estimated cost preserved
+```
+
+Or in YAML config:
+
+```yaml
+cache:
+  enabled: true
+  backend: disk                # persists across restarts
+  path: ~/.justllms/cache.db   # optional; this is the default
+  ttl: 86400
+```
+
+Per-request controls:
+
+```python
+# Bypass the cache for one call (no read, no write)
+client.completion.create(messages=msgs, cache=False)
+
+# Override the TTL for the stored entry (seconds)
+client.completion.create(messages=msgs, cache_ttl=60)
+```
+
+Backends:
+- **memory**: in-process LRU cache (`max_size` entries), thread-safe, cleared when the process exits.
+- **disk**: SQLite database (default `~/.justllms/cache.db`), survives restarts, shareable across processes on the same machine.
+
+Notes: streaming requests and tool-calling requests are never cached (a cache hit also skips failover and consumes no budget). Passing `cache=True` when caching is not enabled in config raises a `ConfigurationError`.
+
 ## Side-by-Side Model Comparison
 
 Compare multiple LLM providers and models simultaneously with our interactive SXS (Side-by-Side) comparison tool. Perfect for evaluating model performance, testing prompts, and making informed decisions about which models to use.

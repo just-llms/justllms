@@ -1,6 +1,14 @@
 import logging
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 
+from justllms.cache import (
+    BaseCacheBackend,
+    DiskCache,
+    InMemoryCache,
+    ResponseCache,
+    _response_from_cache_dict,
+    _response_to_cache_dict,
+)
 from justllms.config import Config
 from justllms.core.base import BaseProvider, BaseResponse
 from justllms.core.completion import Completion, CompletionResponse
@@ -45,6 +53,8 @@ class Client:
 
         self.tool_registry = ToolRegistry()
 
+        self.cache: Optional[ResponseCache] = self._initialize_cache()
+
         self.completion = Completion(self)
 
         if providers is None:
@@ -76,6 +86,35 @@ class Client:
             from justllms.config import load_config
 
             return load_config(use_defaults=True, use_env=True)
+
+    def _initialize_cache(self) -> Optional[ResponseCache]:
+        """Build the response cache from configuration.
+
+        Returns:
+            ResponseCache instance when caching is enabled in config,
+            None otherwise.
+
+        Raises:
+            ConfigurationError: If an unknown cache backend is configured.
+        """
+        cache_config = getattr(self.config, "cache", None)
+        if cache_config is None or not cache_config.enabled:
+            return None
+
+        backend: BaseCacheBackend
+        if cache_config.backend == "memory":
+            backend = InMemoryCache(max_size=cache_config.max_size)
+        elif cache_config.backend == "disk":
+            backend = DiskCache(path=cache_config.path)
+        else:
+            raise ConfigurationError(
+                f"Unknown cache backend '{cache_config.backend}'. "
+                "Valid backends are 'memory' and 'disk'.",
+                config_key="cache.backend",
+                config_value=cache_config.backend,
+            )
+
+        return ResponseCache(backend=backend, default_ttl=cache_config.ttl)
 
     def _initialize_providers(self) -> None:
         """Initialize providers based on configuration settings.
@@ -354,6 +393,16 @@ class Client:
         # Per-request failover override; popped so it never reaches provider payloads.
         fallback_override: Optional[bool] = kwargs.pop("fallback", None)
 
+        # Pop cache-control kwargs first so they never reach provider payloads.
+        cache_flag = kwargs.pop("cache", None)
+        cache_ttl = kwargs.pop("cache_ttl", None)
+        if cache_flag is True and self.cache is None:
+            raise ConfigurationError(
+                "cache=True was passed but response caching is not configured. "
+                "Enable it via config, e.g. {'cache': {'enabled': True}}.",
+                config_key="cache.enabled",
+            )
+
         # Check if tools are provided
         tools = kwargs.pop("tools", None)
         if tools and stream:
@@ -452,10 +501,12 @@ class Client:
             else:
                 # Non-streaming with specified provider; explicit provider is the
                 # primary and the configured fallback chain still applies after it.
-                return self._complete_with_fallback(
-                    messages=messages,
+                return self._complete_non_streaming(
                     provider_name=provider,
-                    selected_model=selected_model,
+                    model=selected_model,
+                    messages=messages,
+                    use_cache=cache_flag is not False,
+                    cache_ttl=cache_ttl,
                     fallback_override=fallback_override,
                     **kwargs,
                 )
@@ -480,10 +531,73 @@ class Client:
                 messages=messages, model=model, providers=self.providers, **kwargs
             )
 
-            return self._complete_with_fallback(
-                messages=messages,
+            return self._complete_non_streaming(
                 provider_name=provider_name,
-                selected_model=selected_model,
+                model=selected_model,
+                messages=messages,
+                use_cache=cache_flag is not False,
+                cache_ttl=cache_ttl,
                 fallback_override=fallback_override,
                 **kwargs,
             )
+
+    def _complete_non_streaming(
+        self,
+        provider_name: str,
+        model: str,
+        messages: List[Message],
+        use_cache: bool = True,
+        cache_ttl: Optional[float] = None,
+        fallback_override: Optional[bool] = None,
+        **kwargs: Any,
+    ) -> CompletionResponse:
+        """Execute a non-streaming completion with caching and failover.
+
+        The cache is consulted before any provider call (a hit skips failover
+        entirely and consumes no budget); on a miss the request runs through
+        the failure-driven fallback chain and the successful response is
+        cached under the originally requested provider/model key.
+
+        Args:
+            provider_name: Resolved provider name.
+            model: Resolved model identifier.
+            messages: Conversation messages.
+            use_cache: Whether the cache may be consulted/updated for this
+                call. Effective only when a cache is configured.
+            cache_ttl: Optional per-request TTL override in seconds.
+            fallback_override: Per-request failover override passed through
+                to the fallback executor.
+            **kwargs: Provider generation parameters.
+
+        Returns:
+            CompletionResponse from the cache (cached=True) or a provider.
+        """
+        cache_enabled = use_cache and self.cache is not None
+
+        if cache_enabled and self.cache is not None:
+            cached_data = self.cache.get(provider_name, model, messages, kwargs)
+            if cached_data is not None:
+                logger.debug(
+                    "Response cache hit for provider '%s', model '%s'", provider_name, model
+                )
+                return _response_from_cache_dict(cached_data)
+
+        completion_response = self._complete_with_fallback(
+            messages=messages,
+            provider_name=provider_name,
+            selected_model=model,
+            fallback_override=fallback_override,
+            **kwargs,
+        )
+
+        if cache_enabled and self.cache is not None:
+            self.cache.set(
+                provider_name,
+                model,
+                messages,
+                kwargs,
+                _response_to_cache_dict(completion_response),
+                ttl=cache_ttl,
+            )
+
+        return completion_response
