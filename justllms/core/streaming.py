@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Optional
@@ -9,6 +10,8 @@ from justllms.core.models import Choice, Message, Role, Usage
 if TYPE_CHECKING:
     from justllms.core.base import BaseProvider
     from justllms.core.completion import CompletionResponse
+
+logger = logging.getLogger(__name__)
 
 
 def parse_sse_stream(
@@ -173,6 +176,7 @@ class SyncStreamResponse:
         model: str,
         messages: List[Message],
         raw_stream: Iterator[StreamChunk],
+        on_complete: Optional[Callable[["CompletionResponse"], None]] = None,
     ):
         """Initialize sync stream response.
 
@@ -181,10 +185,15 @@ class SyncStreamResponse:
             model: Model name.
             messages: Original messages.
             raw_stream: Iterator of StreamChunks.
+            on_complete: Optional callback invoked exactly once with the final
+                CompletionResponse when it is first built (e.g. for usage
+                tracking). Callback errors are logged, never raised.
         """
         self.accumulator = StreamResponse(provider, model, messages)
         self.raw_stream = raw_stream
         self._iterator_started = False
+        self.on_complete = on_complete
+        self._on_complete_fired = False
 
     def __iter__(self) -> Iterator[StreamChunk]:
         """Iterate over stream chunks.
@@ -236,7 +245,14 @@ class SyncStreamResponse:
         """
         if not self.accumulator.completed:
             self.drain()
-        return self.accumulator.to_completion_response()
+        response = self.accumulator.to_completion_response()
+        if self.on_complete is not None and not self._on_complete_fired:
+            self._on_complete_fired = True
+            try:
+                self.on_complete(response)
+            except Exception as exc:  # noqa: BLE001 - callback must never break streaming
+                logger.warning("Stream on_complete callback failed: %s", exc)
+        return response
 
 
 class AsyncStreamResponse:

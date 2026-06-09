@@ -7,6 +7,8 @@ from typing import Any, Dict, List, Optional, Union
 import yaml  # type: ignore[import-untyped]
 from pydantic import BaseModel, ConfigDict, Field
 
+from justllms.monitoring.budget import BudgetConfig
+
 
 class ConfigProviderSettings(BaseModel):
     model_config = ConfigDict(extra="allow")
@@ -61,6 +63,7 @@ class Config(BaseModel):
 
     providers: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
     routing: RoutingConfig = Field(default_factory=RoutingConfig)
+    budget: Optional[BudgetConfig] = None
 
     @classmethod
     def from_file(cls, path: Union[str, Path]) -> "Config":
