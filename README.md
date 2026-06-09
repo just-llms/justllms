@@ -198,6 +198,61 @@ Streaming and tool-calling requests keep their current behavior, though
 HTTP-level retries (3 attempts with exponential backoff on 429/408/5xx and
 network errors) still apply to every request.
 
+### Cost Tracking & Budgets
+Every completion (including streaming and tool calls) is tracked automatically — no setup required:
+
+```python
+client.completion.create(messages=[{"role": "user", "content": "Hello"}])
+
+print(client.get_usage_summary())
+# {
+#     "total_cost": 0.000125,
+#     "total_tokens": 42,
+#     "total_prompt_tokens": 12,
+#     "total_completion_tokens": 30,
+#     "request_count": 1,
+#     "by_provider": {"openai": {"requests": 1, "prompt_tokens": 12, ...}},
+#     "by_model": {"openai/gpt-4o-mini": {"requests": 1, "cost": 0.000125, ...}}
+# }
+
+client.reset_usage()  # start a fresh accounting window
+```
+
+Optionally enforce budget limits via config (dict or YAML):
+
+```python
+client = JustLLM({
+    "providers": {"openai": {"api_key": "your-key"}},
+    "budget": {
+        "max_cost": 5.00,        # USD, cumulative
+        "max_tokens": 1000000,   # cumulative total tokens
+        "max_requests": 1000,    # cumulative request count
+        "on_exceeded": "raise"   # or "warn" to log and continue
+    }
+})
+```
+
+```yaml
+# justllms.yaml
+budget:
+  max_cost: 5.00
+  max_requests: 1000
+  on_exceeded: raise
+```
+
+When a limit is reached, subsequent requests raise `BudgetExceededError`:
+
+```python
+from justllms import BudgetExceededError
+
+try:
+    response = client.completion.create(messages=[{"role": "user", "content": "Hello"}])
+except BudgetExceededError as e:
+    print(f"Budget hit: {e.limit_type} at {e.current} (limit {e.limit})")
+```
+
+Note: budget checks are *pre-flight* — each request is checked against usage accumulated so far, so the request that crosses a limit completes normally and the next one is blocked. Limits are cumulative for the client's lifetime (or since `reset_usage()`).
+
 ## Side-by-Side Model Comparison
 
 Compare multiple LLM providers and models simultaneously with our interactive SXS (Side-by-Side) comparison tool. Perfect for evaluating model performance, testing prompts, and making informed decisions about which models to use.

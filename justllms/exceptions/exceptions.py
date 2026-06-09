@@ -107,6 +107,34 @@ class AuthenticationError(ProviderError):
         self.required_auth = required_auth
 
 
+class BudgetExceededError(JustLLMsError):
+    """Raised when a configured budget limit has been reached.
+
+    Budget checks are pre-flight: the request that crosses a limit completes,
+    and this error is raised for subsequent requests.
+
+    Args:
+        message: Human-readable error description.
+        limit_type: Which limit was breached: "cost", "tokens", or "requests".
+        limit: The configured limit value.
+        current: The accumulated usage value that reached the limit.
+        **kwargs: Additional arguments passed to parent JustLLMsError.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        limit_type: Optional[str] = None,
+        limit: Optional[float] = None,
+        current: Optional[float] = None,
+        **kwargs: Any,
+    ):
+        super().__init__(message, **kwargs)
+        self.limit_type = limit_type
+        self.limit = limit
+        self.current = current
+
+
 class ConfigurationError(JustLLMsError):
     """Configuration error."""
 

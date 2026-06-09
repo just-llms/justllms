@@ -1,5 +1,6 @@
 from justllms.exceptions.exceptions import (
     AuthenticationError,
+    BudgetExceededError,
     ConfigurationError,
     JustLLMsError,
     ProviderError,
@@ -15,5 +16,6 @@ __all__ = [
     "RateLimitError",
     "TimeoutError",
     "AuthenticationError",
+    "BudgetExceededError",
     "ConfigurationError",
 ]

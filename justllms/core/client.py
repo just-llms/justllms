@@ -1,11 +1,12 @@
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 
 from justllms.config import Config
 from justllms.core.base import BaseProvider, BaseResponse
 from justllms.core.completion import Completion, CompletionResponse
 from justllms.core.models import Message, ProviderConfig
 from justllms.exceptions import ConfigurationError, ProviderError
+from justllms.monitoring import BudgetManager, UsageTracker
 from justllms.reliability import FallbackExecutor
 from justllms.routing import Router
 
@@ -32,6 +33,13 @@ class Client:
         self.router = router or Router(self.config.routing)
         self.default_model = default_model
         self.default_provider = default_provider
+
+        # Usage tracking is always on (negligible overhead); budget
+        # enforcement only when configured.
+        self.usage = UsageTracker()
+        self.budget: Optional[BudgetManager] = (
+            BudgetManager(self.config.budget, self.usage) if self.config.budget else None
+        )
 
         from justllms.tools.registry import ToolRegistry
 
@@ -254,6 +262,7 @@ class Client:
             provider_instance = self.providers[name]
             response = provider_instance.complete(messages=messages, model=model_name, **kwargs)
             self._estimate_and_set_cost(response, provider_instance, model_name)
+            self.usage.record(name, model_name, response.usage)
             return self._wrap_completion_response(response, name)
 
         if not use_fallback:
@@ -267,6 +276,38 @@ class Client:
             completion.fallback_attempts = [attempt.to_dict() for attempt in attempts]
 
         return completion
+
+    def _make_stream_usage_callback(
+        self, provider_name: str, model: str
+    ) -> "Callable[[CompletionResponse], None]":
+        """Build an on_complete callback that records streaming usage.
+
+        Args:
+            provider_name: Provider used for the streaming request.
+            model: Model used for the streaming request.
+
+        Returns:
+            Callback for SyncStreamResponse.on_complete that records the
+            final response's usage in the client's UsageTracker.
+        """
+
+        def _on_complete(final_response: "CompletionResponse") -> None:
+            self.usage.record(provider_name, model, final_response.usage, streamed=True)
+
+        return _on_complete
+
+    def get_usage_summary(self) -> Dict[str, Any]:
+        """Get aggregated usage and cost totals for this client.
+
+        Returns:
+            Dict with total_cost, total_tokens, request_count and
+            per-provider/per-model breakdowns.
+        """
+        return self.usage.get_summary()
+
+    def reset_usage(self) -> None:
+        """Reset accumulated usage (also resets budget accounting)."""
+        self.usage.reset()
 
     def _create_completion(
         self,
@@ -305,6 +346,11 @@ class Client:
                           completion request fails, or if streaming is requested
                           but the provider doesn't support it.
         """
+        # Pre-flight budget check: blocks this request if a limit was already
+        # reached by previous requests (the crossing request itself completes).
+        if self.budget is not None:
+            self.budget.check()
+
         # Per-request failover override; popped so it never reaches provider payloads.
         fallback_override: Optional[bool] = kwargs.pop("fallback", None)
 
@@ -346,8 +392,10 @@ class Client:
             max_iterations = kwargs.pop("max_iterations", self.config.routing.max_tool_iterations)
             timeout = kwargs.pop("timeout", None)
 
-            # Call tool-enabled completion
-            return self.completion._create_with_tools(
+            # Call tool-enabled completion. Usage tracking counts the final
+            # response only; intermediate tool-loop LLM calls inside
+            # Completion._create_with_tools are not recorded individually.
+            tool_response = self.completion._create_with_tools(
                 messages=messages,
                 tools=tools,
                 provider=provider_name,
@@ -358,6 +406,8 @@ class Client:
                 timeout=timeout,
                 **kwargs,
             )
+            self.usage.record(provider_name, selected_model, tool_response.usage)
+            return tool_response
 
         if provider:
             if provider not in self.providers:
@@ -392,7 +442,13 @@ class Client:
                     )
 
                 # Stream with specified provider
-                return provider_instance.stream(messages=messages, model=selected_model, **kwargs)
+                stream_response = provider_instance.stream(
+                    messages=messages, model=selected_model, **kwargs
+                )
+                stream_response.on_complete = self._make_stream_usage_callback(
+                    provider, selected_model
+                )
+                return stream_response
             else:
                 # Non-streaming with specified provider; explicit provider is the
                 # primary and the configured fallback chain still applies after it.
@@ -411,7 +467,13 @@ class Client:
 
             # Stream with routed provider
             provider_instance = self.providers[provider_name]
-            return provider_instance.stream(messages=messages, model=selected_model, **kwargs)
+            stream_response = provider_instance.stream(
+                messages=messages, model=selected_model, **kwargs
+            )
+            stream_response.on_complete = self._make_stream_usage_callback(
+                provider_name, selected_model
+            )
+            return stream_response
         else:
             # Non-streaming route
             provider_name, selected_model = self.router.route(
