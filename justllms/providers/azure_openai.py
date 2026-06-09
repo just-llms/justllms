@@ -286,24 +286,7 @@ class AzureOpenAIProvider(BaseProvider):
 
     def _format_messages(self, messages: List[Message]) -> List[Dict[str, Any]]:
         """Format messages for Azure OpenAI API (same as OpenAI)."""
-        formatted = []
-
-        for msg in messages:
-            formatted_msg: Dict[str, Any] = {
-                "role": msg.role.value,
-                "content": msg.content,
-            }
-
-            if msg.name:
-                formatted_msg["name"] = msg.name
-            if msg.function_call:
-                formatted_msg["function_call"] = msg.function_call
-            if msg.tool_calls:
-                formatted_msg["tool_calls"] = msg.tool_calls
-
-            formatted.append(formatted_msg)
-
-        return formatted
+        return self._format_messages_base(messages)
 
     def _parse_response(self, response_data: Dict[str, Any]) -> AzureOpenAIResponse:
         """Parse Azure OpenAI API response (same format as OpenAI)."""
@@ -317,6 +300,7 @@ class AzureOpenAIProvider(BaseProvider):
                 name=message_data.get("name"),
                 function_call=message_data.get("function_call"),
                 tool_calls=message_data.get("tool_calls"),
+                tool_call_id=message_data.get("tool_call_id"),
             )
 
             choice = Choice(
