@@ -17,7 +17,7 @@ from justllms.core.models import (
     Role,
     Usage,
 )
-from justllms.exceptions import ConfigurationError
+from justllms.exceptions import ConfigurationError, ProviderError
 
 
 def _msg(content: str, role: Role = Role.USER) -> Message:
@@ -392,7 +392,7 @@ class TestClientCaching:
         assert client.cache is not None
         messages = [{"role": "user", "content": "hello"}]
 
-        with pytest.raises(Exception):
+        with pytest.raises(ProviderError):
             client.completion.create(messages=messages, provider="fake", stream=True)
 
         stats = client.cache.stats
@@ -415,7 +415,7 @@ class TestClientCaching:
 
         # FakeProvider has no tool adapter, so the tools path raises -- but
         # crucially the cache is never consulted or written.
-        with pytest.raises(Exception):
+        with pytest.raises((TypeError, NotImplementedError)):
             client.completion.create(messages=messages, provider="fake", tools=[add])
 
         stats = client.cache.stats
