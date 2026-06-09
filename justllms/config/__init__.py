@@ -1,6 +1,7 @@
-from justllms.config.config import Config, load_config
+from justllms.config.config import CacheConfig, Config, load_config
 
 __all__ = [
+    "CacheConfig",
     "Config",
     "load_config",
 ]

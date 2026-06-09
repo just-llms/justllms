@@ -56,6 +56,27 @@ class RoutingConfig(BaseModel):
     execute_tools_by_default: bool = False
 
 
+class CacheConfig(BaseModel):
+    """Configuration for response caching."""
+
+    model_config = ConfigDict(extra="allow")
+
+    enabled: bool = False
+    """Whether response caching is enabled."""
+
+    backend: str = "memory"
+    """Cache backend to use: "memory" or "disk"."""
+
+    ttl: Optional[float] = 3600.0
+    """Default time-to-live in seconds for cached entries. None = no expiry."""
+
+    max_size: int = 1000
+    """Maximum number of entries (memory backend only)."""
+
+    path: Optional[str] = None
+    """Database file path for the disk backend (default ~/.justllms/cache.db)."""
+
+
 class Config(BaseModel):
     """Configuration class for multi-provider LLM client."""
 
@@ -64,6 +85,7 @@ class Config(BaseModel):
     providers: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
     routing: RoutingConfig = Field(default_factory=RoutingConfig)
     budget: Optional[BudgetConfig] = None
+    cache: CacheConfig = Field(default_factory=CacheConfig)
 
     @classmethod
     def from_file(cls, path: Union[str, Path]) -> "Config":

@@ -21,6 +21,7 @@ class CompletionResponse(BaseResponse):
         created: Optional[int] = None,
         system_fingerprint: Optional[str] = None,
         provider: Optional[str] = None,
+        cached: bool = False,
         **kwargs: Any,
     ):
         super().__init__(
@@ -33,6 +34,7 @@ class CompletionResponse(BaseResponse):
             **kwargs,
         )
         self.provider = provider
+        self.cached = cached
         self.tool_execution_history: Optional[List[Any]] = None
         self.tools_used: Optional[List[str]] = None
         self.tool_execution_cost: Optional[float] = None
@@ -70,6 +72,7 @@ class CompletionResponse(BaseResponse):
             "provider": self.provider,
             "fallback_used": self.fallback_used,
             "fallback_attempts": self.fallback_attempts,
+            "cached": self.cached,
         }
 
     @property
@@ -111,6 +114,8 @@ class Completion:
         user: Optional[str] = None,
         timeout: Optional[float] = None,
         fallback: Optional[bool] = None,
+        cache: Optional[bool] = None,
+        cache_ttl: Optional[float] = None,
         **kwargs: Any,
     ) -> CompletionResponse: ...
 
@@ -138,6 +143,8 @@ class Completion:
         user: Optional[str] = None,
         timeout: Optional[float] = None,
         fallback: Optional[bool] = None,
+        cache: Optional[bool] = None,
+        cache_ttl: Optional[float] = None,
         **kwargs: Any,
     ) -> "SyncStreamResponse": ...
 
@@ -164,6 +171,8 @@ class Completion:
         user: Optional[str] = None,
         timeout: Optional[float] = None,
         fallback: Optional[bool] = None,
+        cache: Optional[bool] = None,
+        cache_ttl: Optional[float] = None,
         **kwargs: Any,
     ) -> "Union[CompletionResponse, SyncStreamResponse]":
         """Create a completion with automatic fallbacks.
@@ -203,6 +212,12 @@ class Completion:
                     (failover is active when fallback_chain is non-empty or
                     auto_fallback is true). Applies to non-streaming, non-tool
                     requests only.
+
+            Caching (requires config ``cache.enabled: true``):
+                cache: Set to False to bypass the response cache for this call
+                       (no read, no write). Set to True to assert caching; raises
+                       ConfigurationError if caching is not configured.
+                cache_ttl: Per-request TTL override in seconds for the stored entry.
 
         Returns:
             CompletionResponse: The model's response.
@@ -254,6 +269,8 @@ class Completion:
             "user": user,
             "timeout": timeout,
             "fallback": fallback,
+            "cache": cache,
+            "cache_ttl": cache_ttl,
             **kwargs,
         }
 
