@@ -6,6 +6,7 @@ from justllms.core.base import BaseProvider, BaseResponse
 from justllms.core.completion import Completion, CompletionResponse
 from justllms.core.models import Message, ProviderConfig
 from justllms.exceptions import ConfigurationError, ProviderError
+from justllms.reliability import FallbackExecutor
 from justllms.routing import Router
 
 logger = logging.getLogger(__name__)
@@ -224,6 +225,49 @@ class Client:
             **response.raw_response,
         )
 
+    def _complete_with_fallback(
+        self,
+        messages: List[Message],
+        provider_name: str,
+        selected_model: str,
+        fallback_override: Optional[bool],
+        **kwargs: Any,
+    ) -> CompletionResponse:
+        """Run a non-streaming completion with optional failure-driven failover.
+
+        Args:
+            messages: List of conversation messages to process.
+            provider_name: Primary provider to attempt first.
+            selected_model: Primary model to attempt first.
+            fallback_override: Per-request failover override. False disables
+                failover, True forces it, None uses the routing configuration.
+            **kwargs: Additional parameters passed to the provider's complete method.
+
+        Returns:
+            CompletionResponse from the first provider in the chain that succeeds,
+            with fallback metadata populated when failover engaged.
+        """
+        executor = FallbackExecutor(self.config.routing)
+        use_fallback = fallback_override if fallback_override is not None else executor.enabled
+
+        def _call(name: str, model_name: str) -> CompletionResponse:
+            provider_instance = self.providers[name]
+            response = provider_instance.complete(messages=messages, model=model_name, **kwargs)
+            self._estimate_and_set_cost(response, provider_instance, model_name)
+            return self._wrap_completion_response(response, name)
+
+        if not use_fallback:
+            return _call(provider_name, selected_model)
+
+        chain = executor.build_chain((provider_name, selected_model), self.providers)
+        completion, attempts = executor.execute(chain, _call)
+
+        if any(not attempt.succeeded for attempt in attempts):
+            completion.fallback_used = True
+            completion.fallback_attempts = [attempt.to_dict() for attempt in attempts]
+
+        return completion
+
     def _create_completion(
         self,
         messages: List[Message],
@@ -235,7 +279,10 @@ class Client:
         """Create a completion with automatic fallback support.
 
         Uses configured fallback provider/model or first available provider
-        if no specific model is requested.
+        if no specific model is requested. When a fallback chain is configured
+        (routing.fallback_chain or routing.auto_fallback), non-streaming
+        non-tool requests automatically fail over to the next provider/model
+        on retryable errors.
 
         Args:
             messages: List of conversation messages to process.
@@ -245,6 +292,8 @@ class Client:
             stream: If True, returns streaming response instead of CompletionResponse.
             **kwargs: Additional parameters passed to the provider's complete method.
                      Common parameters: temperature, max_tokens, top_p, etc.
+                     'fallback' (Optional[bool]) is consumed here as a per-request
+                     failover override and never forwarded to providers.
 
         Returns:
             CompletionResponse or StreamResponse depending on stream parameter.
@@ -256,6 +305,9 @@ class Client:
                           completion request fails, or if streaming is requested
                           but the provider doesn't support it.
         """
+        # Per-request failover override; popped so it never reaches provider payloads.
+        fallback_override: Optional[bool] = kwargs.pop("fallback", None)
+
         # Check if tools are provided
         tools = kwargs.pop("tools", None)
         if tools and stream:
@@ -342,12 +394,15 @@ class Client:
                 # Stream with specified provider
                 return provider_instance.stream(messages=messages, model=selected_model, **kwargs)
             else:
-                # Non-streaming with specified provider
-                response = provider_instance.complete(
-                    messages=messages, model=selected_model, **kwargs
+                # Non-streaming with specified provider; explicit provider is the
+                # primary and the configured fallback chain still applies after it.
+                return self._complete_with_fallback(
+                    messages=messages,
+                    provider_name=provider,
+                    selected_model=selected_model,
+                    fallback_override=fallback_override,
+                    **kwargs,
                 )
-                self._estimate_and_set_cost(response, provider_instance, selected_model)
-                return self._wrap_completion_response(response, provider)
 
         if stream:
             provider_name, selected_model = self.router.route_streaming(
@@ -363,7 +418,10 @@ class Client:
                 messages=messages, model=model, providers=self.providers, **kwargs
             )
 
-            provider_instance = self.providers[provider_name]
-            response = provider_instance.complete(messages=messages, model=selected_model, **kwargs)
-            self._estimate_and_set_cost(response, provider_instance, selected_model)
-            return self._wrap_completion_response(response, provider_name)
+            return self._complete_with_fallback(
+                messages=messages,
+                provider_name=provider_name,
+                selected_model=selected_model,
+                fallback_override=fallback_override,
+                **kwargs,
+            )

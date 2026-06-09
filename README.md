@@ -129,6 +129,75 @@ response = client.completion.create(
 )
 ```
 
+#### Failure-Driven Failover
+
+Beyond static selection, JustLLMs can automatically retry a request on the next
+provider/model in a fallback chain when the chosen provider fails (rate limit,
+server error, timeout, network error, or auth error):
+
+```python
+client = JustLLM({
+    "providers": {
+        "openai": {"api_key": "your-key"},
+        "anthropic": {"api_key": "your-key"},
+        "google": {"api_key": "your-key"}
+    },
+    "routing": {
+        # Ordered chain tried after the primary. Entries are "provider/model"
+        # or just "provider" (uses the provider's first available model).
+        "fallback_chain": ["anthropic/claude-3-5-sonnet-20241022", "google"],
+
+        # Or, with an empty chain, derive it automatically from all other
+        # configured providers:
+        "auto_fallback": False,
+
+        # Total attempts including the primary (default: 3)
+        "max_fallback_attempts": 3,
+
+        # Error categories that trigger failover (default: all of these)
+        "fallback_on": ["rate_limit", "server_error", "timeout", "connection", "auth"]
+    }
+})
+```
+
+Equivalent YAML config:
+
+```yaml
+routing:
+  fallback_chain:
+    - anthropic/claude-3-5-sonnet-20241022
+    - google
+  auto_fallback: false
+  max_fallback_attempts: 3
+  fallback_on: [rate_limit, server_error, timeout, connection, auth]
+```
+
+Non-retryable errors (e.g. 400 bad request, 404 unknown model, validation
+errors) are raised immediately without failover. You can disable failover for
+a single request:
+
+```python
+response = client.completion.create(
+    messages=[{"role": "user", "content": "Hello"}],
+    fallback=False  # raise immediately if the chosen provider fails
+)
+```
+
+When failover engages, the response tells you what happened:
+
+```python
+response.provider           # actual provider that served the request
+response.model              # actual model used
+response.fallback_used      # True when at least one attempt failed
+response.fallback_attempts  # per-attempt records: provider, model, error,
+                            # error_category, succeeded, duration_ms
+```
+
+Note: failure-driven failover applies to non-streaming, non-tool requests.
+Streaming and tool-calling requests keep their current behavior, though
+HTTP-level retries (3 attempts with exponential backoff on 429/408/5xx and
+network errors) still apply to every request.
+
 ## Side-by-Side Model Comparison
 
 Compare multiple LLM providers and models simultaneously with our interactive SXS (Side-by-Side) comparison tool. Perfect for evaluating model performance, testing prompts, and making informed decisions about which models to use.

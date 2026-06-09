@@ -36,6 +36,8 @@ class CompletionResponse(BaseResponse):
         self.tool_execution_history: Optional[List[Any]] = None
         self.tools_used: Optional[List[str]] = None
         self.tool_execution_cost: Optional[float] = None
+        self.fallback_used: bool = False
+        self.fallback_attempts: Optional[List[Dict[str, Any]]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert response to dictionary."""
@@ -66,6 +68,8 @@ class CompletionResponse(BaseResponse):
             "created": self.created,
             "system_fingerprint": self.system_fingerprint,
             "provider": self.provider,
+            "fallback_used": self.fallback_used,
+            "fallback_attempts": self.fallback_attempts,
         }
 
     @property
@@ -106,6 +110,7 @@ class Completion:
         seed: Optional[int] = None,
         user: Optional[str] = None,
         timeout: Optional[float] = None,
+        fallback: Optional[bool] = None,
         **kwargs: Any,
     ) -> CompletionResponse: ...
 
@@ -132,6 +137,7 @@ class Completion:
         seed: Optional[int] = None,
         user: Optional[str] = None,
         timeout: Optional[float] = None,
+        fallback: Optional[bool] = None,
         **kwargs: Any,
     ) -> "SyncStreamResponse": ...
 
@@ -157,6 +163,7 @@ class Completion:
         seed: Optional[int] = None,
         user: Optional[str] = None,
         timeout: Optional[float] = None,
+        fallback: Optional[bool] = None,
         **kwargs: Any,
     ) -> "Union[CompletionResponse, SyncStreamResponse]":
         """Create a completion with automatic fallbacks.
@@ -191,6 +198,11 @@ class Completion:
                 seed: Random seed for deterministic outputs (OpenAI).
                 user: End-user identifier.
                 timeout: Request timeout in seconds. If None, no timeout is enforced.
+                fallback: Per-request failover override. False disables provider
+                    failover for this call; None uses the routing configuration
+                    (failover is active when fallback_chain is non-empty or
+                    auto_fallback is true). Applies to non-streaming, non-tool
+                    requests only.
 
         Returns:
             CompletionResponse: The model's response.
@@ -241,6 +253,7 @@ class Completion:
             "seed": seed,
             "user": user,
             "timeout": timeout,
+            "fallback": fallback,
             **kwargs,
         }
 

@@ -2,9 +2,9 @@ import contextlib
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -27,6 +27,22 @@ class RoutingConfig(BaseModel):
 
     fallback_provider: Optional[str] = None
     fallback_model: Optional[str] = None
+
+    """Ordered failover chain. Entries are "provider/model" or bare "provider"
+    (which resolves to the provider's first available model)."""
+    fallback_chain: List[str] = Field(default_factory=list)
+
+    """When True and fallback_chain is empty, derive a chain at request time
+    from all other configured providers (their first available model)."""
+    auto_fallback: bool = False
+
+    """Total attempts including the primary provider."""
+    max_fallback_attempts: int = 3
+
+    """Error categories that trigger failover to the next provider."""
+    fallback_on: List[str] = Field(
+        default_factory=lambda: ["rate_limit", "server_error", "timeout", "connection", "auth"]
+    )
 
     """max execution time per tool"""
     tool_timeout: float = 120.0
