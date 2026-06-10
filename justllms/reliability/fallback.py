@@ -17,8 +17,8 @@ from justllms.exceptions import (
     AuthenticationError,
     ProviderError,
     RateLimitError,
+    RequestTimeoutError,
 )
-from justllms.exceptions import RequestTimeoutError
 
 if TYPE_CHECKING:
     from justllms.core.base import BaseProvider

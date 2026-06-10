@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, NoReturn, Optional
 
 
 class JustLLMsError(Exception):
@@ -103,7 +103,7 @@ def raise_from_httpx_error(
     exc: BaseException,
     provider: Optional[str] = None,
     operation: str = "request",
-) -> None:
+) -> NoReturn:
     """Re-raise httpx transport errors as justllms provider exceptions."""
     import httpx
 
