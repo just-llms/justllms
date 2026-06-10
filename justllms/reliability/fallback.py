@@ -17,9 +17,7 @@ from justllms.exceptions import (
     AuthenticationError,
     ProviderError,
     RateLimitError,
-)
-from justllms.exceptions import (
-    TimeoutError as JustLLMsTimeoutError,
+    RequestTimeoutError,
 )
 
 if TYPE_CHECKING:
@@ -47,7 +45,7 @@ def classify_error(exc: Exception) -> Optional[str]:
         return "rate_limit"
     if isinstance(exc, AuthenticationError):
         return "auth"
-    if isinstance(exc, JustLLMsTimeoutError):
+    if isinstance(exc, RequestTimeoutError):
         return "timeout"
 
     # httpx network errors. TimeoutException subclasses RequestError, so check it first.

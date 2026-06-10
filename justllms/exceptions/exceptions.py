@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, NoReturn, Optional
 
 
 class JustLLMsError(Exception):
@@ -81,7 +81,7 @@ class RateLimitError(ProviderError):
         self.retry_after = retry_after
 
 
-class TimeoutError(ProviderError):
+class RequestTimeoutError(ProviderError):
     """Request timeout error."""
 
     def __init__(
@@ -92,6 +92,33 @@ class TimeoutError(ProviderError):
     ):
         super().__init__(message, **kwargs)
         self.timeout_seconds = timeout_seconds
+
+
+# Backwards-compatible alias. Prefer RequestTimeoutError to avoid shadowing
+# Python's built-in TimeoutError.
+TimeoutError = RequestTimeoutError
+
+
+def raise_from_httpx_error(
+    exc: BaseException,
+    provider: Optional[str] = None,
+    operation: str = "request",
+) -> NoReturn:
+    """Re-raise httpx transport errors as justllms provider exceptions."""
+    import httpx
+
+    prefix = f"{provider} " if provider else ""
+    if isinstance(exc, httpx.TimeoutException):
+        raise RequestTimeoutError(
+            f"{prefix}{operation} timed out: {exc}",
+            provider=provider,
+        ) from exc
+    if isinstance(exc, httpx.HTTPError):
+        raise ProviderError(
+            f"{prefix}{operation} failed: {exc}",
+            provider=provider,
+        ) from exc
+    raise exc
 
 
 class AuthenticationError(ProviderError):

@@ -15,9 +15,7 @@ from justllms.exceptions import (
     RateLimitError,
     ValidationError,
 )
-from justllms.exceptions import (
-    TimeoutError as JustLLMsTimeoutError,
-)
+from justllms.exceptions import RequestTimeoutError
 from justllms.reliability import FallbackAttempt, FallbackExecutor, classify_error
 
 
@@ -96,7 +94,7 @@ class TestClassifyError:
         assert classify_error(ProviderError("err", status_code=status)) == "server_error"
 
     def test_timeout_error_instance(self):
-        assert classify_error(JustLLMsTimeoutError("too slow")) == "timeout"
+        assert classify_error(RequestTimeoutError("too slow")) == "timeout"
 
     def test_httpx_timeout(self):
         assert classify_error(httpx.ConnectTimeout("timed out")) == "timeout"

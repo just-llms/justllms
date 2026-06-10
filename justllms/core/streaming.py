@@ -41,7 +41,7 @@ def parse_sse_stream(
     Raises:
         ProviderError: If the streaming request fails.
     """
-    from justllms.exceptions import ProviderError
+    from justllms.exceptions import raise_from_httpx_error
 
     try:
         with httpx.Client(timeout=timeout) as client, client.stream(
@@ -55,8 +55,8 @@ def parse_sse_stream(
                     yield chunk
                 elif line.strip() == "data: [DONE]":
                     break
-    except (httpx.HTTPError, httpx.RequestError) as e:
-        raise ProviderError(f"{error_prefix} failed: {str(e)}") from e
+    except httpx.HTTPError as exc:
+        raise_from_httpx_error(exc, operation=error_prefix)
 
 
 class StreamChunk:
