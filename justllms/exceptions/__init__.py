@@ -5,8 +5,10 @@ from justllms.exceptions.exceptions import (
     JustLLMsError,
     ProviderError,
     RateLimitError,
+    RequestTimeoutError,
     TimeoutError,
     ValidationError,
+    raise_from_httpx_error,
 )
 
 __all__ = [
@@ -14,8 +16,10 @@ __all__ = [
     "ProviderError",
     "ValidationError",
     "RateLimitError",
+    "RequestTimeoutError",
     "TimeoutError",
     "AuthenticationError",
     "BudgetExceededError",
     "ConfigurationError",
+    "raise_from_httpx_error",
 ]

@@ -5,7 +5,7 @@ import httpx
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from justllms.core.models import Choice, Message, ModelInfo, ProviderConfig, Usage
-from justllms.exceptions import ProviderError
+from justllms.exceptions import ProviderError, raise_from_httpx_error
 
 if TYPE_CHECKING:
     from justllms.core.streaming import SyncStreamResponse
@@ -279,32 +279,35 @@ class BaseProvider(ABC):
         request_params = params or {}
 
         timeout_config = timeout if timeout is not None else DEFAULT_TIMEOUT
-        with httpx.Client(timeout=timeout_config) as client:
-            if method.upper() == "POST":
-                response = client.post(
-                    url,
-                    json=payload,
-                    headers=request_headers,
-                    params=request_params,
-                )
-            elif method.upper() == "GET":
-                response = client.get(
-                    url,
-                    headers=request_headers,
-                    params=request_params,
-                )
-            else:
-                raise ValueError(f"Unsupported HTTP method: {method}")
+        try:
+            with httpx.Client(timeout=timeout_config) as client:
+                if method.upper() == "POST":
+                    response = client.post(
+                        url,
+                        json=payload,
+                        headers=request_headers,
+                        params=request_params,
+                    )
+                elif method.upper() == "GET":
+                    response = client.get(
+                        url,
+                        headers=request_headers,
+                        params=request_params,
+                    )
+                else:
+                    raise ValueError(f"Unsupported HTTP method: {method}")
 
-            if response.status_code != 200:
-                raise ProviderError(
-                    f"{self.name} API error: {response.status_code} - {response.text}",
-                    provider=self.name,
-                    status_code=response.status_code,
-                    response_body=response.text,
-                )
+                if response.status_code != 200:
+                    raise ProviderError(
+                        f"{self.name} API error: {response.status_code} - {response.text}",
+                        provider=self.name,
+                        status_code=response.status_code,
+                        response_body=response.text,
+                    )
 
-            return response.json()  # type: ignore[no-any-return]
+                return response.json()  # type: ignore[no-any-return]
+        except httpx.HTTPError as exc:
+            raise_from_httpx_error(exc, provider=self.name)
 
     def _extract_raw_response(
         self, response_data: Dict[str, Any], exclude_keys: Optional[List[str]] = None
