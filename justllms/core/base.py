@@ -412,6 +412,7 @@ class BaseProvider(ABC):
             name=message_data.get("name"),
             function_call=message_data.get("function_call"),
             tool_calls=message_data.get("tool_calls"),
+            tool_call_id=message_data.get("tool_call_id"),
         )
 
         return Choice(
