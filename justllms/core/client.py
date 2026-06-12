@@ -116,6 +116,21 @@ class Client:
 
         return ResponseCache(backend=backend, default_ttl=cache_config.ttl)
 
+    def _register_provider_aliases(self, provider_name: str) -> None:
+        """Register alternate provider names that share the same implementation."""
+        from justllms.providers import get_provider_class, list_available_providers
+
+        provider = self.providers.get(provider_name)
+        if provider is None:
+            return
+
+        provider_class = type(provider)
+        for alias in list_available_providers():
+            if alias == provider_name or alias in self.providers:
+                continue
+            if get_provider_class(alias) is provider_class:
+                self.providers[alias] = provider
+
     def _initialize_providers(self) -> None:
         """Initialize providers based on configuration settings.
 
@@ -150,6 +165,7 @@ class Client:
             try:
                 config = ProviderConfig(name=provider_name, **provider_config)
                 self.providers[provider_name] = provider_class(config)
+                self._register_provider_aliases(provider_name)
             except Exception as exc:
                 logger.warning(
                     "Failed to initialize provider '%s': %s",
@@ -174,6 +190,7 @@ class Client:
             provider: Configured provider instance implementing BaseProvider.
         """
         self.providers[name] = provider
+        self._register_provider_aliases(name)
 
     def get_provider(self, name: str) -> Optional[BaseProvider]:
         """Retrieve a provider instance by name.
