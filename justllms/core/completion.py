@@ -43,17 +43,19 @@ class CompletionResponse(BaseResponse):
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert response to dictionary."""
-        return {
+        result: Dict[str, Any] = {
             "id": self.id,
             "model": self.model,
             "choices": [
                 {
                     "index": choice.index,
-                    "message": {
-                        "role": choice.message.role,
-                        "content": choice.message.content,
-                    },
+                    "message": choice.message.model_dump(mode="json", exclude_none=True),
                     "finish_reason": choice.finish_reason,
+                    **(
+                        {"logprobs": choice.logprobs}
+                        if choice.logprobs is not None
+                        else {}
+                    ),
                 }
                 for choice in self.choices
             ],
@@ -74,6 +76,18 @@ class CompletionResponse(BaseResponse):
             "fallback_attempts": self.fallback_attempts,
             "cached": self.cached,
         }
+
+        if self.tools_used is not None:
+            result["tools_used"] = self.tools_used
+        if self.tool_execution_cost is not None:
+            result["tool_execution_cost"] = self.tool_execution_cost
+        if self.tool_execution_history is not None:
+            result["tool_execution_history"] = [
+                entry.to_dict() if hasattr(entry, "to_dict") else entry
+                for entry in self.tool_execution_history
+            ]
+
+        return result
 
     @property
     def content(self) -> str:
