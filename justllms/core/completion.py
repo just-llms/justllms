@@ -51,11 +51,7 @@ class CompletionResponse(BaseResponse):
                     "index": choice.index,
                     "message": choice.message.model_dump(mode="json", exclude_none=True),
                     "finish_reason": choice.finish_reason,
-                    **(
-                        {"logprobs": choice.logprobs}
-                        if choice.logprobs is not None
-                        else {}
-                    ),
+                    **({"logprobs": choice.logprobs} if choice.logprobs is not None else {}),
                 }
                 for choice in self.choices
             ],
