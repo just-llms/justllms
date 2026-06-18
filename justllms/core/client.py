@@ -347,6 +347,8 @@ class Client:
     def reset_usage(self) -> None:
         """Reset accumulated usage (also resets budget accounting)."""
         self.usage.reset()
+        if self.budget is not None:
+            self.budget.reset()
 
     def _create_completion(
         self,

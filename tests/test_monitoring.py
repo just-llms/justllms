@@ -244,6 +244,21 @@ class TestBudgetManager:
         assert len(warnings) == 1
         assert "requests" in warnings[0].message
 
+    def test_reset_clears_warn_state(self, caplog: pytest.LogCaptureFixture) -> None:
+        tracker = UsageTracker()
+        manager = BudgetManager(BudgetConfig(max_requests=1, on_exceeded="warn"), tracker)
+        tracker.record("openai", "gpt-4o", make_usage())
+
+        with caplog.at_level(logging.WARNING, logger="justllms.monitoring.budget"):
+            manager.check()
+            manager.reset()
+            tracker.reset()
+            tracker.record("openai", "gpt-4o", make_usage())
+            manager.check()
+
+        warnings = [r for r in caplog.records if "Budget limit reached" in r.message]
+        assert len(warnings) == 2
+
 
 class TestClientIntegration:
     def test_usage_recorded_for_completions(self) -> None:
@@ -284,6 +299,22 @@ class TestClientIntegration:
 
         assert client.usage.request_count == 2
         assert any("Budget limit reached" in r.message for r in caplog.records)
+
+    def test_warn_mode_warns_again_after_reset_usage(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        client = make_client(
+            config={"providers": {}, "budget": {"max_requests": 1, "on_exceeded": "warn"}}
+        )
+        with caplog.at_level(logging.WARNING, logger="justllms.monitoring.budget"):
+            client.completion.create(messages=MESSAGES, provider="fake", model="fake-model")
+            client.completion.create(messages=MESSAGES, provider="fake", model="fake-model")
+            client.reset_usage()
+            client.completion.create(messages=MESSAGES, provider="fake", model="fake-model")
+            client.completion.create(messages=MESSAGES, provider="fake", model="fake-model")
+
+        warnings = [r for r in caplog.records if "Budget limit reached" in r.message]
+        assert len(warnings) == 2
 
     def test_budget_max_cost_via_client(self) -> None:
         client = make_client(

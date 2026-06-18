@@ -107,3 +107,7 @@ class BudgetManager:
             limit=limit,
             current=current,
         )
+
+    def reset(self) -> None:
+        """Clear warn-once state after usage is reset."""
+        self._warned_types.clear()
