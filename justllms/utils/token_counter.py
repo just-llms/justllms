@@ -1,4 +1,6 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional, Sequence, Union
+
+from justllms.core.models import Message
 
 try:
     import tiktoken
@@ -115,9 +117,15 @@ class TokenCounter:
 
         return max(1, len(text) // chars_per_token)
 
+    def _message_to_dict(self, message: Union[Dict[str, Any], Message]) -> Dict[str, Any]:
+        """Normalize a message dict or Message object for token counting."""
+        if isinstance(message, Message):
+            return message.model_dump(mode="json", exclude_none=True)
+        return message
+
     def count_messages_tokens(
         self,
-        messages: List[Dict[str, Any]],
+        messages: Sequence[Union[Dict[str, Any], Message]],
         model: Optional[str] = None,
     ) -> Dict[str, int]:
         """Count tokens in a list of messages."""
@@ -125,6 +133,8 @@ class TokenCounter:
         per_message_tokens = 4  # Overhead per message
 
         for message in messages:
+            message = self._message_to_dict(message)
+
             # Count role tokens
             role = message.get("role", "")
             total_tokens += self.count_tokens(role, model)
@@ -152,6 +162,12 @@ class TokenCounter:
             if message.get("function_call"):
                 total_tokens += self.count_tokens(str(message["function_call"]), model)
 
+            if message.get("tool_calls"):
+                total_tokens += self.count_tokens(str(message["tool_calls"]), model)
+
+            if message.get("tool_call_id"):
+                total_tokens += self.count_tokens(message["tool_call_id"], model)
+
         # Add base prompt tokens
         total_tokens += 3  # Every reply is primed with <|start|>assistant<|message|>
 
@@ -166,7 +182,7 @@ _token_counter = TokenCounter()
 
 
 def count_tokens(
-    text: Union[str, List[Dict[str, Any]]],
+    text: Union[str, Sequence[Union[Dict[str, Any], Message]]],
     model: Optional[str] = None,
 ) -> int:
     """Count tokens in text or messages."""
