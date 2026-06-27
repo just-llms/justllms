@@ -37,6 +37,25 @@ def test_grok_supports_streaming():
     assert grok.supports_streaming_for_model("grok-4") is True
 
 
+def test_grok_catalog_is_current():
+    grok = GrokProvider(ProviderConfig(name="grok", api_key="k"))
+    models = grok.get_available_models()
+
+    # Current lineup is present.
+    for current in ("grok-4.3", "grok-4.20", "grok-4.1-fast"):
+        assert current in models
+
+    # grok-4.3 is the default (first entry chosen when no model is specified).
+    assert next(iter(models)) == "grok-4.3"
+
+    # Pricing uses the per-1k convention (grok-4.3 input = $1.25/1M).
+    assert models["grok-4.3"].cost_per_1k_prompt_tokens == 0.00125
+
+    # Retired slugs remain as legacy aliases for backward compatibility.
+    assert "grok-4" in models
+    assert "legacy" in models["grok-4"].tags
+
+
 # --------------------------------------------------------------------------- #
 # Grok: OpenAI-compatible payload + image conversion
 # --------------------------------------------------------------------------- #
