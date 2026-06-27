@@ -416,7 +416,7 @@ response = client.completion.create(
 
 ## Tool Calling (Function Calling)
 
-JustLLMs provides a **provider-agnostic tool calling API** that works seamlessly across OpenAI, Anthropic, and Google Gemini. Define tools once, use them everywhere.
+JustLLMs provides a **provider-agnostic tool calling API** that works seamlessly across OpenAI, Anthropic, Google Gemini, Azure OpenAI, xAI Grok, DeepSeek, and Ollama. Define tools once, use them everywhere.
 
 ### Basic Tool Calling
 

@@ -1,8 +1,9 @@
-from typing import Dict
+from typing import Dict, Optional
 
 from justllms.core.base import BaseResponse
 from justllms.core.models import ModelInfo
 from justllms.core.openai_base import BaseOpenAIChatProvider
+from justllms.tools.adapters.base import BaseToolAdapter
 
 
 class DeepSeekResponse(BaseResponse):
@@ -11,6 +12,9 @@ class DeepSeekResponse(BaseResponse):
 
 class DeepSeekProvider(BaseOpenAIChatProvider):
     """DeepSeek provider implementation."""
+
+    supports_tools = True
+    """DeepSeek exposes OpenAI-compatible function calling."""
 
     MODELS = {
         "deepseek-v4-flash": ModelInfo(
@@ -129,3 +133,9 @@ class DeepSeekProvider(BaseOpenAIChatProvider):
         if self.config.headers:
             headers.update(self.config.headers)
         return headers
+
+    def get_tool_adapter(self) -> Optional[BaseToolAdapter]:
+        """Return the OpenAI-compatible tool adapter (DeepSeek shares the format)."""
+        from justllms.tools.adapters.openai import OpenAIToolAdapter
+
+        return OpenAIToolAdapter()

@@ -11,6 +11,7 @@ from justllms.core.base import BaseProvider, BaseResponse
 from justllms.core.models import Message, ModelInfo
 from justllms.core.streaming import StreamChunk, SyncStreamResponse
 from justllms.exceptions import ProviderError
+from justllms.tools.adapters.base import BaseToolAdapter
 
 
 class OllamaResponse(BaseResponse):
@@ -23,6 +24,9 @@ class OllamaProvider(BaseProvider):
     """Provider implementation for locally hosted Ollama models."""
 
     requires_api_key = False
+    supports_tools = True
+    """Ollama's /api/chat supports tool calling for capable models."""
+
     _DEFAULT_BASE_URL = "http://localhost:11434"
 
     _FALLBACK_MODELS: dict[str, ModelInfo] = {
@@ -131,15 +135,114 @@ class OllamaProvider(BaseProvider):
         Raises:
             ProviderError: If the Ollama API request fails or returns an error.
         """
-        payload = {
+        payload = self._build_request_payload(
+            messages, model, stream=kwargs.pop("stream", False), **kwargs
+        )
+
+        response_data = self._make_http_request(
+            url=self._chat_endpoint,
+            payload=payload,
+            headers=self._get_request_headers(),
+            timeout=timeout,
+        )
+
+        return self._parse_response(response_data, model)
+
+    def complete_with_tools(
+        self,
+        messages: list[Message],
+        tools: Any = None,
+        model: str = "",
+        tool_choice: Any = None,
+        timeout: Any = None,
+        **kwargs: Any,
+    ) -> BaseResponse:
+        """Execute a non-streaming completion with tool definitions.
+
+        Args:
+            messages: Conversation messages (may include tool results).
+            tools: Tool definitions already formatted by the Ollama adapter.
+            model: Ollama model name.
+            tool_choice: Ignored - Ollama's chat API has no tool_choice field.
+            timeout: Optional timeout in seconds.
+            **kwargs: Additional generation parameters.
+
+        Returns:
+            BaseResponse whose message carries any ``tool_calls`` for the
+            adapter to extract.
+        """
+        payload = self._build_request_payload(messages, model, stream=False, **kwargs)
+
+        if tools:
+            payload["tools"] = tools
+
+        response_data = self._make_http_request(
+            url=self._chat_endpoint,
+            payload=payload,
+            headers=self._get_request_headers(),
+            timeout=timeout,
+        )
+
+        return self._parse_response(response_data, model)
+
+    def get_tool_adapter(self) -> BaseToolAdapter | None:
+        """Return the Ollama tool adapter."""
+        from justllms.tools.adapters.ollama import OllamaToolAdapter
+
+        return OllamaToolAdapter()
+
+    def _format_messages_for_ollama(self, messages: list[Message]) -> list[dict[str, Any]]:
+        """Format messages, surfacing the Ollama-specific ``tool_name`` field.
+
+        Tool result messages produced by the adapter carry ``tool_name`` as an
+        extra attribute; Ollama expects it as a top-level field on ``role:
+        "tool"`` messages (and does not use OpenAI's ``tool_call_id``/``name``).
+
+        Args:
+            messages: Conversation messages to format.
+
+        Returns:
+            List of formatted message dicts ready for the /api/chat payload.
+        """
+        formatted = self._format_messages_base(messages)
+
+        for original, formatted_msg in zip(messages, formatted):
+            if original.tool_name:
+                formatted_msg["tool_name"] = original.tool_name
+                formatted_msg.pop("tool_call_id", None)
+                formatted_msg.pop("name", None)
+
+        return formatted
+
+    def _build_request_payload(
+        self, messages: list[Message], model: str, stream: bool, **kwargs: Any
+    ) -> dict[str, Any]:
+        """Build a shared /api/chat payload for completion and streaming.
+
+        Args:
+            messages: Conversation messages to format.
+            model: Ollama model name.
+            stream: Whether to request a streamed response.
+            **kwargs: Generation parameters (temperature, max_tokens, stop,
+                format/response_format, keep_alive, metadata, options, ...).
+
+        Returns:
+            A payload dict for the Ollama chat endpoint.
+        """
+        payload: dict[str, Any] = {
             "model": model,
-            "messages": self._format_messages_base(messages),
-            "stream": kwargs.pop("stream", False),
+            "messages": self._format_messages_for_ollama(messages),
+            "stream": stream,
         }
 
         stop_sequences = kwargs.pop("stop", None)
         if stop_sequences is not None:
             payload["stop"] = stop_sequences
+
+        # Structured output: Ollama's `format` accepts "json" or a JSON schema.
+        response_format = kwargs.pop("format", None) or kwargs.pop("response_format", None)
+        if response_format is not None:
+            payload["format"] = response_format
 
         keep_alive = kwargs.pop("keep_alive", None) or getattr(self.config, "keep_alive", None)
         if keep_alive is not None:
@@ -175,14 +278,7 @@ class OllamaProvider(BaseProvider):
         if options:
             payload["options"] = options
 
-        response_data = self._make_http_request(
-            url=self._chat_endpoint,
-            payload=payload,
-            headers=self._get_request_headers(),
-            timeout=timeout,
-        )
-
-        return self._parse_response(response_data, model)
+        return payload
 
     @property
     def _chat_endpoint(self) -> str:
@@ -510,54 +606,8 @@ class OllamaProvider(BaseProvider):
         Returns:
             SyncStreamResponse: Streaming response iterator.
         """
-        # Build payload similar to complete() but with stream=True
-        payload = {
-            "model": model,
-            "messages": self._format_messages_base(messages),
-            "stream": True,  # Enable streaming
-        }
-
-        # Add stop sequences
-        stop_sequences = kwargs.pop("stop", None)
-        if stop_sequences is not None:
-            payload["stop"] = stop_sequences
-
-        # Add keep_alive
-        keep_alive = kwargs.pop("keep_alive", None) or getattr(self.config, "keep_alive", None)
-        if keep_alive is not None:
-            payload["keep_alive"] = keep_alive
-
-        # Add metadata
-        metadata = kwargs.pop("metadata", None) or getattr(self.config, "metadata", None)
-        if metadata is not None:
-            payload["metadata"] = metadata
-
-        # Build options dict
-        options: dict[str, Any] = {}
-        option_keys = {
-            "temperature": "temperature",
-            "top_p": "top_p",
-            "top_k": "top_k",
-            "presence_penalty": "presence_penalty",
-            "frequency_penalty": "frequency_penalty",
-            "repeat_penalty": "repeat_penalty",
-            "seed": "seed",
-        }
-        for kwarg, option_name in option_keys.items():
-            value = kwargs.pop(kwarg, None)
-            if value is not None:
-                options[option_name] = value
-
-        max_tokens = kwargs.pop("max_tokens", None)
-        if max_tokens is not None:
-            options["num_predict"] = max_tokens
-
-        extra_options = kwargs.pop("options", None)
-        if isinstance(extra_options, dict):
-            options.update(extra_options)
-
-        if options:
-            payload["options"] = options
+        # Build the streaming payload (shared with complete()).
+        payload = self._build_request_payload(messages, model, stream=True, **kwargs)
 
         # Use streaming helper
         stream_iter = self._stream_ollama_response(

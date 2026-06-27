@@ -1,9 +1,9 @@
-import time
 from typing import Any, Dict, List, Optional
 
-from justllms.core.base import BaseProvider, BaseResponse
-from justllms.core.models import Choice, Message, ModelInfo, Usage
-from justllms.exceptions import ProviderError
+from justllms.core.base import BaseResponse
+from justllms.core.models import Message, ModelInfo
+from justllms.core.openai_base import BaseOpenAIChatProvider
+from justllms.tools.adapters.base import BaseToolAdapter
 
 
 class GrokResponse(BaseResponse):
@@ -12,8 +12,15 @@ class GrokResponse(BaseResponse):
     pass
 
 
-class GrokProvider(BaseProvider):
-    """Grok provider implementation."""
+class GrokProvider(BaseOpenAIChatProvider):
+    """Grok (xAI) provider implementation.
+
+    The xAI API is OpenAI-compatible, so this builds on
+    :class:`BaseOpenAIChatProvider` to inherit streaming and tool calling.
+    """
+
+    supports_tools = True
+    """xAI Grok exposes OpenAI-compatible function calling."""
 
     MODELS = {
         "grok-4": ModelInfo(
@@ -92,128 +99,45 @@ class GrokProvider(BaseProvider):
         return self.MODELS.copy()
 
     def _get_api_endpoint(self) -> str:
-        """Get the API endpoint."""
-        base_url = self.config.api_base or "https://api.x.ai"
+        """Get the xAI chat completions endpoint."""
+        base_url = (self.config.api_base or "https://api.x.ai").rstrip("/")
+        if base_url.endswith("/v1"):
+            base_url = base_url[:-3]
         return f"{base_url}/v1/chat/completions"
 
-    def _format_messages(self, messages: List[Message]) -> List[Dict[str, Any]]:
-        """Format messages for Grok API (OpenAI-compatible format)."""
-        formatted_messages = []
-
-        for msg in messages:
-            formatted_msg: Dict[str, Any] = {"role": msg.role.value, "content": msg.content}
-
-            # Handle multimodal content if supported
-            if isinstance(msg.content, list):
-                content_list: List[Dict[str, Any]] = []
-                for item in msg.content:
-                    if isinstance(item, dict):
-                        if item.get("type") == "text":
-                            content_list.append({"type": "text", "text": item.get("text", "")})
-                        elif item.get("type") == "image":
-                            content_list.append(
-                                {"type": "image_url", "image_url": item.get("image", {})}
-                            )
-                formatted_msg["content"] = content_list
-
-            formatted_messages.append(formatted_msg)
-
-        return formatted_messages
-
-    def _get_headers(self) -> Dict[str, str]:
-        """Get request headers."""
-        return {
+    def _get_request_headers(self) -> Dict[str, str]:
+        """Generate HTTP headers for xAI API requests."""
+        headers = {
             "Authorization": f"Bearer {self.config.api_key}",
             "Content-Type": "application/json",
         }
+        headers.update(self.config.headers)
+        return headers
 
-    def _parse_response(self, response_data: Dict[str, Any], model: str) -> GrokResponse:
-        """Parse Grok API response."""
-        choices_data = response_data.get("choices", [])
+    def _format_messages_openai(self, messages: List[Message]) -> List[Dict[str, Any]]:
+        """Format messages for xAI, converting unified image parts to image_url.
 
-        if not choices_data:
-            raise ProviderError("No choices in Grok response", provider=self.name)
-
-        # Parse choices
-        choices = []
-        for choice_data in choices_data:
-            message_data = choice_data.get("message", {})
-            message = Message(
-                role=message_data.get("role", "assistant"),
-                content=message_data.get("content", ""),
-            )
-            choice = Choice(
-                index=choice_data.get("index", 0),
-                message=message,
-                finish_reason=choice_data.get("finish_reason", "stop"),
-            )
-            choices.append(choice)
-
-        # Parse usage
-        usage_data = response_data.get("usage", {})
-        usage = Usage(
-            prompt_tokens=usage_data.get("prompt_tokens", 0),
-            completion_tokens=usage_data.get("completion_tokens", 0),
-            total_tokens=usage_data.get("total_tokens", 0),
-        )
-
-        # Extract only the keys we want to avoid conflicts
-        raw_response = {
-            k: v
-            for k, v in response_data.items()
-            if k not in ["id", "model", "choices", "usage", "created"]
-        }
-
-        return GrokResponse(
-            id=response_data.get("id", f"grok-{int(time.time())}"),
-            model=model,
-            choices=choices,
-            usage=usage,
-            created=response_data.get("created", int(time.time())),
-            **raw_response,
-        )
-
-    def complete(
-        self,
-        messages: List[Message],
-        model: str,
-        timeout: Optional[float] = None,
-        **kwargs: Any,
-    ) -> BaseResponse:
-        """Synchronous completion.
-
-        Args:
-            messages: List of messages for the completion.
-            model: Model identifier to use.
-            timeout: Optional timeout in seconds. If None, no timeout is enforced.
-            **kwargs: Additional provider-specific parameters.
+        The unified multimodal format uses ``{"type": "image", "image": {...}}``;
+        xAI (like OpenAI) expects ``{"type": "image_url", "image_url": {...}}``.
+        Tool/function fields are preserved by the base formatter.
         """
-        url = self._get_api_endpoint()
+        formatted = self._format_messages_base(messages)
 
-        request_data = {
-            "model": model,
-            "messages": self._format_messages(messages),
-            **{
-                k: v
-                for k, v in kwargs.items()
-                if k
-                in [
-                    "temperature",
-                    "max_tokens",
-                    "top_p",
-                    "frequency_penalty",
-                    "presence_penalty",
-                    "stop",
-                ]
-                and v is not None
-            },
-        }
+        for msg in formatted:
+            content = msg.get("content")
+            if isinstance(content, list):
+                converted: List[Dict[str, Any]] = []
+                for item in content:
+                    if isinstance(item, dict) and item.get("type") == "image":
+                        converted.append({"type": "image_url", "image_url": item.get("image", {})})
+                    else:
+                        converted.append(item)
+                msg["content"] = converted
 
-        response_data = self._make_http_request(
-            url=url,
-            payload=request_data,
-            headers=self._get_headers(),
-            timeout=timeout,
-        )
+        return formatted
 
-        return self._parse_response(response_data, model)
+    def get_tool_adapter(self) -> Optional[BaseToolAdapter]:
+        """Return the OpenAI-compatible tool adapter (xAI shares the format)."""
+        from justllms.tools.adapters.openai import OpenAIToolAdapter
+
+        return OpenAIToolAdapter()

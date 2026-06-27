@@ -406,9 +406,11 @@ class BaseProvider(ABC):
         """Create a standard Choice object from message data."""
         from justllms.core.models import Role
 
+        # Tool-call responses set content to null; Message requires str/list.
+        content = message_data.get("content")
         message = Message(
             role=message_data.get("role", Role.ASSISTANT),
-            content=message_data.get("content", ""),
+            content=content if content is not None else "",
             name=message_data.get("name"),
             function_call=message_data.get("function_call"),
             tool_calls=message_data.get("tool_calls"),

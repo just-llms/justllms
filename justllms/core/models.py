@@ -25,6 +25,7 @@ class Message(BaseModel):
     function_call: Optional[Dict[str, Any]] = None
     tool_calls: Optional[List[Dict[str, Any]]] = None
     tool_call_id: Optional[str] = None  # Required for OpenAI/Azure tool results
+    tool_name: Optional[str] = None  # Used by Ollama tool results (role="tool")
 
 
 class Usage(BaseModel):
