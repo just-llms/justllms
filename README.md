@@ -365,13 +365,13 @@ Metrics Summary:
 ```
 
 ### Streaming Support
-Stream responses in real-time for interactive applications with a **provider-agnostic API** - no need to learn different SDKs or streaming implementations. The same code works across OpenAI, Google Gemini, and Azure OpenAI:
+Stream responses in real-time for interactive applications with a **provider-agnostic API** - no need to learn different SDKs or streaming implementations. The same code works across OpenAI, Anthropic, Google Gemini, Azure OpenAI, DeepSeek, and Ollama:
 
 ```python
 # Same streaming code works for ANY supported provider!
 response = client.completion.create(
     messages=[{"role": "user", "content": "Write a story about AI"}],
-    provider="google",  # or "openai", "azure_openai"
+    provider="google",  # or "openai", "anthropic", "azure_openai"
     model="gemini-2.5-flash",
     stream=True
 )
@@ -390,9 +390,29 @@ print(f"Cost: ${final.usage.estimated_cost:.6f}")
 **No SDK hassle:**
 - ❌ Don't learn OpenAI's `stream=True` SSE format
 - ❌ Don't learn Gemini's `generate_content_stream()` method
+- ❌ Don't learn Anthropic's `content_block_delta` SSE events
 - ❌ Don't learn Ollama's newline-delimited JSON streaming
 - ❌ Don't handle different chunk formats per provider
 - ✅ **One API, all providers** - just set `stream=True`
+
+### Reasoning Models (OpenAI o-series & GPT-5)
+
+OpenAI reasoning models (`o1`, `o3`, `o4-mini`, and the `gpt-5` family) use a
+different parameter contract than chat models: they require
+`max_completion_tokens` instead of `max_tokens` and reject sampling parameters
+like `temperature`. JustLLMs handles this automatically — keep using the same
+unified parameters and they're translated per model:
+
+```python
+# Just works: max_tokens is mapped to max_completion_tokens and
+# unsupported sampling params (temperature, top_p, ...) are dropped.
+response = client.completion.create(
+    messages=[{"role": "user", "content": "Solve this step by step..."}],
+    model="openai/gpt-5",
+    max_tokens=2000,
+    reasoning_effort="high",  # low | medium | high (passed through)
+)
+```
 
 ## Tool Calling (Function Calling)
 

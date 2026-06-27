@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from justllms.core.base import DEFAULT_TIMEOUT, BaseProvider, BaseResponse
 from justllms.core.models import Choice, Message, ModelInfo, Usage
+from justllms.core.openai_base import adapt_payload_for_reasoning_model
 from justllms.core.streaming import StreamChunk, SyncStreamResponse
 from justllms.tools.adapters.base import BaseToolAdapter
 
@@ -365,6 +366,9 @@ class AzureOpenAIProvider(BaseProvider):
             "response_format",
             "seed",
             "user",
+            "max_completion_tokens",
+            "reasoning_effort",
+            "verbosity",
             "logprobs",
             "top_logprobs",
             "logit_bias",
@@ -385,6 +389,10 @@ class AzureOpenAIProvider(BaseProvider):
                 else:
                     logger.debug(f"Unknown parameter '{key}' passed to Azure OpenAI API")
                     payload[key] = value
+
+        # Reasoning deployments (o-series, gpt-5 family) need max_completion_tokens
+        # and reject sampling params; normalize the payload before sending.
+        payload = adapt_payload_for_reasoning_model(payload, model)
 
         response_data = self._make_http_request(
             url=url,
@@ -477,6 +485,9 @@ class AzureOpenAIProvider(BaseProvider):
             "response_format",
             "seed",
             "user",
+            "max_completion_tokens",
+            "reasoning_effort",
+            "verbosity",
             "logprobs",
             "top_logprobs",
             "logit_bias",
@@ -490,6 +501,9 @@ class AzureOpenAIProvider(BaseProvider):
                     logger.debug(f"Parameter '{key}' is not supported. Ignoring.")
                 elif key in supported_params:
                     payload[key] = value
+
+        # Reasoning deployments need max_completion_tokens and reject sampling params.
+        payload = adapt_payload_for_reasoning_model(payload, model)
 
         # Use shared SSE parsing helper
         from justllms.core.streaming import parse_sse_stream

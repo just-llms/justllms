@@ -9,6 +9,76 @@ from justllms.core.streaming import StreamChunk, SyncStreamResponse
 logger = logging.getLogger(__name__)
 
 
+# Sampling/control parameters that OpenAI reasoning models reject with a 400.
+REASONING_UNSUPPORTED_PARAMS = frozenset(
+    {
+        "temperature",
+        "top_p",
+        "presence_penalty",
+        "frequency_penalty",
+        "logprobs",
+        "top_logprobs",
+        "logit_bias",
+    }
+)
+
+
+def is_reasoning_model(model: str) -> bool:
+    """Return True if ``model`` is an OpenAI reasoning model.
+
+    Reasoning models (the o-series and the gpt-5 family) require
+    ``max_completion_tokens`` instead of ``max_tokens`` and reject sampling
+    parameters such as ``temperature`` and ``top_p``. The chat-optimized
+    ``*-chat`` variants (e.g. ``gpt-5-chat``) are regular chat models and are
+    intentionally excluded.
+
+    Args:
+        model: Model identifier, optionally in ``provider/model`` form.
+
+    Returns:
+        True for reasoning models, False otherwise.
+    """
+    name = model.lower().split("/")[-1]
+    if "chat" in name:
+        return False
+    if name.startswith(("o1", "o3", "o4")):
+        return True
+    return name.startswith("gpt-5")
+
+
+def adapt_payload_for_reasoning_model(payload: Dict[str, Any], model: str) -> Dict[str, Any]:
+    """Adapt an OpenAI-style payload to reasoning-model constraints.
+
+    Renames ``max_tokens`` to ``max_completion_tokens`` and drops sampling
+    parameters that reasoning models reject. Non-reasoning models are returned
+    unchanged.
+
+    Args:
+        payload: OpenAI-compatible request payload.
+        model: Model identifier the payload targets.
+
+    Returns:
+        A payload safe to send to the given model.
+    """
+    if not is_reasoning_model(model):
+        return payload
+
+    adapted: Dict[str, Any] = {}
+    for key, value in payload.items():
+        if key in REASONING_UNSUPPORTED_PARAMS:
+            logger.debug(
+                "Parameter '%s' is not supported by reasoning model '%s'. Dropping.",
+                key,
+                model,
+            )
+            continue
+        if key == "max_tokens":
+            adapted["max_completion_tokens"] = value
+            continue
+        adapted[key] = value
+    return adapted
+
+
 class BaseOpenAIChatProvider(BaseProvider):
     """Base class for providers using OpenAI-compatible chat API.
 
@@ -107,6 +177,7 @@ class BaseOpenAIChatProvider(BaseProvider):
             "temperature",
             "top_p",
             "max_tokens",
+            "max_completion_tokens",
             "stop",
             "n",
             "presence_penalty",
@@ -116,6 +187,8 @@ class BaseOpenAIChatProvider(BaseProvider):
             "response_format",
             "seed",
             "user",
+            "reasoning_effort",
+            "verbosity",
         }
 
         # Parameters to ignore (provider-specific or handled separately)
@@ -131,7 +204,9 @@ class BaseOpenAIChatProvider(BaseProvider):
                 else:
                     logger.debug(f"Unknown parameter '{key}' ignored. Not in OpenAI API spec.")
 
-        return payload
+        # Reasoning models (o-series, gpt-5 family) need max_completion_tokens
+        # and reject sampling params; normalize the payload before sending.
+        return adapt_payload_for_reasoning_model(payload, model)
 
     def _parse_sse_line(self, line: str) -> Optional[StreamChunk]:
         """Parse a single SSE line into a StreamChunk.
