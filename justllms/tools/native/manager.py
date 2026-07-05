@@ -1,3 +1,4 @@
+import contextlib
 from typing import Any, Dict, List, Optional
 
 from justllms.tools.models import Tool
@@ -18,10 +19,8 @@ class GoogleNativeToolManager:
                 continue
             if tool_name not in GOOGLE_NATIVE_TOOLS:
                 continue
-            try:
+            with contextlib.suppress(Exception):
                 self._native_tools[tool_name] = get_google_native_tool(tool_name, tool_config)
-            except Exception:
-                pass
 
     def get_native_tools(self) -> List[Tool]:
         return list(self._native_tools.values())

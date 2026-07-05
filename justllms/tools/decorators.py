@@ -1,5 +1,5 @@
 import inspect
-from typing import Callable, Dict, Optional, Union
+from typing import Callable, Dict, Optional, Union, cast
 
 from justllms.tools.models import Tool
 from justllms.tools.utils import (
@@ -128,9 +128,8 @@ def tool_from_callable(
     parameter_descriptions: Optional[Dict[str, str]] = None,
 ) -> Tool:
     """Convert an existing callable into a Tool."""
-    return tool(  # type: ignore[return-value]
-        name=name,
-        namespace=namespace,
-        description=description,
-        parameter_descriptions=parameter_descriptions,
-    )(func)
+    decorator = cast(
+        Callable[[Callable], Tool],
+        tool(name=name, namespace=namespace, description=description, parameter_descriptions=parameter_descriptions),
+    )
+    return decorator(func)
