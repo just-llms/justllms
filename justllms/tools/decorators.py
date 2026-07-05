@@ -130,6 +130,11 @@ def tool_from_callable(
     """Convert an existing callable into a Tool."""
     decorator = cast(
         Callable[[Callable], Tool],
-        tool(name=name, namespace=namespace, description=description, parameter_descriptions=parameter_descriptions),
+        tool(
+            name=name,
+            namespace=namespace,
+            description=description,
+            parameter_descriptions=parameter_descriptions,
+        ),
     )
     return decorator(func)

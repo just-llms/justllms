@@ -249,9 +249,7 @@ class BaseProvider(ABC):
                             url, json=payload, headers=request_headers, params=request_params
                         )
                     elif method.upper() == "GET":
-                        response = client.get(
-                            url, headers=request_headers, params=request_params
-                        )
+                        response = client.get(url, headers=request_headers, params=request_params)
                     else:
                         raise ValueError(f"Unsupported HTTP method: {method}")
 

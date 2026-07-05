@@ -40,4 +40,8 @@ class GoogleNativeToolManager:
         return list(merged.values())
 
     def get_api_format_for_google(self) -> List[Dict[str, Any]]:
-        return [tool.to_api_format() for tool in self._native_tools.values() if hasattr(tool, "to_api_format")]
+        return [
+            tool.to_api_format()
+            for tool in self._native_tools.values()
+            if hasattr(tool, "to_api_format")
+        ]

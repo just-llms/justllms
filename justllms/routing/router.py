@@ -217,4 +217,6 @@ class Router:
                 "Enable openai, anthropic, google, or azure_openai providers."
             )
 
-        return self.route(messages, model=model, providers=tool_providers, constraints=constraints, **kwargs)
+        return self.route(
+            messages, model=model, providers=tool_providers, constraints=constraints, **kwargs
+        )

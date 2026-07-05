@@ -253,5 +253,3 @@ class SyncStreamResponse:
             except Exception as exc:  # noqa: BLE001 - callback must never break streaming
                 logger.warning("Stream on_complete callback failed: %s", exc)
         return response
-
-
