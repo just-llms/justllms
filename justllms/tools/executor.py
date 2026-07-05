@@ -36,7 +36,6 @@ class ToolExecutor:
     Attributes:
         tools: Dictionary mapping tool names to Tool instances.
         timeout: Maximum execution time per tool in seconds.
-        execute_in_parallel: Always False (no parallel execution).
 
     Note:
         Timeouts terminate picklable tools in a subprocess. Non-picklable
@@ -47,18 +46,15 @@ class ToolExecutor:
     def __init__(
         self,
         tools: List[Tool],
-        execute_in_parallel: bool = False,
         timeout: float = 30.0,
     ):
         """Initialize the tool executor.
 
         Args:
             tools: List of Tool instances available for execution.
-            execute_in_parallel: Ignored (always False, no parallel support).
             timeout: Maximum execution time per tool in seconds.
         """
         self.tools = {tool.name: tool for tool in tools}
-        self.execute_in_parallel = False  # Always False per requirements
         self.timeout = timeout
         self._execution_count = 0
 

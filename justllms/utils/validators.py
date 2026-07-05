@@ -119,11 +119,4 @@ def validate_messages(  # noqa: C901
     if not any(msg.role == Role.USER for msg in validated_messages):
         raise ValidationError("Messages must contain at least one user message")
 
-    # Check message order (system messages should be first)
-    system_indices = [i for i, msg in enumerate(validated_messages) if msg.role == Role.SYSTEM]
-
-    if system_indices and any(i > 0 for i in system_indices):
-        # Allow system messages after position 0 but warn
-        pass
-
     return validated_messages

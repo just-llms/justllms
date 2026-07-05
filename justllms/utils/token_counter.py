@@ -38,14 +38,6 @@ class TokenCounter:
         "gemini": "cl100k_base",  # Approximation
     }
 
-    # Rough token estimates when tiktoken is not available
-    CHARS_PER_TOKEN = {
-        "default": 4,
-        "chinese": 2,
-        "japanese": 2,
-        "korean": 2,
-    }
-
     def __init__(self) -> None:
         self._encodings: Dict[str, Any] = {}
 
@@ -119,7 +111,7 @@ class TokenCounter:
         self,
         messages: List[Dict[str, Any]],
         model: Optional[str] = None,
-    ) -> Dict[str, int]:
+    ) -> int:
         """Count tokens in a list of messages."""
         total_tokens = 0
         per_message_tokens = 4  # Overhead per message
@@ -155,10 +147,7 @@ class TokenCounter:
         # Add base prompt tokens
         total_tokens += 3  # Every reply is primed with <|start|>assistant<|message|>
 
-        return {
-            "total": total_tokens,
-            "messages": len(messages),
-        }
+        return total_tokens
 
 
 # Global instance
@@ -173,6 +162,6 @@ def count_tokens(
     if isinstance(text, str):
         return _token_counter.count_tokens(text, model)
     elif isinstance(text, list):
-        return _token_counter.count_messages_tokens(text, model)["total"]
+        return _token_counter.count_messages_tokens(text, model)
     else:
         return 0

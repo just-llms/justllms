@@ -49,10 +49,6 @@ class Client:
             BudgetManager(self.config.budget, self.usage) if self.config.budget else None
         )
 
-        from justllms.tools.registry import ToolRegistry
-
-        self.tool_registry = ToolRegistry()
-
         self.cache: Optional[ResponseCache] = self._initialize_cache()
 
         self.completion = Completion(self)
@@ -194,23 +190,6 @@ class Client:
                       and available for use.
         """
         return list(self.providers.keys())
-
-    def register_tools(self, tools: List[Any]) -> None:
-        """Register tools for use with completions.
-
-        Args:
-            tools: List of Tool instances to register.
-        """
-        from justllms.tools.models import Tool
-
-        for tool in tools:
-            if isinstance(tool, Tool):
-                self.tool_registry.register(tool)
-            elif hasattr(tool, "tool"):
-                # It's a decorated function
-                self.tool_registry.register(tool.tool)
-            else:
-                raise ValueError(f"Invalid tool type: {type(tool)}")
 
     def list_models(self, provider: Optional[str] = None) -> Dict[str, Any]:
         """Get available models from providers.

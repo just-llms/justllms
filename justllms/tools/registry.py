@@ -62,19 +62,6 @@ class ToolRegistry:
 
         self._tools[tool.name] = tool
 
-    def unregister(self, name: str) -> None:
-        """Remove a tool from the registry.
-
-        Args:
-            name: Name of the tool to remove.
-
-        Raises:
-            KeyError: If the tool doesn't exist.
-        """
-        if name not in self._tools:
-            raise KeyError(f"Tool '{name}' not found in registry")
-        del self._tools[name]
-
     def get_tool(self, name: str) -> Optional[Tool]:
         """Get a tool by name.
 
@@ -101,42 +88,6 @@ class ToolRegistry:
             List of all Tool instances.
         """
         return list(self._tools.values())
-
-    def merge(self, other: "ToolRegistry", check_conflicts: bool = True) -> "ToolRegistry":
-        """Merge another registry into a new registry.
-
-        Creates a new registry containing tools from both registries.
-        Does not modify either original registry.
-
-        Args:
-            other: Another ToolRegistry to merge with.
-            check_conflicts: Whether to check for name conflicts.
-
-        Returns:
-            New ToolRegistry containing tools from both.
-
-        Raises:
-            ValueError: If check_conflicts is True and there are name conflicts.
-        """
-        # Create new registry with no specific namespace
-        merged = ToolRegistry()
-
-        # Add tools from this registry
-        for tool in self._tools.values():
-            merged._tools[tool.name] = tool
-
-        # Add tools from other registry
-        for tool in other._tools.values():
-            if check_conflicts and tool.name in merged._tools:
-                existing = merged._tools[tool.name]
-                if existing.full_name != tool.full_name:
-                    raise ValueError(
-                        f"Tool name conflict: '{tool.name}' exists in both registries. "
-                        f"Existing: {existing.full_name}, New: {tool.full_name}"
-                    )
-            merged._tools[tool.name] = tool
-
-        return merged
 
     def clear(self) -> None:
         """Remove all tools from the registry."""

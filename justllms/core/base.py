@@ -1,8 +1,8 @@
+import time
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 import httpx
-from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from justllms.core.models import Choice, Message, ModelInfo, ProviderConfig, Usage
 from justllms.exceptions import ProviderError
@@ -15,24 +15,11 @@ DEFAULT_TIMEOUT = 300.0
 
 
 def _is_retryable_http_error(exc: BaseException) -> bool:
-    """Determine if an exception is worth retrying.
-
-    Retries on:
-    - Network/connection errors (httpx.RequestError)
-    - Rate limiting (429)
-    - Server errors (500+)
-    - Request timeout (408)
-
-    Does NOT retry on:
-    - Client errors (400-499 except 429, 408)
-    """
     if isinstance(exc, httpx.RequestError):
         return True
     if isinstance(exc, ProviderError):
         status = getattr(exc, "status_code", None)
-        if status is None:
-            return False
-        return status in (429, 408) or status >= 500
+        return status is not None and (status in (429, 408) or status >= 500)
     return False
 
 
@@ -239,12 +226,6 @@ class BaseProvider(ABC):
         formatted = self._format_messages_base(messages)
         return count_tokens(formatted, model)
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-        retry=retry_if_exception(_is_retryable_http_error),
-        reraise=True,
-    )
     def _make_http_request(
         self,
         url: str,
@@ -254,57 +235,40 @@ class BaseProvider(ABC):
         method: str = "POST",
         timeout: Optional[float] = None,
     ) -> Dict[str, Any]:
-        """Execute HTTP request with automatic retry logic and error handling.
-
-        Provides consistent HTTP request handling across all providers with
-        built-in retry logic and standardized error reporting.
-
-        Args:
-            url: Target endpoint URL for the request.
-            payload: Request body data to send as JSON.
-            headers: Optional HTTP headers to include in request.
-            params: Optional query parameters for the request.
-            method: HTTP method to use ('POST' or 'GET').
-            timeout: Optional timeout in seconds. Defaults to 300 seconds if not specified.
-
-        Returns:
-            Dict[str, Any]: Parsed JSON response from the API.
-
-        Raises:
-            ProviderError: If request fails after retries or returns non-200 status.
-                          Includes provider name, status code, and response details.
-            ValueError: If unsupported HTTP method is specified.
-        """
+        """Execute HTTP request with automatic retry logic and error handling."""
         request_headers = headers or {}
         request_params = params or {}
-
         timeout_config = timeout if timeout is not None else DEFAULT_TIMEOUT
-        with httpx.Client(timeout=timeout_config) as client:
-            if method.upper() == "POST":
-                response = client.post(
-                    url,
-                    json=payload,
-                    headers=request_headers,
-                    params=request_params,
-                )
-            elif method.upper() == "GET":
-                response = client.get(
-                    url,
-                    headers=request_headers,
-                    params=request_params,
-                )
-            else:
-                raise ValueError(f"Unsupported HTTP method: {method}")
 
-            if response.status_code != 200:
-                raise ProviderError(
-                    f"{self.name} API error: {response.status_code} - {response.text}",
-                    provider=self.name,
-                    status_code=response.status_code,
-                    response_body=response.text,
-                )
+        last_exc: BaseException = RuntimeError("No attempts made")
+        for attempt in range(3):
+            try:
+                with httpx.Client(timeout=timeout_config) as client:
+                    if method.upper() == "POST":
+                        response = client.post(
+                            url, json=payload, headers=request_headers, params=request_params
+                        )
+                    elif method.upper() == "GET":
+                        response = client.get(url, headers=request_headers, params=request_params)
+                    else:
+                        raise ValueError(f"Unsupported HTTP method: {method}")
 
-            return response.json()  # type: ignore[no-any-return]
+                    if response.status_code != 200:
+                        raise ProviderError(
+                            f"{self.name} API error: {response.status_code} - {response.text}",
+                            provider=self.name,
+                            status_code=response.status_code,
+                            response_body=response.text,
+                        )
+
+                    return response.json()  # type: ignore[no-any-return]
+            except (httpx.RequestError, ProviderError) as exc:
+                if not _is_retryable_http_error(exc) or attempt == 2:
+                    raise
+                last_exc = exc
+                time.sleep(4)  # fixed 4s between retries (matches previous min=4 config)
+
+        raise last_exc  # pragma: no cover
 
     def _extract_raw_response(
         self, response_data: Dict[str, Any], exclude_keys: Optional[List[str]] = None
