@@ -1,7 +1,7 @@
 import logging
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterator, List, Optional
 
 import httpx
 
@@ -255,80 +255,3 @@ class SyncStreamResponse:
         return response
 
 
-class AsyncStreamResponse:
-    """Asynchronous streaming response (reserved for future use).
-
-    JustLLMs providers currently return :class:`SyncStreamResponse` only.
-    This class is kept for future async streaming support.
-    """
-
-    def __init__(
-        self,
-        provider: "BaseProvider",
-        model: str,
-        messages: List[Message],
-        async_stream: AsyncIterator[StreamChunk],
-    ):
-        """Initialize async stream response.
-
-        Args:
-            provider: Provider instance.
-            model: Model name.
-            messages: Original messages.
-            async_stream: Async iterator of StreamChunks.
-        """
-        self.accumulator = StreamResponse(provider, model, messages)
-        self.async_stream = async_stream
-        self._iterator_started = False
-
-    async def __aiter__(self) -> AsyncIterator[StreamChunk]:
-        """Async iterate over stream chunks.
-
-        Yields:
-            StreamChunk objects.
-
-        Raises:
-            RuntimeError: If iteration already started from a different iterator.
-        """
-        if self._iterator_started:
-            raise RuntimeError(
-                "Stream iteration already started. Cannot create multiple iterators. "
-                "Use a single async for loop or call get_final_response() to consume remaining chunks."
-            )
-        self._iterator_started = True
-
-        async for chunk in self.async_stream:
-            self.accumulator.accumulate(chunk)
-            yield chunk
-
-        self.accumulator.mark_complete()
-
-    async def drain(self) -> None:
-        """Consume remaining chunks without yielding.
-
-        Safe to call at any time - will consume from current position.
-        """
-        if self.accumulator.completed:
-            return  # Already finished
-
-        if not self._iterator_started:
-            # Haven't started yet - consume entire stream
-            async for _ in self:
-                pass
-        else:
-            # Already started - continue from current position
-            async for chunk in self.async_stream:
-                self.accumulator.accumulate(chunk)
-            self.accumulator.mark_complete()
-
-    async def get_final_response(self) -> "CompletionResponse":
-        """Get final CompletionResponse.
-
-        Automatically drains stream if not yet fully consumed.
-
-        Returns:
-            CompletionResponse with cost and usage.
-        """
-        if not self.accumulator.completed:
-            await self.drain()
-        return self.accumulator.to_completion_response()

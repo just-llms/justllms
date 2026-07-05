@@ -18,9 +18,7 @@ from justllms.exceptions import (
     ProviderError,
     RateLimitError,
 )
-from justllms.exceptions import (
-    TimeoutError as JustLLMsTimeoutError,
-)
+from justllms.exceptions import TimeoutError as JustLLMsTimeoutError
 
 if TYPE_CHECKING:
     from justllms.core.base import BaseProvider
@@ -42,14 +40,6 @@ def classify_error(exc: Exception) -> Optional[str]:
         or None when the error should NOT trigger failover (e.g. validation
         errors or 4xx client errors that would fail on every provider).
     """
-    # Specific justllms exception subclasses first (they subclass ProviderError).
-    if isinstance(exc, RateLimitError):
-        return "rate_limit"
-    if isinstance(exc, AuthenticationError):
-        return "auth"
-    if isinstance(exc, JustLLMsTimeoutError):
-        return "timeout"
-
     # httpx network errors. TimeoutException subclasses RequestError, so check it first.
     if isinstance(exc, httpx.TimeoutException):
         return "timeout"
@@ -57,6 +47,13 @@ def classify_error(exc: Exception) -> Optional[str]:
         return "connection"
 
     if isinstance(exc, ProviderError):
+        # Named subclasses may carry no status_code (e.g. raised directly by user code).
+        if isinstance(exc, RateLimitError):
+            return "rate_limit"
+        if isinstance(exc, AuthenticationError):
+            return "auth"
+        if isinstance(exc, JustLLMsTimeoutError):
+            return "timeout"
         status = getattr(exc, "status_code", None)
         if not isinstance(status, int):
             return None

@@ -10,18 +10,6 @@ from pydantic import BaseModel, ConfigDict, Field
 from justllms.monitoring.budget import BudgetConfig
 
 
-class ConfigProviderSettings(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    name: str
-    api_key: Optional[str] = None
-    enabled: bool = True
-    base_url: Optional[str] = None
-    timeout: Optional[int] = None
-    max_retries: int = 3
-    rate_limit: Optional[int] = None
-    deployment_mapping: Dict[str, str] = Field(default_factory=dict)
-
-
 class RoutingConfig(BaseModel):
     """Configuration for provider and model fallbacks."""
 

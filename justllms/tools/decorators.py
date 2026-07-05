@@ -127,66 +127,10 @@ def tool_from_callable(
     description: Optional[str] = None,
     parameter_descriptions: Optional[Dict[str, str]] = None,
 ) -> Tool:
-    """Convert an existing callable into a Tool.
-
-    This is useful for converting existing functions that you can't
-    or don't want to decorate directly.
-
-    Args:
-        func: The callable to convert.
-        name: Custom name for the tool (defaults to function name).
-        namespace: Optional namespace for the tool.
-        description: Custom description (defaults to function docstring).
-        parameter_descriptions: Parameter descriptions.
-
-    Returns:
-        Tool instance.
-
-    Examples:
-        >>> def existing_func(x: int, y: int) -> int:
-        ...     return x * y
-        ...
-        >>> tool_instance = tool_from_callable(
-        ...     existing_func,
-        ...     name="multiplier",
-        ...     description="Multiplies two numbers"
-        ... )
-    """
-    # Extract metadata
-    tool_name = name or func.__name__
-    tool_description = description or inspect.getdoc(func) or f"Tool: {tool_name}"
-
-    # Extract parameters
-    parameters = extract_function_schema(func)
-
-    # Extract parameter descriptions from docstring
-    docstring_descriptions = extract_docstring_descriptions(func)
-
-    # Merge parameter descriptions
-    merged_descriptions = {}
-    if docstring_descriptions:
-        merged_descriptions.update(docstring_descriptions)
-    if parameter_descriptions:
-        merged_descriptions.update(parameter_descriptions)
-
-    # Update parameter descriptions in ParameterInfo objects
-    for param_name, param_info in parameters.items():
-        if param_name in merged_descriptions:
-            param_info.description = merged_descriptions[param_name]
-
-    # Get return type
-    sig = inspect.signature(func)
-    return_type = (
-        sig.return_annotation if sig.return_annotation != inspect.Signature.empty else None
-    )
-
-    # Create Tool instance
-    return Tool(
-        name=tool_name,
+    """Convert an existing callable into a Tool."""
+    return tool(  # type: ignore[return-value]
+        name=name,
         namespace=namespace,
-        description=tool_description,
-        callable=func,
-        parameters=parameters,
-        parameter_descriptions=merged_descriptions,
-        return_type=return_type,
-    )
+        description=description,
+        parameter_descriptions=parameter_descriptions,
+    )(func)

@@ -217,20 +217,4 @@ class Router:
                 "Enable openai, anthropic, google, or azure_openai providers."
             )
 
-        # If specific model requested, route to it
-        if model:
-            provider_name, model_name = self.route(
-                messages,
-                model=model,
-                providers=tool_providers,
-                constraints=constraints,
-                **kwargs,
-            )
-            return provider_name, model_name
-
-        # Route among tool-capable providers
-        provider_name, model_name = self.route(
-            messages, providers=tool_providers, constraints=constraints, **kwargs
-        )
-
-        return provider_name, model_name
+        return self.route(messages, model=model, providers=tool_providers, constraints=constraints, **kwargs)

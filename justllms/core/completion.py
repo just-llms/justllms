@@ -337,11 +337,7 @@ class Completion:
 
         for tool in tools:
             # Check if it's a native tool (e.g., GoogleSearch, GoogleCodeExecution)
-            if (
-                hasattr(tool, "is_native_tool")
-                and callable(tool.is_native_tool)
-                and tool.is_native_tool()
-            ):
+            if getattr(tool, "is_native", False):
                 native_tool_objects.append(tool)
                 continue
 
