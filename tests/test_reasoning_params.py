@@ -149,3 +149,42 @@ def test_azure_complete_adapts_payload(monkeypatch):
     assert payload["max_completion_tokens"] == 128
     assert "max_tokens" not in payload
     assert "temperature" not in payload
+
+
+def test_azure_parse_response_accepts_null_content():
+    """Azure tool-call responses set content to null; parsing must not crash."""
+    provider = AzureOpenAIProvider(
+        ProviderConfig(name="azure_openai", api_key="test-key", resource_name="my-res")
+    )
+
+    response = provider._parse_response(
+        {
+            "id": "chatcmpl-x",
+            "model": "gpt-4o",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [
+                            {
+                                "id": "call_1",
+                                "type": "function",
+                                "function": {
+                                    "name": "get_weather",
+                                    "arguments": '{"location": "Paris"}',
+                                },
+                            }
+                        ],
+                    },
+                    "finish_reason": "tool_calls",
+                }
+            ],
+            "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+        }
+    )
+
+    message = response.choices[0].message
+    assert message.content == ""
+    assert message.tool_calls[0]["function"]["name"] == "get_weather"
