@@ -36,8 +36,9 @@ def validate_messages(  # noqa: C901
 
     for i, msg in enumerate(messages):
         if isinstance(msg, Message):
-            validated_messages.append(msg)
-        elif isinstance(msg, dict):
+            msg = msg.model_dump()
+
+        if isinstance(msg, dict):
             # Validate required fields
             if "role" not in msg:
                 raise ValidationError(f"Message {i} missing required field 'role'")
