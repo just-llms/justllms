@@ -77,13 +77,19 @@ class BaseToolAdapter(ABC):
         """
         pass
 
-    def format_tool_calls_message(self, tool_calls: List[ToolCall]) -> Optional[Message]:
+    def format_tool_calls_message(
+        self, tool_calls: List[ToolCall], content: Optional[str] = None
+    ) -> Optional[Message]:
         """Format tool calls as an assistant message.
 
         Some providers need tool calls formatted as assistant messages.
 
         Args:
             tool_calls: List of tool calls to include in message.
+            content: The model's actual response text, if any. Unused in this
+                default (OpenAI-style) implementation since OpenAI-style
+                messages carry tool calls in a separate field and leave
+                content empty.
 
         Returns:
             Assistant message with tool calls, or None if not needed.

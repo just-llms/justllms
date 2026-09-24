@@ -181,13 +181,17 @@ class OpenAIToolAdapter(BaseToolAdapter):
             tool_call_id=tool_call.id,  # OpenAI requires matching the tool call ID
         )
 
-    def format_tool_calls_message(self, tool_calls: List[ToolCall]) -> Optional[Message]:
+    def format_tool_calls_message(
+        self, tool_calls: List[ToolCall], content: Optional[str] = None
+    ) -> Optional[Message]:
         """Format tool calls as an assistant message.
 
         OpenAI requires tool calls to be in an assistant message.
 
         Args:
             tool_calls: List of tool calls.
+            content: The model's actual response text (unused; OpenAI tool
+                calls carry an empty content field).
 
         Returns:
             Assistant message with tool calls.

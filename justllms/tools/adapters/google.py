@@ -225,11 +225,15 @@ class GoogleToolAdapter(BaseToolAdapter):
             content=parts,  # Pass as list for GoogleProvider to handle
         )
 
-    def format_tool_calls_message(self, tool_calls: List[ToolCall]) -> Optional[Message]:
+    def format_tool_calls_message(
+        self, tool_calls: List[ToolCall], content: Optional[str] = None
+    ) -> Optional[Message]:
         """Format tool calls as an assistant message for Gemini.
 
         Args:
             tool_calls: List of tool calls.
+            content: The model's actual response text (unused; Gemini packs
+                function calls into ``parts``).
 
         Returns:
             Assistant message with function calls.

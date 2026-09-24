@@ -2,6 +2,8 @@
 
 from justllms.core.models import Message, ProviderConfig, Role
 from justllms.providers.anthropic import AnthropicProvider
+from justllms.tools.adapters.anthropic import AnthropicToolAdapter
+from justllms.tools.models import ToolCall
 
 
 def _provider():
@@ -173,3 +175,27 @@ def test_supports_streaming():
     assert provider.supports_streaming() is True
     assert provider.supports_streaming_for_model("claude-opus-4-7") is True
     assert provider.supports_streaming_for_model("not-a-model") is False
+
+
+def test_format_tool_calls_message_preserves_real_text():
+    tool_calls = [ToolCall(id="toolu_1", name="get_weather", arguments={"location": "Paris"})]
+
+    message = AnthropicToolAdapter().format_tool_calls_message(
+        tool_calls, content="some real text"
+    )
+
+    assert message is not None
+    text_blocks = [b for b in message.content if b.get("type") == "text"]
+    assert text_blocks == [{"type": "text", "text": "some real text"}]
+    assert "I'll help you with that." not in [b.get("text") for b in text_blocks]
+
+
+def test_format_tool_calls_message_omits_text_block_when_no_content():
+    tool_calls = [ToolCall(id="toolu_1", name="get_weather", arguments={"location": "Paris"})]
+
+    for empty_content in (None, ""):
+        message = AnthropicToolAdapter().format_tool_calls_message(
+            tool_calls, content=empty_content
+        )
+        assert message is not None
+        assert all(b.get("type") != "text" for b in message.content)
