@@ -154,13 +154,19 @@ class AnthropicToolAdapter(BaseToolAdapter):
 
         return Message(role=Role.USER, content=content)
 
-    def format_tool_calls_message(self, tool_calls: List[ToolCall]) -> Optional[Message]:
+    def format_tool_calls_message(
+        self, tool_calls: List[ToolCall], content: Optional[str] = None
+    ) -> Optional[Message]:
         """Format tool calls as an assistant message.
 
         Anthropic includes tool calls in the assistant's content array.
 
         Args:
             tool_calls: List of tool calls.
+            content: The model's actual response text preceding the tool
+                calls, if any. Anthropic does not require a text block before
+                tool_use, so this is only included when there is real text
+                to preserve -- never fabricated.
 
         Returns:
             Assistant message with tool calls in content.
@@ -168,11 +174,10 @@ class AnthropicToolAdapter(BaseToolAdapter):
         if not tool_calls:
             return None
 
-        content: List[Dict[str, Any]] = []
+        content_blocks: List[Dict[str, Any]] = []
 
-        # Add any text content if needed
-        # Anthropic requires at least one text block before tool use
-        content.append({"type": "text", "text": "I'll help you with that."})
+        if content:
+            content_blocks.append({"type": "text", "text": content})
 
         # Add tool use blocks
         for tc in tool_calls:
@@ -182,9 +187,9 @@ class AnthropicToolAdapter(BaseToolAdapter):
                 "name": tc.name,
                 "input": tc.arguments,
             }
-            content.append(tool_use)
+            content_blocks.append(tool_use)
 
-        return Message(role=Role.ASSISTANT, content=content)
+        return Message(role=Role.ASSISTANT, content=content_blocks)
 
     def supports_parallel_tools(self) -> bool:
         """Claude 3 supports calling multiple tools in one response."""

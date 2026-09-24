@@ -84,11 +84,18 @@ class OllamaToolAdapter(BaseToolAdapter):
 
         return tool_calls
 
-    def format_tool_calls_message(self, tool_calls: List[ToolCall]) -> Optional[Message]:
+    def format_tool_calls_message(
+        self, tool_calls: List[ToolCall], content: Optional[str] = None
+    ) -> Optional[Message]:
         """Format tool calls as an assistant message in Ollama's format.
 
         Ollama expects ``function.arguments`` as an object (not a string) and
         does not use ``id``/``type`` on echoed calls.
+
+        Args:
+            tool_calls: List of tool calls.
+            content: The model's actual response text (unused; Ollama tool
+                calls carry an empty content field).
         """
         if not tool_calls:
             return None

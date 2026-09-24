@@ -474,8 +474,12 @@ class Completion:
                 )
                 return final_response
 
-            # Add assistant message with tool calls
-            assistant_msg = adapter.format_tool_calls_message(tool_calls)
+            # Add assistant message with tool calls, preserving any real
+            # response text the model produced alongside them.
+            response_text = response.choices[0].message.content if response.choices else None
+            assistant_msg = adapter.format_tool_calls_message(
+                tool_calls, content=response_text if isinstance(response_text, str) else None
+            )
             if assistant_msg:
                 conversation_messages.append(assistant_msg)
 
