@@ -241,7 +241,7 @@ class BaseProvider(ABC):
         timeout_config = timeout if timeout is not None else DEFAULT_TIMEOUT
 
         last_exc: BaseException = RuntimeError("No attempts made")
-        for attempt in range(3):
+        for attempt in range(self.config.max_retries):
             try:
                 with httpx.Client(timeout=timeout_config) as client:
                     if method.upper() == "POST":
@@ -263,10 +263,10 @@ class BaseProvider(ABC):
 
                     return response.json()  # type: ignore[no-any-return]
             except (httpx.RequestError, ProviderError) as exc:
-                if not _is_retryable_http_error(exc) or attempt == 2:
+                if not _is_retryable_http_error(exc) or attempt == self.config.max_retries - 1:
                     raise
                 last_exc = exc
-                time.sleep(4)  # fixed 4s between retries (matches previous min=4 config)
+                time.sleep(self.config.retry_delay)
 
         raise last_exc  # pragma: no cover
 
