@@ -6,6 +6,15 @@ from justllms.tools.adapters.base import BaseToolAdapter
 from justllms.tools.models import Tool, ToolCall, ToolResult
 
 
+def _parse_arguments(arguments_str: str) -> Dict[str, Any]:
+    """Parse a JSON arguments string, falling back to {} if it isn't a JSON object."""
+    try:
+        arguments = json.loads(arguments_str)
+    except json.JSONDecodeError:
+        return {}
+    return arguments if isinstance(arguments, dict) else {}
+
+
 class OpenAIToolAdapter(BaseToolAdapter):
     """Adapter for OpenAI's function calling format.
 
@@ -122,16 +131,13 @@ class OpenAIToolAdapter(BaseToolAdapter):
             message = choice.get("message", {})
 
             # Check for tool_calls in message
-            message_tool_calls = message.get("tool_calls", [])
+            message_tool_calls = message.get("tool_calls") or []
             for tc in message_tool_calls:
                 function = tc.get("function", {})
 
                 # Parse arguments
-                arguments_str = function.get("arguments", "{}")
-                try:
-                    arguments = json.loads(arguments_str)
-                except json.JSONDecodeError:
-                    arguments = {}
+                arguments_str = function.get("arguments") or "{}"
+                arguments = _parse_arguments(arguments_str)
 
                 tool_call = ToolCall(
                     id=tc.get("id", ""),
@@ -144,11 +150,8 @@ class OpenAIToolAdapter(BaseToolAdapter):
             # Also check for legacy function_call format
             function_call = message.get("function_call")
             if function_call:
-                arguments_str = function_call.get("arguments", "{}")
-                try:
-                    arguments = json.loads(arguments_str)
-                except json.JSONDecodeError:
-                    arguments = {}
+                arguments_str = function_call.get("arguments") or "{}"
+                arguments = _parse_arguments(arguments_str)
 
                 tool_call = ToolCall(
                     id=f"call_{function_call.get('name', 'unknown')}",

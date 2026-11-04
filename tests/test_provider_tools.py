@@ -259,3 +259,29 @@ def test_ollama_format_passthrough_structured_output():
     )
     assert payload["format"] == schema
     assert payload["options"]["num_predict"] == 64
+
+
+def test_openai_adapter_handles_null_tool_calls():
+    adapter = OpenAIToolAdapter()
+    response = {
+        "choices": [{"message": {"role": "assistant", "content": "hi", "tool_calls": None}}]
+    }
+    assert adapter.extract_tool_calls(response) == []
+
+
+def test_openai_adapter_handles_null_and_non_object_arguments():
+    adapter = OpenAIToolAdapter()
+    response = {
+        "choices": [
+            {
+                "message": {
+                    "tool_calls": [
+                        {"id": "a", "function": {"name": "f", "arguments": None}},
+                        {"id": "b", "function": {"name": "g", "arguments": "[1, 2]"}},
+                    ]
+                }
+            }
+        ]
+    }
+    calls = adapter.extract_tool_calls(response)
+    assert [(c.id, c.arguments) for c in calls] == [("a", {}), ("b", {})]
