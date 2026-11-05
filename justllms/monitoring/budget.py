@@ -76,19 +76,25 @@ class BudgetManager:
             current_cost = self.tracker.total_cost
             if current_cost >= self.config.max_cost:
                 self._handle_breach("cost", self.config.max_cost, current_cost)
+            else:
+                self._warned_types.discard("cost")
 
         if self.config.max_tokens is not None:
             current_tokens = self.tracker.total_tokens
             if current_tokens >= self.config.max_tokens:
                 self._handle_breach("tokens", self.config.max_tokens, current_tokens)
+            else:
+                self._warned_types.discard("tokens")
 
         if self.config.max_requests is not None:
             current_requests = self.tracker.request_count
             if current_requests >= self.config.max_requests:
                 self._handle_breach("requests", self.config.max_requests, current_requests)
+            else:
+                self._warned_types.discard("requests")
 
     def _handle_breach(self, limit_type: str, limit: float, current: float) -> None:
-        """Raise or warn (once per breach type) about an exceeded limit."""
+        """Raise or warn (once per breach, re-armed when usage drops below the limit)."""
         if self.config.on_exceeded == "warn":
             if limit_type not in self._warned_types:
                 self._warned_types.add(limit_type)

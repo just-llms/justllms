@@ -244,6 +244,21 @@ class TestBudgetManager:
         assert len(warnings) == 1
         assert "requests" in warnings[0].message
 
+    def test_warn_mode_warns_again_after_reset(self, caplog: pytest.LogCaptureFixture) -> None:
+        tracker = UsageTracker()
+        manager = BudgetManager(BudgetConfig(max_requests=1, on_exceeded="warn"), tracker)
+
+        with caplog.at_level(logging.WARNING, logger="justllms.monitoring.budget"):
+            tracker.record("openai", "gpt-4o", make_usage())
+            manager.check()
+            tracker.reset()
+            manager.check()
+            tracker.record("openai", "gpt-4o", make_usage())
+            manager.check()
+
+        warnings = [r for r in caplog.records if "Budget limit reached" in r.message]
+        assert len(warnings) == 2
+
 
 class TestClientIntegration:
     def test_usage_recorded_for_completions(self) -> None:
