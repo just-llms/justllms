@@ -66,12 +66,10 @@ class Router:
 
         # If specific model requested, try to find it
         if model:
-            # Check if it's in format "provider/model"
-            if "/" in model:
-                provider_name, model_name = model.split("/", 1)
-                if provider_name not in providers:
-                    raise ValueError(f"Provider '{provider_name}' not found")
-
+            # Check if it's in format "provider/model". An unknown prefix falls
+            # through, since model ids like "hf.co/org/model" contain slashes.
+            provider_name, _, model_name = model.partition("/")
+            if model_name and provider_name in providers:
                 provider = providers[provider_name]
                 if not provider.validate_model(model_name):
                     raise ValueError(
