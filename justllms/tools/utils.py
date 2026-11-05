@@ -1,10 +1,24 @@
 import inspect
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Union, get_args, get_origin
+import types
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Union,
+    get_args,
+    get_origin,
+    get_type_hints,
+)
 
 from justllms.tools.models import ParameterInfo
 
 if TYPE_CHECKING:
     from justllms.tools.models import Tool
+
+# `int | None` (PEP 604, Python 3.10+) has origin types.UnionType, not typing.Union
+_UNION_TYPES = (Union, getattr(types, "UnionType", Union))
 
 
 def python_type_to_json_schema(python_type: type) -> Dict[str, Any]:
@@ -31,13 +45,15 @@ def python_type_to_json_schema(python_type: type) -> Dict[str, Any]:
         return {"type": "boolean"}
     elif python_type is dict or python_type is Dict:
         return {"type": "object"}
+    elif python_type in (list, tuple, set):
+        return {"type": "array"}
 
     # Handle typing module types
     origin = get_origin(python_type)
     args = get_args(python_type)
 
     # Handle Optional[T] (Union[T, None])
-    if origin is Union:
+    if origin in _UNION_TYPES:
         non_none_args = [arg for arg in args if arg is not type(None)]
         if len(non_none_args) == 1:
             # Optional[T]
@@ -49,7 +65,7 @@ def python_type_to_json_schema(python_type: type) -> Dict[str, Any]:
             return {"oneOf": [python_type_to_json_schema(arg) for arg in args]}
 
     # Handle List[T]
-    elif origin in (list, List):
+    elif origin in (list, List, tuple, set):
         items_type = args[0] if args else Any
         return {
             "type": "array",
@@ -76,22 +92,34 @@ def extract_function_schema(func: Callable) -> Dict[str, ParameterInfo]:
     sig = inspect.signature(func)
     parameters = {}
 
+    # Resolve string annotations (e.g. under `from __future__ import annotations`)
+    try:
+        hints = get_type_hints(func)
+    except Exception:
+        hints = {}
+
     for param_name, param in sig.parameters.items():
-        # Skip self/cls parameters
-        if param_name in ("self", "cls"):
+        # Skip self/cls and *args/**kwargs, which the LLM can't supply by name
+        if param_name in ("self", "cls") or param.kind in (
+            param.VAR_POSITIONAL,
+            param.VAR_KEYWORD,
+        ):
             continue
 
         # Determine if parameter is required
         required = param.default is inspect.Parameter.empty
 
         # Get type hint
-        param_type = param.annotation if param.annotation != inspect.Parameter.empty else Any
+        param_type = hints.get(
+            param_name,
+            param.annotation if param.annotation != inspect.Parameter.empty else Any,
+        )
 
         # Convert to JSON schema type
         schema_info = python_type_to_json_schema(param_type)
 
         # Handle Optional types - they're not required
-        if get_origin(param_type) is Union:
+        if get_origin(param_type) in _UNION_TYPES:
             args = get_args(param_type)
             if type(None) in args:
                 required = False
